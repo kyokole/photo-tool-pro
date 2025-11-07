@@ -1,12 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
 const getModel = () => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    return new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY }).models;
+    return new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY }).models;
 }
 
 export const BASE_PROMPT_INSTRUCTION = `You are a world-class expert in reverse-engineering images into prompts for generative AI. Your sole task is to analyze the provided image with microscopic detail and generate a prompt that can be used by an advanced AI image generator to reconstruct the original image with near-perfect, 1:1 fidelity.

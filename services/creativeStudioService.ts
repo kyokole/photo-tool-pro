@@ -5,17 +5,13 @@ import { HIDDEN_ADDONS, K_CONCEPTS } from '../constants/creativeStudioConstants'
 import i18n from '../i18n';
 
 const getImageEditingModel = () => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    return new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY }).models;
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
+    return new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY }).models;
 };
 
 const getTextModel = () => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    return new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY }).models;
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
+    return new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY }).models;
 };
 
 
@@ -456,7 +452,7 @@ HƯỚNG DẪN: Sắp xếp người 1 và người 2 một cách tự nhiên tr
                         MÀU TÓC: ${data.hair_color}.
                         ĐỘ DÀI TÓC: ${data.hair_length}.
                         HƯỚNG DẪN VỀ TƯ THẾ (QUAN TRỌNG): Mục tiêu là tạo ra bức chân dung tự nhiên nhất với kiểu tóc mới. Sử dụng tư thế ban đầu làm cơ sở, nhưng có thể điều chỉnh nhẹ góc đầu và tư thế vai để phù hợp hơn với mái tóc mới. Hình ảnh cuối cùng phải trông giống như một bức chân dung tự nhiên, có bố cục tốt, không chỉ là một bản chỉnh sửa tĩnh.
-                        HƯỚNG DẪN: Kết quả phải chân thực. Hòa trộn mái tóc mới một cách liền mạch.`;
+                        HƯỚN DẪN: Kết quả phải chân thực. Hòa trộn mái tóc mới một cách liền mạch.`;
                     }
                 }
             );
@@ -606,10 +602,8 @@ export const generateVideoFromImage = async (
 ): Promise<string> => {
     setProgress('Đang khởi tạo tác vụ...');
     
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const videoAi = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
+    const videoAi = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
 
     const imagePayload = {
         imageBytes: base64Image,
@@ -643,8 +637,7 @@ export const generateVideoFromImage = async (
         throw new Error("Không tìm thấy link tải video trong phản hồi của API.");
     }
     
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const response = await fetch(`${downloadLink}&key=${process.env.VITE_GEMINI_API_KEY}`);
+    const response = await fetch(`${downloadLink}&key=${(import.meta as any).env.VITE_GEMINI_API_KEY}`);
     if (!response.ok) {
         const errorBody = await response.text();
         console.error("Failed to download video:", errorBody);

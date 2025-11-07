@@ -2,19 +2,14 @@ import { GoogleGenAI, Modality, Part } from '@google/genai';
 import { FootballStudioSettings } from '../types';
 import { fileToGenerativePart } from '../utils/fileUtils';
 
-// FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY! });
-
 export const generateFootballPhoto = async (settings: FootballStudioSettings): Promise<string> => {
     if (!settings.sourceImage) {
         throw new Error("Source image is missing.");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
 
     const { mode, sourceImage, category, team, player, scene, aspectRatio, style, customPrompt } = settings;
 

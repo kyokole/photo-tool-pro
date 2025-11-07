@@ -148,12 +148,10 @@ const callGeminiApiForIdPhoto = async (
         throw new DOMException('Aborted by user', 'AbortError');
     }
 
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
     
     const imagePart: FilePart = {
         inlineData: {
@@ -204,12 +202,10 @@ const callGeminiApiForIdPhoto = async (
 }
 
 const callGeminiApiForRestoration = async (imagePart: FilePart, prompt: string): Promise<string> => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
 
     try {
         console.log("Calling Gemini for Restoration. Prompt starts with:", prompt.substring(0, 100));
@@ -258,12 +254,10 @@ export const generateHeadshot = async (imagePart: FilePart, prompt: string, sign
     if (signal?.aborted) {
         throw new DOMException('Aborted by user', 'AbortError');
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
 
     const fullPrompt = `
         Act as a professional headshot photographer and retoucher.
@@ -312,13 +306,11 @@ export const generateHeadshot = async (imagePart: FilePart, prompt: string, sign
 
 export const generateFashionPhoto = async (imagePart: FilePart, settings: FashionStudioSettings, signal?: AbortSignal): Promise<string> => {
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
     
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
 
     const userDescription = settings.description ? `${settings.description}. ` : '';
     const highQualityPrompt = settings.highQuality ? 'Chất lượng 4K, độ phân giải siêu cao, chi tiết cực cao. ' : '';
@@ -378,13 +370,11 @@ export const generateFourSeasonsPhoto = async (
     aspectRatio: string,
     customDescription: string
 ): Promise<string> => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
     
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
     const themeTitle = season === 'spring' ? 'mùa xuân' : season === 'summer' ? 'mùa hạ' : season === 'autumn' ? 'mùa thu' : 'mùa đông';
 
     const prompt = `--- HIERARCHY OF COMMANDS ---
@@ -454,12 +444,10 @@ export const generateBatchImages = async (
   aspectRatio: BatchAspectRatio,
   numOutputs: number
 ): Promise<string[]> => {
-  // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-  if (!process.env.VITE_GEMINI_API_KEY) {
+  if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
       throw new Error("API_KEY_INVALID");
   }
-  // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-  const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+  const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
 
   try {
     const response = await ai.models.generateImages({
@@ -524,16 +512,16 @@ export const generateThumbnail = async ({
 }: {
     modelImage: HTMLImageElement;
     refImage: HTMLImageElement | null;
+    // FIX: Corrected type name from 'Inputs' to 'ThumbnailInputs'.
     inputs: ThumbnailInputs;
+    // FIX: Corrected type name from 'Ratio' to 'ThumbnailRatio'.
     ratio: ThumbnailRatio;
 }): Promise<{ image?: string; error?: string; }> => {
 
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         return { error: "API_KEY_INVALID" };
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
     
     try {
         const { title, speaker, outfit, action, extra } = inputs;
@@ -594,12 +582,10 @@ export const generateThumbnail = async ({
 };
 
 export const detectOutfit = async (base64Image: string, mimeType: string): Promise<string> => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
     const imagePart = { inlineData: { data: base64Image, mimeType } };
     const prompt = "Analyze the image and identify the main, most prominent piece of clothing the person is wearing. Respond with ONLY the name of the clothing in lowercase Vietnamese. For example: 'áo dài', 'vest', 'áo sơ mi'. Do not add any other words, punctuation, or explanations.";
 
@@ -612,12 +598,10 @@ export const detectOutfit = async (base64Image: string, mimeType: string): Promi
 };
 
 export const editOutfitOnImage = async (base64Image: string, mimeType: string, newOutfitPrompt: string): Promise<string> => {
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    if (!process.env.VITE_GEMINI_API_KEY) {
+    if (!(import.meta as any).env.VITE_GEMINI_API_KEY) {
         throw new Error("API_KEY_INVALID");
     }
-    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
-    const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY });
     const imagePart = { inlineData: { data: base64Image, mimeType } };
     const prompt = `**CRITICAL INSTRUCTION: ABSOLUTE PRESERVATION**
 - You MUST preserve the person's original face, body shape, pose, and the entire background with 100% pixel-level accuracy. This is the highest priority.
