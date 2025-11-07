@@ -38,6 +38,7 @@ export default {
     "printPrepareFailed": "Chuẩn bị in thất bại:",
     "noResultToExport": "Không có kết quả để xuất.",
     "imageUploadFailed": "Đã có lỗi xảy ra khi tải ảnh lên.",
-    "invalidCredential": "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra lại email và mật khẩu."
+    "invalidCredential": "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra lại email và mật khẩu.",
+    "apiKeyInvalid": "API Key không hợp lệ. Vui lòng kiểm tra lại cấu hình. Nếu bạn là người dùng, hãy liên hệ với quản trị viên để được hỗ trợ."
   }
 }

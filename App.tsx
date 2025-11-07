@@ -404,7 +404,11 @@ const App: React.FC = () => {
       } else {
         console.error(err);
         const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
-        setIdPhotoError(t('errors.generationFailed', { error: errorMessage }));
+        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+            setIdPhotoError(t('errors.apiKeyInvalid'));
+        } else {
+            setIdPhotoError(t('errors.generationFailed', { error: errorMessage }));
+        }
       }
     } finally {
       setIsGenerating(false);
@@ -593,8 +597,12 @@ const App: React.FC = () => {
             setHeadshotError(t('errors.generationCancelled'));
         } else {
             console.error("Headshot generation failed:", err);
-            const errorMessage = err instanceof Error ? err.message : t('errors.headshotGenerationFailed');
-            setHeadshotError(t('errors.headshotGenerationFailed', { error: errorMessage }));
+            const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
+            if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+                setHeadshotError(t('errors.apiKeyInvalid'));
+            } else {
+                setHeadshotError(t('errors.headshotGenerationFailed', { error: errorMessage }));
+            }
         }
     } finally {
         setIsHeadshotLoading(false);
@@ -630,8 +638,12 @@ const App: React.FC = () => {
               setFashionStudioError(t('errors.generationCancelled'));
           } else {
               console.error("Fashion Studio generation failed:", err);
-              const errorMessage = err instanceof Error ? err.message : t('errors.generationFailed');
-              setFashionStudioError(t('errors.generationFailed', { error: errorMessage }));
+              const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
+              if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+                  setFashionStudioError(t('errors.apiKeyInvalid'));
+              } else {
+                  setFashionStudioError(t('errors.generationFailed', { error: errorMessage }));
+              }
           }
       } finally {
           setIsFashionStudioLoading(false);
@@ -688,7 +700,11 @@ const App: React.FC = () => {
     } catch (err) {
         console.error("Restoration pipeline failed:", err);
         const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
-        setRestorationError(t('errors.restorationPipelineFailed', { error: errorMessage }));
+        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+            setRestorationError(t('errors.apiKeyInvalid'));
+        } else {
+            setRestorationError(t('errors.restorationPipelineFailed', { error: errorMessage }));
+        }
     } finally {
         setIsRestoring(false);
     }
@@ -726,14 +742,11 @@ const App: React.FC = () => {
 
   const handleGoogleSignIn = async (): Promise<void> => {
     const provider = new GoogleAuthProvider();
-    try {
-        await signInWithPopup(auth, provider);
-        // onAuthStateChanged will handle the successful login.
-    } catch (error: any) {
-        // Silently re-throw the error to be handled by the UI component
-        // without logging to the console, as requested.
-        throw error;
-    }
+    // The signInWithPopup promise will reject on error.
+    // The AuthModal component, which calls this function, will catch the error
+    // and set its own state to display an appropriate message to the user.
+    await signInWithPopup(auth, provider);
+    // onAuthStateChanged will handle the successful login.
   };
   
   const handleResendVerification = async (): Promise<void> => {

@@ -53,7 +53,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
             // The console.error was removed as requested to hide the configuration error.
             // The UI will still show a user-friendly message.
             let userFriendlyError = t('errors.unknownError');
-            if (err.code === 'auth/unauthorized-domain') {
+            if (err.code === 'auth/unauthorized-domain' || err.code === 'auth/operation-not-allowed') {
                 setIsGoogleSignInUnavailable(true);
                 userFriendlyError = t('auth.unauthorizedDomain');
             } else if (err.code === 'auth/popup-blocked') {

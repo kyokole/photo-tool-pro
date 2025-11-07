@@ -38,6 +38,7 @@ export default {
     "printPrepareFailed": "Failed to prepare for printing:",
     "noResultToExport": "No result to export.",
     "imageUploadFailed": "An error occurred while uploading the image.",
-    "invalidCredential": "Invalid credentials. Please check your email and password."
+    "invalidCredential": "Invalid credentials. Please check your email and password.",
+    "apiKeyInvalid": "Invalid API Key. Please check the configuration. If you are a user, please contact the administrator for support."
   }
 }
