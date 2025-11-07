@@ -1,6 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const getModel = () => {
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY_INVALID");
+    }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    return new GoogleGenAI({ apiKey: process.env.API_KEY }).models;
+}
 
 export const BASE_PROMPT_INSTRUCTION = `You are a world-class expert in reverse-engineering images into prompts for generative AI. Your sole task is to analyze the provided image with microscopic detail and generate a prompt that can be used by an advanced AI image generator to reconstruct the original image with near-perfect, 1:1 fidelity.
 
@@ -32,6 +39,7 @@ For the **Facial Description** step, your task changes. Instead of creating a si
 
 export async function generatePromptFromImage(base64Image: string, mimeType: string, isFaceLockEnabled: boolean, language: string): Promise<string> {
   try {
+    const models = getModel();
     const imagePart = {
       inlineData: {
         data: base64Image,
@@ -45,7 +53,7 @@ export async function generatePromptFromImage(base64Image: string, mimeType: str
         ? `${BASE_PROMPT_INSTRUCTION}\n\n${FACE_LOCK_INSTRUCTION}${languageInstruction}` 
         : `${BASE_PROMPT_INSTRUCTION}${languageInstruction}`;
 
-    const response = await ai.models.generateContent({
+    const response = await models.generateContent({
       model: 'gemini-2.5-flash',
       contents: { parts: [imagePart] },
       config: {
@@ -76,7 +84,7 @@ export async function generatePromptFromImage(base64Image: string, mimeType: str
     return text.trim();
   } catch (error) {
     console.error("Error generating prompt from Gemini:", error);
-    if (error instanceof Error && error.message.includes('API key not valid')) {
+    if (error instanceof Error && (error.message.includes('API key not valid') || error.message.includes("API_KEY_INVALID"))) {
         throw new Error("API key không hợp lệ. Vui lòng kiểm tra cấu hình.");
     }
     if (error instanceof Error) {

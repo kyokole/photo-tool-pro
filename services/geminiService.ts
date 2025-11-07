@@ -148,9 +148,11 @@ const callGeminiApiForIdPhoto = async (
         throw new DOMException('Aborted by user', 'AbortError');
     }
 
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     if (!process.env.API_KEY) {
-        throw new Error("API key not found. Please set the API_KEY environment variable.");
+        throw new Error("API_KEY_INVALID");
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const imagePart: FilePart = {
@@ -202,9 +204,11 @@ const callGeminiApiForIdPhoto = async (
 }
 
 const callGeminiApiForRestoration = async (imagePart: FilePart, prompt: string): Promise<string> => {
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     if (!process.env.API_KEY) {
-        throw new Error("API_KEY is not set.");
+        throw new Error("API_KEY_INVALID");
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     try {
@@ -254,9 +258,11 @@ export const generateHeadshot = async (imagePart: FilePart, prompt: string, sign
     if (signal?.aborted) {
         throw new DOMException('Aborted by user', 'AbortError');
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     if (!process.env.API_KEY) {
-        throw new Error("API key not found. Please set the API_KEY environment variable.");
+        throw new Error("API_KEY_INVALID");
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const fullPrompt = `
@@ -306,8 +312,12 @@ export const generateHeadshot = async (imagePart: FilePart, prompt: string, sign
 
 export const generateFashionPhoto = async (imagePart: FilePart, settings: FashionStudioSettings, signal?: AbortSignal): Promise<string> => {
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
-    if (!process.env.API_KEY) throw new Error("API key not found.");
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY_INVALID");
+    }
     
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const userDescription = settings.description ? `${settings.description}. ` : '';
@@ -368,8 +378,12 @@ export const generateFourSeasonsPhoto = async (
     aspectRatio: string,
     customDescription: string
 ): Promise<string> => {
-    if (!process.env.API_KEY) throw new Error("API key not found.");
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY_INVALID");
+    }
     
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const themeTitle = season === 'spring' ? 'mùa xuân' : season === 'summer' ? 'mùa hạ' : season === 'autumn' ? 'mùa thu' : 'mùa đông';
 
@@ -440,9 +454,11 @@ export const generateBatchImages = async (
   aspectRatio: BatchAspectRatio,
   numOutputs: number
 ): Promise<string[]> => {
+  // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
   if (!process.env.API_KEY) {
-      throw new Error("API key not found. Please set the API_KEY environment variable.");
+      throw new Error("API_KEY_INVALID");
   }
+  // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -512,9 +528,11 @@ export const generateThumbnail = async ({
     ratio: ThumbnailRatio;
 }): Promise<{ image?: string; error?: string; }> => {
 
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     if (!process.env.API_KEY) {
-        return { error: "API key not configured." };
+        return { error: "API_KEY_INVALID" };
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
@@ -576,9 +594,11 @@ export const generateThumbnail = async ({
 };
 
 export const detectOutfit = async (base64Image: string, mimeType: string): Promise<string> => {
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     if (!process.env.API_KEY) {
-        throw new Error("API key not found.");
+        throw new Error("API_KEY_INVALID");
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const imagePart = { inlineData: { data: base64Image, mimeType } };
     const prompt = "Analyze the image and identify the main, most prominent piece of clothing the person is wearing. Respond with ONLY the name of the clothing in lowercase Vietnamese. For example: 'áo dài', 'vest', 'áo sơ mi'. Do not add any other words, punctuation, or explanations.";
@@ -592,9 +612,11 @@ export const detectOutfit = async (base64Image: string, mimeType: string): Promi
 };
 
 export const editOutfitOnImage = async (base64Image: string, mimeType: string, newOutfitPrompt: string): Promise<string> => {
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     if (!process.env.API_KEY) {
-        throw new Error("API key not found.");
+        throw new Error("API_KEY_INVALID");
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const imagePart = { inlineData: { data: base64Image, mimeType } };
     const prompt = `**CRITICAL INSTRUCTION: ABSOLUTE PRESERVATION**

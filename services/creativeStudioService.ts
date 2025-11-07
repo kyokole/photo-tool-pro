@@ -4,8 +4,19 @@ import { FeatureAction } from "../types";
 import { HIDDEN_ADDONS, K_CONCEPTS } from '../constants/creativeStudioConstants';
 import i18n from '../i18n';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-const imageEditingModel = 'gemini-2.5-flash-image';
+const getImageEditingModel = () => {
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) throw new Error("API_KEY_INVALID");
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    return new GoogleGenAI({ apiKey: process.env.API_KEY }).models;
+};
+
+const getTextModel = () => {
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) throw new Error("API_KEY_INVALID");
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    return new GoogleGenAI({ apiKey: process.env.API_KEY }).models;
+};
 
 
 // --- START: LOGIC FOR IMAGE VARIATION ---
@@ -159,12 +170,13 @@ const callEditingModel = async (parts: Part[], numImages: number): Promise<{imag
         throw new Error("A text prompt is required for image generation.");
     }
     const finalParts = [...imageParts, textPart];
-
+    
+    const models = getImageEditingModel();
 
     const promises: Promise<GenerateContentResponse>[] = [];
     for (let i = 0; i < numImages; i++) {
-        promises.push(ai.models.generateContent({
-            model: imageEditingModel,
+        promises.push(models.generateContent({
+            model: 'gemini-2.5-flash-image',
             contents: { parts: finalParts },
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
@@ -280,6 +292,7 @@ export const generateImagesFromFeature = async (
             };
 
             const imagePart = await fileToGenaiPart(reference_image);
+            const models = getImageEditingModel();
 
             const generationPromises = Array.from({ length: 4 }, (_, i) => {
                 const optionsForPrompt: ImageVariationOptions = {
@@ -293,8 +306,8 @@ export const generateImagesFromFeature = async (
                 const prompt = getImageVariationPromptTemplate(optionsForPrompt, i);
                 const textPart = { text: prompt };
             
-                return ai.models.generateContent({
-                    model: imageEditingModel,
+                return models.generateContent({
+                    model: 'gemini-2.5-flash-image',
                     contents: { parts: [imagePart, textPart] },
                     config: {
                         responseModalities: [Modality.IMAGE],
@@ -514,7 +527,8 @@ HƯỚNG DẪN: Sắp xếp người 1 và người 2 một cách tự nhiên tr
 
 export const getHotTrends = async (): Promise<string[]> => {
     try {
-        const response = await ai.models.generateContent({
+        const models = getTextModel();
+        const response = await models.generateContent({
             model: 'gemini-2.5-flash',
             contents: `Đóng vai một chuyên gia xu hướng mạng xã hội. Tìm kiếm trên web các xu hướng nhiếp ảnh và chỉnh sửa hình ảnh trực quan mới nhất và phổ biến nhất trên các nền tảng như TikTok, Instagram và Pinterest. Lập một danh sách gồm 25 xu hướng đa dạng và sáng tạo có thể áp dụng cho ảnh của một người. Đặt một cái tên ngắn gọn, hấp dẫn cho mỗi xu hướng bằng tiếng Việt.
 
@@ -561,8 +575,8 @@ Example:
   "vietnamesePrompt": "Một người phụ nữ Đông Á thanh lịch trong chiếc áo khoác vải tweed sang trọng..."
 }`;
 
-    const textAi = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-    const response = await textAi.models.generateContent({
+    const models = getTextModel();
+    const response = await models.generateContent({
         model: 'gemini-2.5-pro',
         contents: { parts: [imagePart, { text: prompt }] },
         config: {
@@ -592,7 +606,10 @@ export const generateVideoFromImage = async (
 ): Promise<string> => {
     setProgress('Đang khởi tạo tác vụ...');
     
-    const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) throw new Error("API_KEY_INVALID");
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const imagePayload = {
         imageBytes: base64Image,
@@ -626,6 +643,7 @@ export const generateVideoFromImage = async (
         throw new Error("Không tìm thấy link tải video trong phản hồi của API.");
     }
     
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
     const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
     if (!response.ok) {
         const errorBody = await response.text();

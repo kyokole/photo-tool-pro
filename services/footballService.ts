@@ -2,12 +2,19 @@ import { GoogleGenAI, Modality, Part } from '@google/genai';
 import { FootballStudioSettings } from '../types';
 import { fileToGenerativePart } from '../utils/fileUtils';
 
+// FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const generateFootballPhoto = async (settings: FootballStudioSettings): Promise<string> => {
     if (!settings.sourceImage) {
         throw new Error("Source image is missing.");
     }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY_INVALID");
+    }
+    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const { mode, sourceImage, category, team, player, scene, aspectRatio, style, customPrompt } = settings;
 
