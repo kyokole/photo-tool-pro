@@ -133,6 +133,18 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
+    if (!isAuthLoading) {
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+            preloader.classList.add('loaded');
+            setTimeout(() => {
+                preloader.remove();
+            }, 500);
+        }
+    }
+  }, [isAuthLoading]);
+
+  useEffect(() => {
     document.documentElement.lang = i18n.language;
     auth.languageCode = i18n.language;
   }, [i18n.language]);
@@ -1325,7 +1337,7 @@ const App: React.FC = () => {
   };
 
   if (isAuthLoading) {
-    return <LoadingOverlay />;
+    return null;
   }
 
   return (
