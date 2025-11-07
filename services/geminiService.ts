@@ -100,7 +100,7 @@ Follow the specific instructions for background, clothing, and facial adjustment
         case 'auto': return 'Make the hair look neat and tidy, suitable for a professional photo.';
         case 'down': return 'Style the hair down at the front.';
         case 'slicked_back': return 'Style the hair slicked back.';
-        case 'keep_original': return 'CRITICAL: Keep the original hairstyle. Do not make any changes to the person\'s hair style, length, or form.';
+        case 'keep_original': return 'CRITICAL: Keep the original hairstyle. Do not make any changes to the person\\\'s hair style, length, or form.';
         default: return 'Make the hair look neat and tidy, suitable for a professional photo.';
     }
 })()}
@@ -193,7 +193,7 @@ const callGeminiApiForIdPhoto = async (
         }
     }
     
-    const refusalText = response.candidates[0]?.content?.parts?.[0]?.text;
+    const refusalText = response.text;
     if (refusalText) {
        throw new Error(`API từ chối xử lý ảnh. Lý do: ${refusalText}`);
     }
@@ -203,7 +203,7 @@ const callGeminiApiForIdPhoto = async (
 
 const callGeminiApiForRestoration = async (imagePart: FilePart, prompt: string): Promise<string> => {
     if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable is not set.");
+        throw new Error("API_KEY is not set.");
     }
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -228,7 +228,7 @@ const callGeminiApiForRestoration = async (imagePart: FilePart, prompt: string):
             }
         }
         
-        const refusalText = response.candidates[0]?.content?.parts?.[0]?.text;
+        const refusalText = response.text;
         if (refusalText) {
            throw new Error(`API từ chối xử lý ảnh. Lý do: ${refusalText}`);
         }
@@ -353,7 +353,7 @@ export const generateFashionPhoto = async (imagePart: FilePart, settings: Fashio
         }
     }
 
-    const refusalText = response.candidates[0]?.content?.parts?.[0]?.text;
+    const refusalText = response.text;
     if (refusalText) {
         throw new Error(`API từ chối xử lý ảnh. Lý do: ${refusalText}`);
     }
@@ -414,7 +414,7 @@ export const generateFourSeasonsPhoto = async (
         }
     }
 
-    const refusalText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    const refusalText = response.text;
     if (refusalText) {
         throw new Error(`API Refusal: ${refusalText}`);
     }
@@ -561,7 +561,7 @@ export const generateThumbnail = async ({
             }
         }
         
-        const refusalText = response.candidates[0]?.content?.parts?.[0]?.text;
+        const refusalText = response.text;
         if (refusalText) {
            return { error: `API Refusal: ${refusalText}` };
         }
@@ -619,7 +619,7 @@ export const editOutfitOnImage = async (base64Image: string, mimeType: string, n
         }
     }
     
-    const refusalText = response.candidates[0]?.content?.parts?.[0]?.text;
+    const refusalText = response.text;
     if (refusalText) {
        throw new Error(`API Refusal: ${refusalText}`);
     }
