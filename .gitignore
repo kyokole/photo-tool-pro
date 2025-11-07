@@ -7,6 +7,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Local Secrets & API Keys
+# This file should not be committed to version control.
+apiKey.js
+
+# Dependencies
 node_modules
 dist
 dist-ssr
