@@ -5,17 +5,17 @@ import { HIDDEN_ADDONS, K_CONCEPTS } from '../constants/creativeStudioConstants'
 import i18n from '../i18n';
 
 const getImageEditingModel = () => {
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    if (!process.env.API_KEY) throw new Error("API_KEY_INVALID");
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    return new GoogleGenAI({ apiKey: process.env.API_KEY }).models;
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    if (!process.env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    return new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY }).models;
 };
 
 const getTextModel = () => {
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    if (!process.env.API_KEY) throw new Error("API_KEY_INVALID");
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    return new GoogleGenAI({ apiKey: process.env.API_KEY }).models;
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    if (!process.env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    return new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY }).models;
 };
 
 
@@ -606,10 +606,10 @@ export const generateVideoFromImage = async (
 ): Promise<string> => {
     setProgress('Đang khởi tạo tác vụ...');
     
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    if (!process.env.API_KEY) throw new Error("API_KEY_INVALID");
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    const videoAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    if (!process.env.VITE_GEMINI_API_KEY) throw new Error("API_KEY_INVALID");
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    const videoAi = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY });
 
     const imagePayload = {
         imageBytes: base64Image,
@@ -643,8 +643,8 @@ export const generateVideoFromImage = async (
         throw new Error("Không tìm thấy link tải video trong phản hồi của API.");
     }
     
-    // FIX: Use process.env.API_KEY as per the guidelines to fix TypeScript error and follow API key requirements.
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    // FIX: Use VITE_GEMINI_API_KEY as required by the Vite build process for client-side environment variables.
+    const response = await fetch(`${downloadLink}&key=${process.env.VITE_GEMINI_API_KEY}`);
     if (!response.ok) {
         const errorBody = await response.text();
         console.error("Failed to download video:", errorBody);
