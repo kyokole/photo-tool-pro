@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="galactic-cobalt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TOOL ẢNH PRO | Công Cụ Chỉnh Sửa & Tạo Ảnh AI</title>
+    <meta name="description" content="TOOL ẢNH PRO: Bộ công cụ AI tất-cả-trong-một. Tạo ảnh thẻ chuyên nghiệp, ảnh headshot, ảnh thời trang, phục hồi ảnh cũ, và sáng tạo không giới hạn với Gemini AI." />
+    <meta name="keywords" content="AI photo editor, tạo ảnh thẻ, phục hồi ảnh cũ, ảnh AI, Gemini API, AI headshot, fashion studio, chỉnh sửa ảnh, công cụ AI, tool ảnh" />
+    <meta name="author" content="Kyoko Le" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
+    "react-i18next": "https://aistudiocdn.com/react-i18next@^16.2.3",
+    "i18next": "https://aistudiocdn.com/i18next@^25.6.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.5.0/"
+  }
+}
+</script>
+<style>
+  :root[data-theme='rose-gold-glam'] {
+    --bg-primary: #fff7f9;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #fceef2;
+    --bg-hover: #f9e4ea;
+    --bg-interactive: rgba(252, 238, 242, 0.8);
+    --bg-interactive-hover: rgba(249, 228, 234, 0.9);
+
+    /* Darker text for high contrast */
+    --text-primary: #4a2c3d;
+    --text-secondary: #704560;
+    --text-muted: #856377;
+    --text-active: var(--text-primary); /* Use main text color for active state for max contrast */
+    
+    --border-color: rgba(92, 55, 76, 0.15);
+    --ring-color: #c45a6b; /* Darker accent */
+
+    /* Darker gradients for better contrast with white button text */
+    --accent-gradient-start: #c45a6b; 
+    --accent-gradient-end: #b52058;
+    --accent-gradient-start-hover: #b52058;
+    --accent-gradient-end-hover: #a11c4e;
+
+    /* Darker text accents for readability on light backgrounds */
+    --accent-text-start: #9c1a4a;
+    --accent-text-end: #a13a4d;
+    --accent-border-subtle: rgba(181, 32, 88, 0.4);
+    
+    --button-primary: #b52058;
+    --button-secondary: #c45a6b;
+    --accent-gold: #c08d2c;
+    --accent-gold-glow: rgba(252, 211, 77, 0.6);
+
+    /* Legacy Vars for compatibility, referencing new vars */
+    --bg-deep-space: var(--bg-primary);
+    --bg-component: var(--bg-secondary);
+    --bg-component-light: var(--bg-tertiary);
+    --accent-blue: var(--accent-text-start);
+    --accent-cyan: var(--accent-text-end);
+    --accent-blue-glow: rgba(181, 32, 88, 0.4);
+    --accent-cyan-glow: rgba(196, 90, 107, 0.5);
+    --gradient-start: var(--accent-gradient-start);
+    --gradient-end: var(--accent-gradient-end);
+    --bg-glow: radial-gradient(circle at 1% 1%, rgba(217, 70, 127, 0.1) 0%, transparent 35%),
+               radial-gradient(circle at 99% 99%, rgba(229, 140, 154, 0.1) 0%, transparent 40%);
+  }
+
+  :root[data-theme='cyberpunk-night'] {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a; 
+    --bg-tertiary: #333333;
+    --bg-hover: #4d4d4d;
+    --bg-interactive: rgba(26, 26, 26, 0.5);
+    --bg-interactive-hover: rgba(52, 52, 52, 0.5);
+    
+    --text-primary: #ffffff;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --text-active: #ffffff;
+    
+    --border-color: rgba(255, 255, 255, 0.1);
+    --ring-color: #a855f7;
+    
+    --accent-gradient-start: #a855f7;
+    --accent-gradient-end: #3b82f6;
+    --accent-gradient-start-hover: #9333ea;
+    --accent-gradient-end-hover: #2563eb;
+
+    --accent-text-start: #c084fc;
+    --accent-text-end: #60a5fa;
+    --accent-border-subtle: rgba(192, 132, 252, 0.4);
+
+    --button-primary: #a855f7;
+    --button-secondary: #3b82f6;
+    --accent-gold: #facc15;
+    --accent-gold-glow: rgba(250, 204, 21, 0.5);
+
+    /* Legacy Vars */
+    --bg-deep-space: var(--bg-primary);
+    --bg-component: var(--bg-secondary);
+    --bg-component-light: var(--bg-tertiary);
+    --accent-blue: var(--accent-text-start);
+    --accent-cyan: var(--accent-text-end);
+    --accent-blue-glow: rgba(168, 85, 247, 0.5);
+    --accent-cyan-glow: rgba(59, 130, 246, 0.6);
+    --gradient-start: var(--accent-gradient-start);
+    --gradient-end: var(--accent-gradient-end);
+    --bg-glow: radial-gradient(circle at 1% 1%, rgba(168, 85, 247, 0.1) 0%, transparent 35%),
+               radial-gradient(circle at 99% 99%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
+  }
+
+  :root[data-theme='synthwave-grid'] {
+    --bg-primary: #0D0C22;
+    --bg-secondary: #12102A;
+    --bg-tertiary: #1A183C;
+    --bg-hover: #2A2854;
+    --bg-interactive: rgba(18, 16, 42, 0.6);
+    --bg-interactive-hover: rgba(26, 24, 60, 0.8);
+
+    --text-primary: #E0E6F1;
+    --text-secondary: #8B99B0;
+    --text-muted: #6b7990;
+    --text-active: #ffffff;
+
+    --border-color: rgba(139, 153, 176, 0.15);
+    --ring-color: #00F5FF;
+
+    --accent-gradient-start: #7B2BFF; /* Nebula Violet */
+    --accent-gradient-end: #C322FF; /* Hyper Magenta */
+    --accent-gradient-start-hover: #8A42FF;
+    --accent-gradient-end-hover: #D83BFF;
+
+    --accent-text-start: #00F5FF; /* Electric Cyan */
+    --accent-text-end: #7B2BFF; /* Nebula Violet */
+    --accent-border-subtle: rgba(0, 245, 255, 0.4);
+
+    --button-primary: #7B2BFF;
+    --button-secondary: #00F5FF;
+    --accent-gold: #fde047;
+    --accent-gold-glow: rgba(253, 224, 71, 0.5);
+
+    /* Legacy Vars */
+    --bg-deep-space: var(--bg-primary);
+    --bg-component: var(--bg-secondary);
+    --bg-component-light: var(--bg-tertiary);
+    --accent-blue: var(--accent-text-start);
+    --accent-cyan: var(--accent-text-end);
+    --accent-cyan-glow: rgba(0, 245, 255, 0.5);
+    --accent-blue-glow: rgba(123, 43, 255, 0.5);
+    --gradient-start: var(--accent-gradient-start);
+    --gradient-end: var(--accent-gradient-end);
+    --bg-glow: radial-gradient(circle at 1% 1%, rgba(0, 245, 255, 0.1) 0%, transparent 40%),
+               radial-gradient(circle at 99% 99%, rgba(123, 43, 255, 0.1) 0%, transparent 35%);
+  }
+
+  :root, :root[data-theme='galactic-cobalt'] {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --bg-hover: #30363d;
+    --bg-interactive: rgba(22, 27, 34, 0.7);
+    --bg-interactive-hover: rgba(33, 38, 45, 0.8);
+    
+    --text-primary: #c9d1d9;
+    --text-secondary: #b1bac4;
+    --text-muted: #8b949e;
+    --text-active: #ffffff;
+    
+    --border-color: rgba(139, 148, 158, 0.2);
+    --ring-color: #58a6ff;
+    
+    --accent-gradient-start: #388bfd;
+    --accent-gradient-end: #1f6feb;
+    --accent-gradient-start-hover: #58a6ff;
+    --accent-gradient-end-hover: #388bfd;
+    
+    --accent-text-start: #58a6ff;
+    --accent-text-end: #79c0ff;
+    --accent-border-subtle: rgba(88, 166, 255, 0.4);
+    
+    --button-primary: #238636;
+    --button-secondary: #58a6ff;
+    --accent-gold: #facc15;
+    --accent-gold-glow: rgba(250, 204, 21, 0.5);
+
+    /* Legacy Vars */
+    --bg-deep-space: var(--bg-primary);
+    --bg-component: var(--bg-secondary);
+    --bg-component-light: var(--bg-tertiary);
+    --accent-blue: var(--accent-text-start);
+    --accent-cyan: var(--accent-text-end);
+    --accent-blue-glow: rgba(88, 166, 255, 0.5);
+    --accent-cyan-glow: rgba(121, 192, 255, 0.6);
+    --gradient-start: var(--accent-gradient-start);
+    --gradient-end: var(--accent-gradient-end);
+    --bg-glow: radial-gradient(circle at 1% 1%, rgba(88, 166, 255, 0.1) 0%, transparent 35%),
+               radial-gradient(circle at 99% 99%, rgba(121, 192, 255, 0.1) 0%, transparent 40%);
+  }
+  
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 17px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-deep-space);
+    background-image: var(--bg-glow);
+    background-size: 100% 100%;
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
+  }
+  
+  /* Pre-loader styles */
+  #preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background-color: var(--bg-deep-space);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease-out;
+  }
+  #preloader.loaded {
+    opacity: 0;
+    pointer-events: none;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  #preloader .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(88, 166, 255, 0.3);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  #preloader .preloader-footer {
+      position: absolute;
+      bottom: 2rem;
+      text-align: center;
+  }
+
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 15px var(--accent-cyan-glow); }
+    50% { box-shadow: 0 0 25px var(--accent-cyan-glow); }
+  }
+  .animate-pulse-glow {
+    animation: pulseGlow 2.5s infinite;
+  }
+
+  @keyframes pulse-gold {
+    0%, 100% { filter: drop-shadow(0 0 4px var(--accent-gold-glow)); }
+    50% { filter: drop-shadow(0 0 8px var(--accent-gold-glow)); }
+  }
+  .animate-pulse-gold {
+      animation: pulse-gold 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Custom Scrollbar */
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: var(--bg-deep-space); }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--bg-component-light); border-radius: 3px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* --- NEW CUSTOM SLIDER STYLES --- */
+  .custom-slider {
+    --thumb-size: 18px;
+    --track-height: 8px;
+    --progress-percent: 50%; /* Default value, will be updated by JS */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: var(--thumb-size);
+    background-color: transparent;
+    cursor: pointer;
+  }
+
+  /* Webkit Track */
+  .custom-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: var(--track-height);
+    background: linear-gradient(to right, var(--accent-blue) var(--progress-percent), var(--bg-component-light) var(--progress-percent));
+    border-radius: calc(var(--track-height) / 2);
+    transition: all 0.2s;
+  }
+
+  /* Webkit Thumb */
+  .custom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: calc((var(--track-height) - var(--thumb-size)) / 2);
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    background-color: var(--accent-cyan);
+    border-radius: 50%;
+    border: 3px solid var(--bg-secondary);
+    box-shadow: 0 0 8px var(--accent-blue-glow);
+    transition: transform 0.2s ease-out;
+  }
+  .custom-slider:hover::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+  .custom-slider:active::-webkit-slider-thumb {
+    transform: scale(1.2);
+  }
+
+  /* Mozilla Track */
+  .custom-slider::-moz-range-track {
+    width: 100%;
+    height: var(--track-height);
+    background: var(--bg-component-light); /* Fallback */
+    border-radius: calc(var(--track-height) / 2);
+  }
+  /* Mozilla Progress */
+ .custom-slider::-moz-range-progress {
+    background-color: var(--accent-blue);
+    height: var(--track-height);
+    border-radius: calc(var(--track-height) / 2);
+  }
+
+  /* Mozilla Thumb */
+  .custom-slider::-moz-range-thumb {
+    width: var(--thumb-size);
+    height: var(--thumb-size);
+    background-color: var(--accent-cyan);
+    border-radius: 50%;
+    border: 3px solid var(--bg-secondary);
+    box-shadow: 0 0 8px var(--accent-blue-glow);
+    transition: transform 0.2s ease-out;
+  }
+  .custom-slider:hover::-moz-range-thumb {
+    transform: scale(1.15);
+  }
+  
+  /* Tooltip for Slider */
+  .slider-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: var(--progress-percent);
+    transform: translateX(-50%);
+    background-color: var(--bg-tertiary);
+    color: var(--text-active);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    pointer-events: none;
+  }
+  .slider-tooltip-visible {
+      opacity: 1;
+  }
+
+
+  /* Custom Form Elements */
+  .form-checkbox, .form-radio {
+    appearance: none;
+    background-color: transparent;
+    border: 1px solid var(--text-secondary);
+    width: 1.15em;
+    height: 1.15em;
+    display: inline-grid;
+    place-content: center;
+    transition: all 0.2s ease-in-out;
+  }
+  .form-checkbox { border-radius: 0.25rem; }
+  .form-radio { border-radius: 50%; }
+
+  .form-checkbox:checked, .form-radio:checked {
+    background-image: linear-gradient(to right, var(--gradient-start), var(--gradient-end));
+    border-color: transparent;
+  }
+  .form-checkbox::before {
+    content: '';
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em white;
+    transform-origin: bottom left;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+  .form-radio::before {
+    content: '';
+    width: 0.5em;
+    height: 0.5em;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em white;
+  }
+  .form-checkbox:checked::before, .form-radio:checked::before {
+    transform: scale(1);
+  }
+
+  /* Focus Ring */
+  *:focus-visible {
+    outline: 2px solid var(--accent-cyan) !important;
+    outline-offset: 2px !important;
+    border-radius: 4px;
+    box-shadow: 0 0 12px var(--accent-cyan-glow);
+  }
+  
+  /* Gradient Button */
+  .btn-gradient {
+    background-image: linear-gradient(to right, var(--gradient-start) 0%, var(--gradient-end) 51%, var(--gradient-start) 100%);
+    background-size: 200% auto;
+    transition: background-position 0.5s;
+  }
+  .btn-gradient:hover:not(:disabled) {
+    background-position: right center;
+  }
+  
+  .btn-secondary {
+    background-color: var(--bg-component-light);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease-in-out;
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px var(--accent-blue-glow);
+  }
+
+  /* Animated Gradient Text */
+  @keyframes animate-gradient-text {
+    from { background-position: 0% center; }
+    to { background-position: -200% center; }
+  }
+  .animated-gradient-text {
+    font-weight: 500;
+    background-image: linear-gradient(to right, var(--accent-text-start), var(--accent-text-end), var(--accent-text-start));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: animate-gradient-text 5s linear infinite;
+    transition: transform 0.3s ease, filter 0.3s ease;
+  }
+  .animated-gradient-text:hover {
+      transform: scale(1.05);
+      filter: brightness(1.2);
+  }
+
+  /* --- Four Seasons Hover Effects --- */
+  .season-card {
+    position: relative;
+    overflow: hidden;
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    -webkit-transform: translate3d(0, 0, 0);
+    -moz-transform: translate3d(0, 0, 0);
+  }
+
+  .season-card .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .season-card .particle {
+    position: absolute;
+    top: -20%;
+    font-size: 1.5rem;
+    opacity: 0;
+    animation-duration: 4s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  .season-card-spring .particle::before { content: '🌸'; }
+  .season-card-autumn .particle::before { content: '🍂'; }
+  .season-card-winter .particle::before { content: '❄️'; }
+
+  .season-card:hover .particle {
+    opacity: 0.7;
+    animation-name: fall;
+  }
+
+  @keyframes fall {
+    0% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 0.7;
+    }
+    100% {
+      transform: translateY(120%) rotate(360deg);
+      opacity: 0;
+    }
+  }
+
+  /* Individual particle settings for randomization */
+  .season-card .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+  .season-card .particle:nth-child(2) { left: 20%; animation-delay: -1.5s; font-size: 1rem; }
+  .season-card .particle:nth-child(3) { left: 30%; animation-delay: -3s; }
+  .season-card .particle:nth-child(4) { left: 40%; animation-delay: -0.5s; font-size: 1.2rem; }
+  .season-card .particle:nth-child(5) { left: 50%; animation-delay: -2.5s; }
+  .season-card .particle:nth-child(6) { left: 60%; animation-delay: -1s; font-size: 1rem; }
+  .season-card .particle:nth-child(7) { left: 70%; animation-delay: -2s; }
+  .season-card .particle:nth-child(8) { left: 80%; animation-delay: -3.5s; font-size: 1.2rem; }
+  .season-card .particle:nth-child(9) { left: 90%; animation-delay: -0.2s; }
+
+  /* Summer Sun Rays Effect */
+  .season-card-summer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    padding-bottom: 200%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 220, 100, 0.4) 0%, rgba(255, 220, 100, 0) 60%);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.8s;
+  }
+  .season-card-summer:hover::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  /* Winter Frost Effect */
+  .season-card-winter::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+      backdrop-filter: blur(1px);
+  }
+  .season-card-winter:hover::before {
+      opacity: 0.1;
+  }
+
+  /* FIX: Override for winter snowflake color */
+  .season-card-winter .animated-gradient-text.text-3xl, /* Targets the icon span specifically */
+  .season-card-winter .particle { /* Targets the falling particles */
+    background-image: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="preloader">
+      <div class="spinner"></div>
+      <footer class="preloader-footer">
+          <div 
+              class="inline-block text-sm animated-gradient-text"
+          >
+              © 2025 - Thiết kế & Phát triển bởi Kyoko Le
+          </div>
+      </footer>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

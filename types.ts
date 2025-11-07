@@ -1,0 +1,284 @@
+import type { LayoutResult as CoreLayoutResult } from './utils/canvasUtils';
+
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio';
+export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
+export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
+export type OutfitMode = 'preset' | 'custom' | 'upload';
+export type HairStyle = 'auto' | 'down' | 'slicked_back' | 'keep_original';
+export type BackgroundMode = 'white' | 'light_blue' | 'custom' | 'ai';
+export type PrintLayout = 'none' | '10x15' | '13x18' | '20x30';
+export type PaperBackground = 'white' | 'gray';
+export type AccordionSection = 'layout' | 'outfit' | 'face' | 'background' | '';
+
+
+export interface Settings {
+  aspectRatio: AspectRatio;
+  outfit: {
+    mode: OutfitMode;
+    preset: string;
+    customPrompt: string;
+    uploadedFile: File | null;
+    keepOriginal: boolean;
+  };
+  face: {
+    otherCustom: string;
+    hairStyle: HairStyle;
+    keepOriginalFeatures: boolean;
+    smoothSkin: boolean;
+    slightSmile: boolean;
+  };
+  background: {
+    mode: BackgroundMode;
+    customColor: string;
+    customPrompt: string;
+  };
+  safe5x5Layout: boolean;
+  printLayout: PrintLayout;
+  paperBackground: PaperBackground;
+}
+
+export interface HistoryItem {
+    image: string;
+    settings: Settings;
+}
+
+export interface HeadshotStyle {
+  id: string;
+  nameKey: string; // Changed from name to nameKey for i18n
+  prompt: string;
+  type: 'professional' | 'artistic' | 'outdoor' | 'minimalist';
+}
+
+export interface HeadshotResult {
+    id: string;
+    imageUrl: string;
+}
+
+// Types for the new Restoration Tool
+export interface FilePart {
+  inlineData: {
+    data: string;
+    mimeType: string;
+  };
+}
+
+export interface RestorationResult {
+  key: string; // Used to look up title and description from translation files
+  imageUrl: string;
+}
+
+export interface User {
+  uid: string;
+  username: string;
+  subscriptionEndDate: string; // ISO 8601 date string
+  isAdmin?: boolean;
+  deviceFingerprint?: string;
+}
+
+// --- Types for the new Fashion Studio ---
+export type FashionCategory = 'female' | 'male' | 'girl' | 'boy';
+
+export interface FashionStyle {
+  key: string;
+  promptValue: string;
+}
+
+export interface FashionStudioSettings {
+  category: FashionCategory;
+  style: string; // This will store the promptValue
+  aspectRatio: FashionAspectRatio;
+  description: string;
+  highQuality: boolean;
+}
+
+export interface FashionStudioResult {
+  id: string;
+  imageUrl: string;
+}
+
+// --- Types for the new Football Studio ---
+export type FootballMode = 'idol' | 'outfit';
+export type FootballCategory = 'contemporary' | 'legendary';
+
+export interface FootballStudioSettings {
+  mode: FootballMode;
+  sourceImage: File | null;
+  category: FootballCategory;
+  team: string;
+  player: string;
+  scene: string;
+  aspectRatio: string;
+  style: string;
+  customPrompt: string;
+}
+
+export interface FootballStudioResult {
+  id: string;
+  imageUrl: string;
+}
+
+
+// --- Batch Processing Types ---
+export interface IdPhotoJob {
+  id: string;
+  file: File;
+  originalUrl: string;
+  processedUrl: string | null;
+  status: 'pending' | 'processing' | 'done' | 'error';
+  error?: string;
+}
+
+// --- Types for Four Seasons Studio ---
+export interface Scene {
+  title: string;
+  desc: string;
+}
+
+
+// --- Types for AI Studio ---
+
+export enum FeatureAction {
+  PRODUCT_PHOTO = 'product_photo',
+  TRY_ON_OUTFIT = 'try_on_outfit',
+  PLACE_IN_SCENE = 'place_in_scene',
+  COUPLE_COMPOSE = 'couple_compose',
+  FASHION_STUDIO = 'fashion_studio',
+  EXTRACT_OUTFIT = 'extract_outfit',
+  CHANGE_HAIRSTYLE = 'change_hairstyle',
+  CREATE_ALBUM = 'create_album',
+  CREATIVE_COMPOSITE = 'creative_composite',
+  BIRTHDAY_PHOTO = 'birthday_photo',
+  HOT_TREND_PHOTO = 'hot_trend_photo',
+  AI_TRAINER = 'ai_trainer',
+  ID_PHOTO = 'id_photo',
+  AI_THUMBNAIL_DESIGNER = 'ai_thumbnail_designer',
+  BATCH_GENERATOR = 'batch_generator',
+  IMAGE_VARIATION_GENERATOR = 'image_variation_generator',
+  KOREAN_STYLE_STUDIO = 'korean_style_studio',
+}
+
+export interface BaseInput {
+  type: string;
+  label: string;
+  name: string;
+  required?: boolean;
+}
+
+export interface TextInput extends BaseInput {
+  type: 'text';
+  placeholder?: string;
+}
+
+export interface SliderInput extends BaseInput {
+    type: 'slider';
+    min?: number;
+    max?: number;
+    step?: number;
+    default?: number;
+}
+
+export interface FileInput extends BaseInput {
+  type: 'file';
+  accept: string[];
+}
+
+export interface SelectInput extends BaseInput {
+  type: 'select';
+  options: (string | { value: string; label: string })[];
+  placeholder?: string;
+  default?: string;
+}
+
+export interface MultiSelectInput extends BaseInput {
+  type: 'multiselect';
+  options: string[];
+  placeholder?: string;
+}
+
+export interface CheckboxInput extends BaseInput {
+  type: 'checkbox';
+  default?: boolean;
+}
+
+export interface ImageSelectOption {
+  name: string;
+  preview: string;
+}
+
+export interface ImageSelectInput extends BaseInput {
+  type: 'imageselect';
+  options: ImageSelectOption[];
+}
+
+
+export type FeatureInput = TextInput | FileInput | SelectInput | MultiSelectInput | CheckboxInput | ImageSelectInput | SliderInput;
+
+export interface Feature {
+  name: string;
+  action: FeatureAction;
+  icon: string;
+  inputs: FeatureInput[];
+}
+
+export type ConceptType = 'character' | 'style';
+
+export interface Concept {
+    id: string;
+    name: string;
+    type: ConceptType;
+    images: string[]; // base64 encoded images
+}
+
+// --- Types for AI Thumbnail Generator ---
+export type ThumbnailRatio = '16:9' | '9:16';
+
+export interface ThumbnailInputs {
+  title: string;
+  speaker: string;
+  outfit: string;
+  action: string;
+  extra: string;
+}
+
+export interface ThumbnailImageData {
+  element: HTMLImageElement;
+  url: string;
+}
+
+// --- Types for Batch Generator ---
+export enum JobStatus {
+  Queued = 'Queued',
+  Running = 'Running',
+  Success = 'Success',
+  Failed = 'Failed',
+}
+
+export type BatchAspectRatio = '1:1' | '16:9' | '9:16' | '4:3' | '3:4';
+
+export const batchAspectRatios: BatchAspectRatio[] = ['9:16', '1:1', '16:9', '4:3', '3:4'];
+
+export const isBatchAspectRatio = (value: any): value is BatchAspectRatio => {
+  return batchAspectRatios.includes(value);
+};
+
+export interface GeneratedImage {
+  id: string;
+  base64: string;
+}
+
+export interface JobDefinition {
+  prompt: string;
+  aspectRatio: BatchAspectRatio;
+  numOutputs: number;
+}
+
+export interface Job extends JobDefinition {
+  id: string;
+  status: JobStatus;
+  result: GeneratedImage[];
+  error?: string;
+}
+
+
+// Re-export for use in other components if needed
+export type LayoutResult = CoreLayoutResult;
