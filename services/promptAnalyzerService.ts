@@ -6,13 +6,18 @@ const callBackendApi = async (action: string, payload: any): Promise<any> => {
         body: JSON.stringify({ action, payload }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-        throw new Error(data.error || 'An unknown error occurred with the API proxy.');
+        let errorMessage = 'An unknown server error occurred.';
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || JSON.stringify(errorData);
+        } catch (e) {
+            errorMessage = await response.text();
+        }
+        throw new Error(errorMessage);
     }
 
-    return data;
+    return response.json();
 };
 
 

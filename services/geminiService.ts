@@ -15,14 +15,21 @@ const callBackendApi = async (action: string, payload: any): Promise<any> => {
         body: JSON.stringify({ action, payload }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-        // Forward the error message from the backend
-        throw new Error(data.error || 'An unknown error occurred with the API proxy.');
+        let errorMessage = 'An unknown server error occurred.';
+        try {
+            // First, try to parse the error as JSON. This is the expected format.
+            const errorData = await response.json();
+            errorMessage = errorData.error || JSON.stringify(errorData);
+        } catch (e) {
+            // If JSON parsing fails, it's likely a plain text error from Vercel (e.g., function crashed).
+            errorMessage = await response.text();
+        }
+        throw new Error(errorMessage);
     }
 
-    return data;
+    // If response is OK, we expect valid JSON.
+    return response.json();
 };
 
 // --- ID Photo Tool ---
