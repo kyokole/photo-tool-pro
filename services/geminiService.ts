@@ -16,14 +16,17 @@ const callBackendApi = async (action: string, payload: any): Promise<any> => {
     });
 
     if (!response.ok) {
-        let errorMessage = 'An unknown server error occurred.';
+        // Read the body ONCE as text.
+        const errorText = await response.text(); 
+        let errorMessage = errorText; 
+
         try {
-            // First, try to parse the error as JSON. This is the expected format.
-            const errorData = await response.json();
+            // Then, TRY to parse that text as JSON.
+            const errorData = JSON.parse(errorText);
             errorMessage = errorData.error || JSON.stringify(errorData);
         } catch (e) {
-            // If JSON parsing fails, it's likely a plain text error from Vercel (e.g., function crashed).
-            errorMessage = await response.text();
+            // If parsing fails, it was plain text. We already have the error message.
+            // No extra action needed.
         }
         throw new Error(errorMessage);
     }
