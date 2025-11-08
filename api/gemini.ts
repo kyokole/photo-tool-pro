@@ -139,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     : `${BASE_PROMPT_INSTRUCTION}${languageInstruction}`;
 
                 const response = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart] }, config: { systemInstruction } });
-                return res.status(200).json({ prompt: response.text.trim() });
+                return res.status(200).json({ prompt: (response.text ?? '').trim() });
             }
 
             case 'detectOutfit': {
@@ -149,7 +149,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const prompt = "Analyze the image and identify the main, most prominent piece of clothing the person is wearing. Respond with ONLY the name of the clothing in lowercase Vietnamese. For example: 'áo dài', 'vest', 'áo sơ mi'. Do not add any other words, punctuation, or explanations.";
                 const response = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart, { text: prompt }] } });
-                return res.status(200).json({ outfit: response.text.trim() });
+                return res.status(200).json({ outfit: (response.text ?? '').trim() });
             }
 
             case 'editOutfitOnImage': {
@@ -242,7 +242,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     contents: `Đóng vai một chuyên gia xu hướng mạng xã hội. Tìm kiếm trên web các xu hướng nhiếp ảnh và chỉnh sửa hình ảnh trực quan mới nhất và phổ biến nhất trên các nền tảng như TikTok, Instagram và Pinterest. Lập một danh sách gồm 25 xu hướng đa dạng và sáng tạo có thể áp dụng cho ảnh của một người. Đặt một cái tên ngắn gọn, hấp dẫn cho mỗi xu hướng bằng tiếng Việt. Chỉ trả về một mảng JSON hợp lệ chứa các chuỗi, trong đó mỗi chuỗi là một tên xu hướng. Không bao gồm các dấu ngoặc kép markdown (\`\`\`json), giải thích hoặc bất kỳ văn bản nào khác ngoài mảng JSON.`,
                     config: { tools: [{googleSearch: {}}] }
                 });
-                let jsonStr = response.text.trim().match(/(\[[\s\S]*\])/)?.[0];
+                let jsonStr = (response.text ?? '').trim().match(/(\[[\s\S]*\])/)?.[0];
                 if (!jsonStr) throw new Error("Không thể phân tích xu hướng từ phản hồi của AI.");
                 return res.status(200).json({ trends: JSON.parse(jsonStr) });
             }
