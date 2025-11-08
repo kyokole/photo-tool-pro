@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/gemini.ts": {
-      "maxDuration": 60
-    }
-  }
-}
+full contents of vercel.json
