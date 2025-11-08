@@ -414,12 +414,22 @@ const App: React.FC = () => {
          console.log('Generation was aborted by the user.');
          setIdPhotoError(t('errors.generationCancelled'));
       } else {
-        console.error(err);
-        const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
-        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+        let errorStringForSearch: string;
+        try {
+            errorStringForSearch = JSON.stringify(err);
+        } catch {
+            errorStringForSearch = String(err);
+        }
+
+        console.error("Generation failed with error:", errorStringForSearch);
+
+        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+            setIdPhotoError(t('errors.quotaExceeded'));
+        } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
             setIdPhotoError(t('errors.apiKeyInvalid'));
         } else {
-            setIdPhotoError(t('errors.generationFailed', { error: errorMessage }));
+            const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
+            setIdPhotoError(t('errors.generationFailed', { error: displayMessage }));
         }
       }
     } finally {
@@ -608,12 +618,22 @@ const App: React.FC = () => {
             console.log('Headshot generation was aborted by the user.');
             setHeadshotError(t('errors.generationCancelled'));
         } else {
-            console.error("Headshot generation failed:", err);
-            const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
-            if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+            let errorStringForSearch: string;
+            try {
+                errorStringForSearch = JSON.stringify(err);
+            } catch {
+                errorStringForSearch = String(err);
+            }
+    
+            console.error("Headshot generation failed with error:", errorStringForSearch);
+    
+            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+                setHeadshotError(t('errors.quotaExceeded'));
+            } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
                 setHeadshotError(t('errors.apiKeyInvalid'));
             } else {
-                setHeadshotError(t('errors.headshotGenerationFailed', { error: errorMessage }));
+                const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
+                setHeadshotError(t('errors.headshotGenerationFailed', { error: displayMessage }));
             }
         }
     } finally {
@@ -649,13 +669,23 @@ const App: React.FC = () => {
               console.log('Fashion Studio generation was aborted.');
               setFashionStudioError(t('errors.generationCancelled'));
           } else {
-              console.error("Fashion Studio generation failed:", err);
-              const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
-              if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
-                  setFashionStudioError(t('errors.apiKeyInvalid'));
-              } else {
-                  setFashionStudioError(t('errors.generationFailed', { error: errorMessage }));
-              }
+            let errorStringForSearch: string;
+            try {
+                errorStringForSearch = JSON.stringify(err);
+            } catch {
+                errorStringForSearch = String(err);
+            }
+    
+            console.error("Fashion Studio generation failed with error:", errorStringForSearch);
+    
+            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+                setFashionStudioError(t('errors.quotaExceeded'));
+            } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
+                setFashionStudioError(t('errors.apiKeyInvalid'));
+            } else {
+                const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
+                setFashionStudioError(t('errors.generationFailed', { error: displayMessage }));
+            }
           }
       } finally {
           setIsFashionStudioLoading(false);
@@ -710,12 +740,22 @@ const App: React.FC = () => {
         setRestorationStep(3);
 
     } catch (err) {
-        console.error("Restoration pipeline failed:", err);
-        const errorMessage = err instanceof Error ? err.message : t('errors.unknownError');
-        if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('API key not valid')) {
+        let errorStringForSearch: string;
+        try {
+            errorStringForSearch = JSON.stringify(err);
+        } catch {
+            errorStringForSearch = String(err);
+        }
+
+        console.error("Restoration pipeline failed with error:", errorStringForSearch);
+
+        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+            setRestorationError(t('errors.quotaExceeded'));
+        } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
             setRestorationError(t('errors.apiKeyInvalid'));
         } else {
-            setRestorationError(t('errors.restorationPipelineFailed', { error: errorMessage }));
+            const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
+            setRestorationError(t('errors.restorationPipelineFailed', { error: displayMessage }));
         }
     } finally {
         setIsRestoring(false);
