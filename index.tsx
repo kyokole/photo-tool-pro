@@ -2,11 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
+import { initializeFirebase } from './services/firebase';
 
 // Wrap the startup in an async function to allow for dynamic imports inside the try/catch block.
 // This is critical for catching module-level errors (e.g., from Firebase initialization).
 async function main() {
   try {
+    // **BƯỚC QUAN TRỌNG:** Đợi cho Firebase khởi tạo xong trước khi làm bất cứ điều gì khác.
+    // Hàm này sẽ lấy cấu hình từ /api/config và thiết lập kết nối.
+    await initializeFirebase();
+
     // Dynamically import the App component. This ensures that any errors during its module evaluation
     // (including its dependencies like firebase.ts) are caught by this try...catch block.
     const App = (await import('./App')).default;
