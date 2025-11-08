@@ -28,10 +28,12 @@ const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => (
 });
 
 const getAi = () => {
-    if (!process.env.GEMINI_API_KEY) {
-        throw new Error("API Key của máy chủ chưa được cấu hình (GEMINI_API_KEY). Vui lòng liên hệ quản trị viên.");
+    // **FIX:** Check for both the user-defined key and the standard key for robustness.
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("API Key của máy chủ chưa được cấu hình. Vui lòng kiểm tra biến môi trường GEMINI_API_KEY hoặc API_KEY và liên hệ quản trị viên.");
     }
-    return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    return new GoogleGenAI({ apiKey });
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
