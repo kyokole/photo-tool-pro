@@ -69,8 +69,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 parts.push({ text: prompt });
 
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
-                const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
@@ -81,8 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const fullPrompt = buildHeadshotPrompt(prompt);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
-                const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
@@ -99,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 else if (action === 'colorizeImage') prompt = COLORIZATION_PROMPT;
 
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 if (!data) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: data });
             }
@@ -110,8 +110,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const prompt = buildFashionStudioPrompt(settings);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
-                const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                  if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
@@ -122,8 +122,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const prompt = buildFourSeasonsPrompt(scene, season, aspectRatio, customDescription);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
-                const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
@@ -165,8 +165,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 - The lighting on the new clothing must perfectly match the existing lighting in the image.
 - Generate ONLY the final image. Do not change the aspect ratio or crop the image.`;
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
-                const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
@@ -184,8 +184,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
                 const imagePart = base64ToPart(settings.sourceImage);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates[0].content.parts[0].inlineData?.data;
-                const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
+                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
@@ -209,7 +209,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }));
                     
                     const results = await Promise.allSettled(promises);
-                    const images = results.map(r => r.status === 'fulfilled' ? r.value.candidates[0].content.parts[0].inlineData?.data : null).filter(Boolean);
+                    const images = results.map(r => r.status === 'fulfilled' ? r.value.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data : null).filter(Boolean);
 
                     return res.status(200).json({ images, successCount: images.length });
                 }
