@@ -42,11 +42,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(405).json({ error: 'Method Not Allowed' });
         }
 
+        // Input validation is now safely inside the try block
+        if (!req.body) {
+            return res.status(400).json({ error: 'Yêu cầu không có nội dung (body).'});
+        }
+        
         const { action, payload } = req.body;
 
-        // Input validation
-        if (!action || payload === undefined) {
-            return res.status(400).json({ error: 'Thiếu tham số "action" hoặc "payload" trong yêu cầu.' });
+        if (!action) {
+            return res.status(400).json({ error: 'Thiếu tham số "action" trong yêu cầu.' });
         }
         
         const ai = getAi();
@@ -54,8 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         switch (action) {
             case 'generateIdPhoto': {
+                if (!payload || !payload.originalImage || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
                 const { originalImage, settings, outfitImagePart } = payload;
-                if (!originalImage || !settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
                 
                 const prompt = buildIdPhotoPrompt(settings);
                 const imagePart: Part = { inlineData: { data: originalImage.split(',')[1], mimeType: originalImage.split(';')[0].split(':')[1] } };
@@ -72,8 +76,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'generateHeadshot': {
+                if (!payload || !payload.imagePart || !payload.prompt) return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
                 const { imagePart, prompt } = payload;
-                if (!imagePart || !prompt) return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
 
                 const fullPrompt = buildHeadshotPrompt(prompt);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
@@ -86,8 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'initialCleanImage':
             case 'advancedRestoreImage':
             case 'colorizeImage': {
+                if (!payload || !payload.imagePart) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
                 const { imagePart } = payload;
-                if (!imagePart) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
 
                 let prompt = '';
                 if (action === 'initialCleanImage') prompt = INITIAL_CLEAN_PROMPT;
@@ -101,8 +105,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             
             case 'generateFashionPhoto': {
+                if (!payload || !payload.imagePart || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh hoặc cài đặt.' });
                 const { imagePart, settings } = payload;
-                if (!imagePart || !settings) return res.status(400).json({ error: 'Thiếu ảnh hoặc cài đặt.' });
 
                 const prompt = buildFashionStudioPrompt(settings);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
@@ -113,8 +117,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
              case 'generateFourSeasonsPhoto': {
+                if (!payload || !payload.imagePart || !payload.scene) return res.status(400).json({ error: 'Thiếu ảnh hoặc bối cảnh.' });
                 const { imagePart, scene, season, aspectRatio, customDescription } = payload;
-                if (!imagePart || !scene) return res.status(400).json({ error: 'Thiếu ảnh hoặc bối cảnh.' });
 
                 const prompt = buildFourSeasonsPrompt(scene, season, aspectRatio, customDescription);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
@@ -125,8 +129,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             
             case 'generatePromptFromImage': {
+                if (!payload || !payload.base64Image || !payload.mimeType) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
                 const { base64Image, mimeType, isFaceLockEnabled, language } = payload;
-                if (!base64Image || !mimeType) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
 
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const languageInstruction = `\n**LANGUAGE:** The final output prompt must be written entirely in ${language === 'vi' ? 'Vietnamese' : 'English'}.`;
@@ -139,8 +143,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'detectOutfit': {
+                if (!payload || !payload.base64Image || !payload.mimeType) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
                 const { base64Image, mimeType } = payload;
-                if (!base64Image || !mimeType) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
                 
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const prompt = "Analyze the image and identify the main, most prominent piece of clothing the person is wearing. Respond with ONLY the name of the clothing in lowercase Vietnamese. For example: 'áo dài', 'vest', 'áo sơ mi'. Do not add any other words, punctuation, or explanations.";
@@ -149,8 +153,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'editOutfitOnImage': {
+                if (!payload || !payload.base64Image || !payload.mimeType || !payload.newOutfitPrompt) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh hoặc mô tả trang phục.' });
                 const { base64Image, mimeType, newOutfitPrompt } = payload;
-                if (!base64Image || !mimeType || !newOutfitPrompt) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh hoặc mô tả trang phục.' });
 
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const prompt = `**CRITICAL INSTRUCTION: ABSOLUTE PRESERVATION**
@@ -168,8 +172,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'generateFootballPhoto': {
+                if (!payload || !payload.settings) return res.status(400).json({ error: 'Thiếu cài đặt.' });
                 const { settings } = payload;
-                if (!settings) return res.status(400).json({ error: 'Thiếu cài đặt.' });
 
                 const { mode } = settings;
                 let prompt = '';
