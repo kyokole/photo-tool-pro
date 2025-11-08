@@ -583,11 +583,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (errorStringForSearch.includes('429') || errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit')) {
-            errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.";
             statusCode = 429;
+            // NEW: Enhanced error parsing for Quota Failures
+            try {
+                // Google API errors often have a nested structure. We try to find it.
+                // The actual error object might be in `error.cause` or a JSON string in `error.message`.
+                const potentialErrorBody = error.cause?.error || JSON.parse(error.message.substring(error.message.indexOf('{')));
+                const details = potentialErrorBody?.details;
+                if (details && Array.isArray(details)) {
+                    const quotaFailure = details.find(d => d['@type'] === 'type.googleapis.com/google.rpc.QuotaFailure');
+                    if (quotaFailure && quotaFailure.violations && quotaFailure.violations.length > 0) {
+                        const violation = quotaFailure.violations[0];
+                        // Construct a very specific error message for the user
+                        errorMessage = `Đã vượt quá hạn ngạch API. Chi tiết: "${violation.description}". Vui lòng kiểm tra hạn ngạch có tên "${violation.subject}" trong Google Cloud Console.`;
+                    } else {
+                         errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên. Không thể lấy chi tiết lỗi cụ thể.";
+                    }
+                } else {
+                     errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên. Chi tiết lỗi không có sẵn.";
+                }
+            } catch (parseError) {
+                // If parsing fails, fall back to the generic message
+                errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên. (Lỗi khi phân tích chi tiết).";
+            }
         } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid') || error.message.includes('GEMINI_API_KEY')) {
             errorMessage = "API Key của máy chủ không hợp lệ hoặc bị thiếu. Vui lòng liên hệ quản trị viên.";
-            statusCode = 500; // Đây là lỗi server, không phải lỗi client
+            statusCode = 500; // This is a server error, not a client error
         } else if (error instanceof TypeError) {
              errorMessage = `Lỗi cú pháp hoặc dữ liệu không hợp lệ ở máy chủ: ${error.message}`;
              statusCode = 400; // Bad Request
