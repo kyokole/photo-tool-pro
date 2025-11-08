@@ -17,7 +17,7 @@ import {
     buildFootballOutfitPrompt,
     createFinalPrompt as createCreativeStudioFinalPrompt,
     buildImageVariationPrompt
-} from '../services/_serverSidePrompts'; // We'll move prompt logic here
+} from '../services/_serverSidePrompts';
 
 // Helper to convert base64 from client to a format the SDK understands
 const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => ({
@@ -29,25 +29,34 @@ const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => (
 
 const getAi = () => {
     if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY environment variable is not set.");
+        throw new Error("API Key của máy chủ chưa được cấu hình (GEMINI_API_KEY). Vui lòng liên hệ quản trị viên.");
     }
     return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
-    }
-
-    const { action, payload } = req.body;
-    
+    // Wrap the entire function logic in a top-level try...catch block.
+    // This prevents the function from crashing and ensures a JSON error is always returned.
     try {
+        if (req.method !== 'POST') {
+            return res.status(405).json({ error: 'Method Not Allowed' });
+        }
+
+        const { action, payload } = req.body;
+
+        // Input validation
+        if (!action || payload === undefined) {
+            return res.status(400).json({ error: 'Thiếu tham số "action" hoặc "payload" trong yêu cầu.' });
+        }
+        
         const ai = getAi();
         const models = ai.models;
 
         switch (action) {
             case 'generateIdPhoto': {
                 const { originalImage, settings, outfitImagePart } = payload;
+                if (!originalImage || !settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
+                
                 const prompt = buildIdPhotoPrompt(settings);
                 const imagePart: Part = { inlineData: { data: originalImage.split(',')[1], mimeType: originalImage.split(';')[0].split(':')[1] } };
                 const parts: Part[] = [];
@@ -58,17 +67,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
                 const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
-                if (!data || !mime) throw new Error("API did not return an image.");
+                if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
 
             case 'generateHeadshot': {
                 const { imagePart, prompt } = payload;
+                if (!imagePart || !prompt) return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
+
                 const fullPrompt = buildHeadshotPrompt(prompt);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
                 const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
-                if (!data || !mime) throw new Error("API did not return an image.");
+                if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
             
@@ -76,6 +87,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'advancedRestoreImage':
             case 'colorizeImage': {
                 const { imagePart } = payload;
+                if (!imagePart) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
+
                 let prompt = '';
                 if (action === 'initialCleanImage') prompt = INITIAL_CLEAN_PROMPT;
                 else if (action === 'advancedRestoreImage') prompt = ADVANCED_RESTORATION_PROMPT;
@@ -83,32 +96,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
-                if (!data) throw new Error("API did not return an image.");
+                if (!data) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: data });
             }
             
             case 'generateFashionPhoto': {
                 const { imagePart, settings } = payload;
+                if (!imagePart || !settings) return res.status(400).json({ error: 'Thiếu ảnh hoặc cài đặt.' });
+
                 const prompt = buildFashionStudioPrompt(settings);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
                 const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
-                 if (!data || !mime) throw new Error("API did not return an image.");
+                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
 
              case 'generateFourSeasonsPhoto': {
                 const { imagePart, scene, season, aspectRatio, customDescription } = payload;
+                if (!imagePart || !scene) return res.status(400).json({ error: 'Thiếu ảnh hoặc bối cảnh.' });
+
                 const prompt = buildFourSeasonsPrompt(scene, season, aspectRatio, customDescription);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
                 const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
-                if (!data || !mime) throw new Error("API did not return an image.");
+                if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
             
             case 'generatePromptFromImage': {
                 const { base64Image, mimeType, isFaceLockEnabled, language } = payload;
+                if (!base64Image || !mimeType) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
+
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const languageInstruction = `\n**LANGUAGE:** The final output prompt must be written entirely in ${language === 'vi' ? 'Vietnamese' : 'English'}.`;
                 const systemInstruction = isFaceLockEnabled 
@@ -121,6 +140,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'detectOutfit': {
                 const { base64Image, mimeType } = payload;
+                if (!base64Image || !mimeType) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
+                
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const prompt = "Analyze the image and identify the main, most prominent piece of clothing the person is wearing. Respond with ONLY the name of the clothing in lowercase Vietnamese. For example: 'áo dài', 'vest', 'áo sơ mi'. Do not add any other words, punctuation, or explanations.";
                 const response = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart, { text: prompt }] } });
@@ -129,6 +150,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'editOutfitOnImage': {
                 const { base64Image, mimeType, newOutfitPrompt } = payload;
+                if (!base64Image || !mimeType || !newOutfitPrompt) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh hoặc mô tả trang phục.' });
+
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const prompt = `**CRITICAL INSTRUCTION: ABSOLUTE PRESERVATION**
 - You MUST preserve the person's original face, body shape, pose, and the entire background with 100% pixel-level accuracy. This is the highest priority.
@@ -140,35 +163,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
                 const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
-                if (!data || !mime) throw new Error("API did not return an image.");
+                if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
 
             case 'generateFootballPhoto': {
                 const { settings } = payload;
-                const { mode, sourceImage, category, team, player, scene } = settings;
+                if (!settings) return res.status(400).json({ error: 'Thiếu cài đặt.' });
+
+                const { mode } = settings;
                 let prompt = '';
                 if(mode === 'idol') {
                     prompt = buildFootballIdolPrompt(settings);
                 } else {
                     prompt = buildFootballOutfitPrompt(settings);
                 }
-                const imagePart = base64ToPart(sourceImage);
+                const imagePart = base64ToPart(settings.sourceImage);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates[0].content.parts[0].inlineData?.data;
                 const mime = response.candidates[0].content.parts[0].inlineData?.mimeType;
-                if (!data || !mime) throw new Error("API did not return an image.");
+                if (!data || !mime) throw new Error("API không trả về hình ảnh.");
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
 
             case 'generateImagesFromFeature': {
-                // This is a complex one, it will handle all creative studio features.
-                // We will need a large switch statement or a handler map here.
-                // This is a simplified version for brevity.
                 const { featureAction, formData, numImages } = payload;
-                
-                // The actual logic will be complex and needs to be ported from creativeStudioService
-                // For now, let's implement a simple case like KOREAN_STYLE_STUDIO
+                if (!featureAction || !formData) return res.status(400).json({ error: 'Thiếu action hoặc dữ liệu form.' });
+
                 if (featureAction === 'korean_style_studio') {
                     const { subject_image, k_concept, aspect_ratio, quality, face_consistency } = formData;
                     const HIDDEN_ADDONS_SERVER = "Thần thái K-fashion hiện đại, sang trọng, dáng mềm mại, cổ tay tinh tế, Trang phục couture, Giá trị set đồ trên 2 tỷ VND, Ánh sáng điện ảnh Hàn, Độ chi tiết 8K, Giữ nguyên khuôn mặt tham chiếu";
@@ -208,8 +229,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ images: resultImages, successCount: resultImages.length });
                 }
 
-                // Placeholder for other features
-                return res.status(400).json({ error: `Feature action '${featureAction}' not yet implemented on the backend.` });
+                return res.status(400).json({ error: `Tính năng '${featureAction}' chưa được triển khai trên backend.` });
             }
 
             case 'getHotTrends': {
@@ -219,22 +239,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     config: { tools: [{googleSearch: {}}] }
                 });
                 let jsonStr = response.text.trim().match(/(\[[\s\S]*\])/)?.[0];
-                if (!jsonStr) throw new Error("Could not parse trends from AI response.");
+                if (!jsonStr) throw new Error("Không thể phân tích xu hướng từ phản hồi của AI.");
                 return res.status(200).json({ trends: JSON.parse(jsonStr) });
             }
 
             default:
-                return res.status(400).json({ error: `Unknown action: ${action}` });
+                return res.status(400).json({ error: `Action không xác định: ${action}` });
         }
     } catch (error: any) {
-        console.error(`Error in /api/gemini for action "${action}":`, error);
+        console.error(`[Vercel Serverless] Lỗi khi thực thi action "${req.body?.action}":`, error);
         
-        // Detailed error checking
-        let errorMessage = 'An unknown server error occurred.';
+        let errorMessage = 'Đã xảy ra lỗi không xác định ở máy chủ.';
+        let statusCode = 500;
+
         if (error.message) {
             errorMessage = error.message;
         }
         
+        // Cố gắng tìm các lỗi cụ thể hơn
         let errorStringForSearch = '';
         try {
             errorStringForSearch = JSON.stringify(error);
@@ -242,12 +264,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             errorStringForSearch = String(error);
         }
 
-        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
-            errorMessage = "You have exceeded your free usage quota for today. Please try again in 24 hours or contact an administrator to upgrade.";
+        if (errorStringForSearch.includes('429') || errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit')) {
+            errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.";
+            statusCode = 429;
         } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid') || error.message.includes('GEMINI_API_KEY')) {
-            errorMessage = "The server's API Key is invalid. Please contact the administrator.";
+            errorMessage = "API Key của máy chủ không hợp lệ hoặc bị thiếu. Vui lòng liên hệ quản trị viên.";
+            statusCode = 500; // Đây là lỗi server, không phải lỗi client
+        } else if (error instanceof TypeError) {
+             errorMessage = `Lỗi cú pháp hoặc dữ liệu không hợp lệ ở máy chủ: ${error.message}`;
+             statusCode = 400; // Bad Request
         }
 
-        return res.status(500).json({ error: errorMessage });
+        return res.status(statusCode).json({ error: errorMessage });
     }
 }
