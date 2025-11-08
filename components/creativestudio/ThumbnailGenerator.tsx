@@ -90,6 +90,17 @@ const extractPalette = (img: HTMLImageElement): Promise<string[]> => {
     });
 };
 
+const imageElementToBase64 = (image: HTMLImageElement): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.drawImage(image, 0, 0);
+    return canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+};
+
+
 // --- UI COMPONENTS ---
 interface ImageUploaderProps {
   id: string;
@@ -277,7 +288,10 @@ export const ThumbnailGenerator: React.FC = () => {
 
     try {
         const result = await generateThumbnail({
-            modelImage: modelImage.element, refImage: refImage?.element || null, inputs, ratio,
+            modelImage: imageElementToBase64(modelImage.element), 
+            refImage: refImage ? imageElementToBase64(refImage.element) : null, 
+            inputs, 
+            ratio,
         });
         if (result.image) {
             const img = new Image();
