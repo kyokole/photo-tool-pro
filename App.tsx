@@ -269,7 +269,6 @@ const App: React.FC = () => {
   }, [resetAllTools]);
   
   useEffect(() => {
-    // This handles all auth state, including on initial load and after redirects.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
@@ -279,28 +278,19 @@ const App: React.FC = () => {
 
           if (isNewUserInFirestore) {
             const fingerprint = await getFingerprint();
-            
-            // Check if this fingerprint has been used before
             const usersRef = collection(db, "users");
             const q = query(usersRef, where("deviceFingerprint", "==", fingerprint));
             const querySnapshot = await getDocs(q);
-            
             const hasBeenUsed = !querySnapshot.empty;
-
-            let expiryDate = new Date(); // Default to expired
+            let expiryDate = new Date();
             if (!hasBeenUsed) {
-              console.log("New device detected. Granting 1-hour VIP trial.");
               expiryDate.setHours(expiryDate.getHours() + 1);
-            } else {
-              console.log("Device fingerprint already used. Not granting VIP trial.");
             }
-            
-            console.log("Creating new user document in Firestore for UID:", user.uid);
             await setDoc(userDocRef, {
               username: user.email!,
               subscriptionEndDate: expiryDate.toISOString(),
               isAdmin: false,
-              deviceFingerprint: fingerprint, // Store the fingerprint
+              deviceFingerprint: fingerprint,
             });
             userDoc = await getDoc(userDocRef);
           }
@@ -316,20 +306,21 @@ const App: React.FC = () => {
           const hasPasswordProvider = user.providerData.some(p => p.providerId === 'password');
           const hasOAuthProvider = user.providerData.some(p => p.providerId !== 'password');
 
-          // Send verification email only for new, pure email/password signups.
           if (isNewUserInFirestore && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified) {
             await sendEmailVerification(user);
           }
           
           const isAdmin = userData.isAdmin || false;
 
-          // Show verification modal only for pure email/password users who are unverified.
-          // OAuth users (Google etc.) are considered verified by their provider.
-          if (!isAdmin && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified) {
+          // **THE FIX:** If user is logged in via OAuth (Google), they are considered verified.
+          // The verification modal should ONLY show for PURE email/password users who are unverified.
+          const needsVerification = !isAdmin && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified;
+
+          if (needsVerification) {
             setIsVerificationModalVisible(true);
             setCurrentUser(null);
           } else {
-            setIsAuthModalVisible(false); // Explicitly close auth modal on success
+            setIsAuthModalVisible(false);
             setIsVerificationModalVisible(false);
             setCurrentUser({
               uid: user.uid,
@@ -351,7 +342,6 @@ const App: React.FC = () => {
         console.error("Auth state change error:", e);
         setCurrentUser(null);
       } finally {
-        // Once all logic is done, we are no longer in an auth loading state.
         setIsAuthLoading(false);
       }
     });
@@ -771,53 +761,42 @@ const App: React.FC = () => {
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
         try {
-            // Step 1: Attempt to create a new user. This is the primary action.
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            // If successful, a verification email is sent and the promise resolves.
-            // The onAuthStateChanged listener will handle the rest.
-            await sendEmailVerification(userCredential.user);
+            await createUserWithEmailAndPassword(auth, email, password);
             resolve();
         } catch (registrationError: any) {
-            // Step 2: If user creation fails, analyze the error.
             switch (registrationError.code) {
                 case 'auth/email-already-in-use':
-                    // This is an expected failure. The user exists, so try to sign them in.
                     try {
                         await signInWithEmailAndPassword(auth, email, password);
-                        // Login successful.
                         resetAllTools();
-                        setIsAuthModalVisible(false); // Close modal on success
+                        setIsAuthModalVisible(false);
                         resolve();
                     } catch (loginError: any) {
-                        // Step 3: Handle errors from the sign-in attempt.
+                         let errorMessage = loginError.message || t('errors.unknownError');
                         switch (loginError.code) {
                             case 'auth/user-disabled':
-                                reject(new Error(t('errors.userDisabled')));
+                                errorMessage = t('errors.userDisabled');
                                 break;
                             case 'auth/wrong-password':
                             case 'auth/invalid-credential':
-                                reject(new Error(t('errors.invalidCredential')));
+                                errorMessage = t('errors.invalidCredential');
                                 break;
-                            default:
-                                // For any other login error, reject with a generic message.
-                                reject(new Error(loginError.message || t('errors.unknownError')));
                         }
+                        if (loginError.message?.includes('auth/user-disabled')) {
+                            errorMessage = t('errors.userDisabled');
+                        }
+                        reject(new Error(errorMessage));
                     }
                     break;
-
-                case 'auth/user-disabled':
-                    // This handles the edge case where a disabled user tries to "register" again.
-                    reject(new Error(t('errors.userDisabled')));
-                    break;
-                    
                 case 'auth/weak-password':
-                    // Handle weak password error during registration.
                     reject(new Error(t('errors.passwordTooShort')));
                     break;
-
                 default:
-                    // For any other unexpected registration error.
-                    reject(new Error(registrationError.message || t('errors.unknownError')));
+                    let regErrorMessage = registrationError.message || t('errors.unknownError');
+                    if (registrationError.message?.includes('auth/user-disabled')) {
+                        regErrorMessage = t('errors.userDisabled');
+                    }
+                    reject(new Error(regErrorMessage));
                     break;
             }
         }
@@ -826,11 +805,7 @@ const App: React.FC = () => {
 
   const handleGoogleSignIn = async (): Promise<void> => {
     const provider = new GoogleAuthProvider();
-    // The signInWithPopup promise will reject on error.
-    // The AuthModal component, which calls this function, will catch the error
-    // and set its own state to display an appropriate message to the user.
     await signInWithPopup(auth, provider);
-    // onAuthStateChanged will handle the successful login.
   };
   
   const handleResendVerification = async (): Promise<void> => {
