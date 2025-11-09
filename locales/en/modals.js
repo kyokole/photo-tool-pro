@@ -183,11 +183,14 @@ export default {
   },
   "auth": {
     "title": "Login or Register",
+    "loginTitle": "Login",
+    "registerTitle": "Create Account",
     "description": "New accounts get a <strong>free 1-hour trial</strong> of VIP features.",
     "usernamePlaceholder": "Email Address",
     "passwordPlaceholder": "Password",
     "forgotPassword": "Forgot password?",
-    "loginButton": "Login / Register",
+    "loginButton": "Login",
+    "registerButton": "Register",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "recoverTitle": "Recover Password",
@@ -208,7 +211,12 @@ export default {
     "popupBlocked": "The login window was blocked by the browser. Please allow popups for this site.",
     "popupClosed": "You closed the login window before completing the process.",
     "popupCancelled": "Another login window is already open. Please close it and try again.",
-    "unauthorizedDomain": "Google Sign-In is unavailable in this environment due to security restrictions. Please use the email/password method to register or log in."
+    "unauthorizedDomain": "Google Sign-In is unavailable in this environment due to security restrictions. Please use the email/password method to register or log in.",
+    "noAccount": "Don't have an account?",
+    "registerNow": "Register now",
+    "hasAccount": "Already have an account?",
+    "loginNow": "Login now",
+    "emailAlreadyInUse": "This email is already in use. Please log in or use a different email."
   },
   "changePassword": {
     "title": "Change Password",

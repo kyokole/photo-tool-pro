@@ -183,11 +183,14 @@ export default {
   },
   "auth": {
     "title": "Đăng nhập hoặc Đăng ký",
+    "loginTitle": "Đăng nhập",
+    "registerTitle": "Đăng ký tài khoản",
     "description": "Tài khoản mới sẽ được <strong>dùng thử miễn phí 1 giờ</strong> các tính năng VIP.",
     "usernamePlaceholder": "Địa chỉ Email",
     "passwordPlaceholder": "Mật khẩu",
     "forgotPassword": "Quên mật khẩu?",
-    "loginButton": "Đăng nhập / Đăng ký",
+    "loginButton": "Đăng nhập",
+    "registerButton": "Đăng ký",
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
     "recoverTitle": "Khôi phục mật khẩu",
@@ -208,7 +211,12 @@ export default {
     "popupBlocked": "Cửa sổ đăng nhập đã bị trình duyệt chặn. Vui lòng cho phép pop-up cho trang này.",
     "popupClosed": "Bạn đã đóng cửa sổ đăng nhập trước khi hoàn tất.",
     "popupCancelled": "Một cửa sổ đăng nhập khác đang mở. Vui lòng đóng nó và thử lại.",
-    "unauthorizedDomain": "Đăng nhập Google không khả dụng trong môi trường này do hạn chế bảo mật. Vui lòng sử dụng phương thức email/mật khẩu để đăng ký hoặc đăng nhập."
+    "unauthorizedDomain": "Đăng nhập Google không khả dụng trong môi trường này do hạn chế bảo mật. Vui lòng sử dụng phương thức email/mật khẩu để đăng ký hoặc đăng nhập.",
+    "noAccount": "Chưa có tài khoản?",
+    "registerNow": "Đăng ký ngay",
+    "hasAccount": "Đã có tài khoản?",
+    "loginNow": "Đăng nhập ngay",
+    "emailAlreadyInUse": "Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác."
   },
   "changePassword": {
     "title": "Đổi mật khẩu",

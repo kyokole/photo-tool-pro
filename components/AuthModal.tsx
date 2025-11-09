@@ -4,14 +4,14 @@ import type { User } from '../types';
 
 interface AuthModalProps {
     onLogin: (username: string, password: string) => Promise<void>;
+    onRegister: (username: string, password: string) => Promise<void>;
     onGoogleSignIn: () => Promise<void>;
     onForgotPassword: (email: string) => Promise<void>;
     onClose: () => void;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgotPassword, onClose }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSignIn, onForgotPassword, onClose }) => {
     const { t } = useTranslation();
-    // Login state
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -19,6 +19,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isGoogleSignInUnavailable, setIsGoogleSignInUnavailable] = useState(false);
     
+    // State to toggle between Login and Register views
+    const [isLoginView, setIsLoginView] = useState(true);
+
     // Forgot password state
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -26,16 +29,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
     const [recoveryStatus, setRecoveryStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [isFindingPassword, setIsFindingPassword] = useState(false);
 
-    const handleLoginSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !password) {
             setError(t('errors.fillAllFields'));
             return;
         }
+        if (!isLoginView && password.length < 6) {
+            setError(t('errors.passwordTooShort'));
+            return;
+        }
+
         setError('');
         setIsLoading(true);
         try {
-            await onLogin(email, password);
+            if (isLoginView) {
+                await onLogin(email, password);
+            } else {
+                await onRegister(email, password);
+            }
+            // On success, onAuthStateChanged in App.tsx will close the modal.
         } catch (err) {
             setError(err instanceof Error ? err.message : t('errors.unknownError'));
         } finally {
@@ -50,10 +63,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
             await onGoogleSignIn();
             // On success, onAuthStateChanged in App.tsx will close the modal.
         } catch (err: any) {
-            // The console.error was removed as requested to hide the configuration error.
-            // The UI will still show a user-friendly message.
             let userFriendlyError = t('errors.unknownError');
-            if (err.code === 'auth/unauthorized-domain' || err.code === 'auth/operation-not-allowed') {
+            if (err.code === 'auth/user-disabled') {
+                userFriendlyError = t('errors.userDisabled');
+            } else if (err.code === 'auth/unauthorized-domain' || err.code === 'auth/operation-not-allowed') {
                 setIsGoogleSignInUnavailable(true);
                 userFriendlyError = t('auth.unauthorizedDomain');
             } else if (err.code === 'auth/popup-blocked') {
@@ -100,12 +113,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
         }
     };
 
-    const renderLoginForm = () => (
+    const toggleView = () => {
+        setIsLoginView(!isLoginView);
+        setError('');
+        setPassword('');
+    };
+
+    const renderMainForm = () => (
         <>
             <div className="text-[var(--accent-blue)] mb-4">
                 <i className="fas fa-user-lock fa-3x"></i>
             </div>
-            <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">{t('auth.title')}</h2>
+            <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">{isLoginView ? t('auth.loginTitle') : t('auth.registerTitle')}</h2>
             <p className="text-[var(--text-secondary)] mb-6"
                 dangerouslySetInnerHTML={{ __html: t('auth.description') }}
             >
@@ -135,7 +154,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
                     </div>
                 </div>
 
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <input 
                         type="email" 
                         value={email}
@@ -156,7 +175,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
                                 className="w-full bg-[var(--bg-deep-space)] border border-[var(--border-color)] rounded-md px-4 py-3 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] pr-10"
                                 required
                                 aria-label={t('auth.passwordPlaceholder')}
-                                autoComplete="current-password"
+                                autoComplete={isLoginView ? "current-password" : "new-password"}
                             />
                             <button
                                 type="button"
@@ -167,18 +186,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
                                 <i className={`fas ${isPasswordVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                             </button>
                         </div>
-                        <div className="text-right text-sm mt-1">
-                            <button 
-                                type="button" 
-                                onClick={() => {
-                                    setIsForgotPassword(true);
-                                    setError('');
-                                }}
-                                className="text-[var(--accent-blue)] hover:text-[var(--accent-cyan)] hover:underline text-xs"
-                            >
-                                {t('auth.forgotPassword')}
-                            </button>
-                        </div>
+                        {isLoginView && (
+                            <div className="text-right text-sm mt-1">
+                                <button 
+                                    type="button" 
+                                    onClick={() => {
+                                        setIsForgotPassword(true);
+                                        setError('');
+                                    }}
+                                    className="text-[var(--accent-blue)] hover:text-[var(--accent-cyan)] hover:underline text-xs"
+                                >
+                                    {t('auth.forgotPassword')}
+                                </button>
+                            </div>
+                        )}
                     </div>
                     {error && <p className="text-red-400 text-sm" role="alert">{error}</p>}
                     <button 
@@ -186,9 +207,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
                         disabled={isLoading}
                         className="w-full btn-gradient text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-wait"
                     >
-                        {isLoading ? t('common.processing') : t('auth.loginButton')}
+                        {isLoading ? t('common.processing') : (isLoginView ? t('auth.loginButton') : t('auth.registerButton'))}
                     </button>
                 </form>
+
+                <p className="text-sm text-[var(--text-secondary)]">
+                    {isLoginView ? t('auth.noAccount') : t('auth.hasAccount')}
+                    <button onClick={toggleView} className="font-semibold text-[var(--accent-blue)] hover:text-[var(--accent-cyan)] hover:underline ml-1">
+                        {isLoginView ? t('auth.registerNow') : t('auth.loginNow')}
+                    </button>
+                </p>
             </div>
         </>
     );
@@ -259,7 +287,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onGoogleSignIn, onForgot
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-[var(--text-primary)] transition-colors">
                     <i className="fas fa-times fa-lg"></i>
                 </button>
-                {isForgotPassword ? renderForgotPasswordForm() : renderLoginForm()}
+                {isForgotPassword ? renderForgotPasswordForm() : renderMainForm()}
             </div>
         </div>
     );

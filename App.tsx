@@ -759,47 +759,47 @@ const App: React.FC = () => {
     const handleLogin = (email: string, password: string): Promise<void> => {
         return new Promise(async (resolve, reject) => {
             try {
-                // Attempt to create a new user first. This covers both registration and login flow.
-                await createUserWithEmailAndPassword(auth, email, password);
-                // If successful, onAuthStateChanged will handle the rest.
+                await signInWithEmailAndPassword(auth, email, password);
                 resolve();
-            } catch (registrationError: any) {
-                // This block handles errors during registration.
-                switch (registrationError.code) {
-                    case 'auth/email-already-in-use':
-                        // This is the expected path for an existing user. Now, try to sign them in.
-                        try {
-                            await signInWithEmailAndPassword(auth, email, password);
-                            // If sign-in is successful, onAuthStateChanged will handle UI updates.
-                            resolve();
-                        } catch (loginError: any) {
-                            // This block handles errors specifically during the sign-in attempt.
-                            let errorMessage;
-                            switch (loginError.code) {
-                                case 'auth/user-disabled':
-                                    errorMessage = t('errors.userDisabled');
-                                    break;
-                                case 'auth/wrong-password':
-                                case 'auth/invalid-credential':
-                                    errorMessage = t('errors.invalidCredential');
-                                    break;
-                                default:
-                                    errorMessage = loginError.message || t('errors.unknownError');
-                                    break;
-                            }
-                            reject(new Error(errorMessage));
-                        }
+            } catch (error: any) {
+                let errorMessage;
+                switch (error.code) {
+                    case 'auth/user-disabled':
+                        errorMessage = t('errors.userDisabled');
                         break;
-
-                    case 'auth/weak-password':
-                        reject(new Error(t('errors.passwordTooShort')));
+                    case 'auth/wrong-password':
+                    case 'auth/invalid-credential':
+                    case 'auth/user-not-found':
+                        errorMessage = t('errors.invalidCredential');
                         break;
-                    
                     default:
-                        // Handle other, unexpected registration errors.
-                        reject(new Error(registrationError.message || t('errors.unknownError')));
+                        errorMessage = error.message || t('errors.unknownError');
                         break;
                 }
+                reject(new Error(errorMessage));
+            }
+        });
+    };
+    
+    const handleRegister = (email: string, password: string): Promise<void> => {
+        return new Promise(async (resolve, reject) => {
+             try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                resolve();
+            } catch (error: any) {
+                 let errorMessage;
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = t('auth.emailAlreadyInUse');
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = t('errors.passwordTooShort');
+                        break;
+                    default:
+                        errorMessage = error.message || t('errors.unknownError');
+                        break;
+                }
+                reject(new Error(errorMessage));
             }
         });
     };
@@ -1394,6 +1394,7 @@ const App: React.FC = () => {
       {isAuthModalVisible && (
         <AuthModal 
           onLogin={handleLogin}
+          onRegister={handleRegister}
           onGoogleSignIn={handleGoogleSignIn}
           onForgotPassword={handleForgotPassword}
           onClose={() => {
