@@ -529,6 +529,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         promptsToRun.push({ prompt, parts });
                         break;
                     }
+                    case FeatureAction.CREATIVE_COMPOSITE: {
+                        const { main_subject, scene_description, additional_components, main_subject_description, aspect_ratio } = formData;
+                        if (!main_subject?.file?.base64) {
+                            throw new Error('Thiếu ảnh chủ thể chính.');
+                        }
+                        if (!scene_description) {
+                            throw new Error('Thiếu mô tả bối cảnh.');
+                        }
+
+                        const parts: Part[] = [base64ToPart(main_subject.file)];
+                        let prompt = `Bối cảnh và bố cục chính: ${scene_description}\n\n`;
+
+                        prompt += `Chủ thể chính (ảnh đầu tiên): ${main_subject_description || 'Người/vật trong ảnh đầu tiên.'}\n\n`;
+
+                        if (additional_components && Array.isArray(additional_components)) {
+                            additional_components.forEach((comp: any, index: number) => {
+                                // The description is stored separately in formData
+                                const componentDescription = formData[`additional_components_${index}_description`];
+                                if (comp.file?.base64) {
+                                    parts.push(base64ToPart(comp.file));
+                                    prompt += `Thành phần phụ ${index + 1} (ảnh thứ ${parts.length}): ${componentDescription || 'Người/vật trong ảnh này.'}\n`;
+                                }
+                            });
+                        }
+
+                        prompt += `\nTỉ lệ khung hình cuối cùng: ${aspect_ratio || '4:3'}.`;
+                        
+                        promptsToRun.push({ prompt, parts, isCouple: false });
+                        break;
+                    }
                     default:
                         throw new Error(`Tính năng '${featureAction}' chưa được triển khai trên backend.`);
                 }
