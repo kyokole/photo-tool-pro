@@ -31,8 +31,18 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onChangePassw
             setError(t('errors.passwordsDoNotMatch'));
             return;
         }
-        if (newPassword.length < 6) { 
-            setError(t('errors.passwordTooShort'));
+        if (newPassword.length < 8) {
+            setError(t('errors.passwordTooShort', { min: 8 }));
+            return;
+        }
+
+        const hasUpperCase = /[A-Z]/.test(newPassword);
+        const hasLowerCase = /[a-z]/.test(newPassword);
+        const hasNumber = /[0-9]/.test(newPassword);
+        const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(newPassword);
+
+        if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+            setError(t('errors.passwordComplexity'));
             return;
         }
 
@@ -74,17 +84,22 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onChangePassw
                                 <i className={`fas ${isOldPasswordVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                             </button>
                         </div>
-                         <div className="relative">
-                            <input type={isNewPasswordVisible ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('changePassword.newPassword')} required className="w-full bg-[var(--bg-deep-space)] border border-[var(--border-color)] rounded-md px-4 py-3 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] pr-10" />
-                             <button
-                                type="button"
-                                onClick={() => setNewPasswordVisible(!isNewPasswordVisible)}
-                                className="absolute inset-y-0 right-0 px-3 flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                                aria-label={isNewPasswordVisible ? t('auth.hidePassword') : t('auth.showPassword')}
-                            >
-                                <i className={`fas ${isNewPasswordVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                            </button>
-                        </div>
+                         <div>
+                            <div className="relative">
+                               <input type={isNewPasswordVisible ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder={t('changePassword.newPassword')} required className="w-full bg-[var(--bg-deep-space)] border border-[var(--border-color)] rounded-md px-4 py-3 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] pr-10" />
+                                <button
+                                   type="button"
+                                   onClick={() => setNewPasswordVisible(!isNewPasswordVisible)}
+                                   className="absolute inset-y-0 right-0 px-3 flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                   aria-label={isNewPasswordVisible ? t('auth.hidePassword') : t('auth.showPassword')}
+                               >
+                                   <i className={`fas ${isNewPasswordVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                               </button>
+                           </div>
+                           <p className="text-xs text-left text-[var(--text-secondary)] mt-2 px-1">
+                                {t('auth.passwordHint')}
+                           </p>
+                         </div>
                          <div className="relative">
                             <input type={isConfirmPasswordVisible ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder={t('changePassword.confirmPassword')} required className="w-full bg-[var(--bg-deep-space)] border border-[var(--border-color)] rounded-md px-4 py-3 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] pr-10" />
                              <button

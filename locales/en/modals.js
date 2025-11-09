@@ -188,6 +188,8 @@ export default {
     "description": "New accounts get a <strong>free 1-hour trial</strong> of VIP features.",
     "usernamePlaceholder": "Email Address",
     "passwordPlaceholder": "Password",
+    "confirmPasswordPlaceholder": "Confirm Password",
+    "passwordHint": "At least 8 characters, with uppercase, lowercase, number, and special character.",
     "forgotPassword": "Forgot password?",
     "loginButton": "Login",
     "registerButton": "Register",

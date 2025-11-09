@@ -14,9 +14,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSign
     const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
     const [isGoogleSignInUnavailable, setIsGoogleSignInUnavailable] = useState(false);
     
     // State to toggle between Login and Register views
@@ -31,13 +33,35 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSign
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email || !password) {
+        if (isLoginView && (!email || !password)) {
             setError(t('errors.fillAllFields'));
             return;
         }
-        if (!isLoginView && password.length < 6) {
-            setError(t('errors.passwordTooShort'));
+        if (!isLoginView && (!email || !password || !confirmPassword)) {
+            setError(t('errors.fillAllFields'));
             return;
+        }
+        
+        if (!isLoginView) {
+            if (password.length < 8) {
+                setError(t('errors.passwordTooShort', { min: 8 }));
+                return;
+            }
+
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`]/.test(password);
+
+            if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+                setError(t('errors.passwordComplexity'));
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                setError(t('errors.passwordsDoNotMatch'));
+                return;
+            }
         }
 
         setError('');
@@ -117,6 +141,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSign
         setIsLoginView(!isLoginView);
         setError('');
         setPassword('');
+        setConfirmPassword('');
     };
 
     const renderMainForm = () => (
@@ -125,10 +150,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSign
                 <i className="fas fa-user-lock fa-3x"></i>
             </div>
             <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">{isLoginView ? t('auth.loginTitle') : t('auth.registerTitle')}</h2>
-            <p className="text-[var(--text-secondary)] mb-6"
-                dangerouslySetInnerHTML={{ __html: t('auth.description') }}
-            >
-            </p>
+            {isLoginView ? null : (
+                 <p className="text-[var(--text-secondary)] mb-6"
+                    dangerouslySetInnerHTML={{ __html: t('auth.description') }}
+                >
+                </p>
+            )}
             
             <div className="space-y-4">
                 <button
@@ -186,6 +213,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSign
                                 <i className={`fas ${isPasswordVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                             </button>
                         </div>
+                         {!isLoginView && (
+                            <p className="text-xs text-left text-[var(--text-secondary)] mt-2 px-1">
+                                {t('auth.passwordHint')}
+                            </p>
+                        )}
                         {isLoginView && (
                             <div className="text-right text-sm mt-1">
                                 <button 
@@ -201,6 +233,30 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onRegister, onGoogleSign
                             </div>
                         )}
                     </div>
+                    {!isLoginView && (
+                         <div>
+                            <div className="relative">
+                                <input 
+                                    type={isConfirmPasswordVisible ? 'text' : 'password'}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                                    className="w-full bg-[var(--bg-deep-space)] border border-[var(--border-color)] rounded-md px-4 py-3 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] pr-10"
+                                    required
+                                    aria-label={t('auth.confirmPasswordPlaceholder')}
+                                    autoComplete="new-password"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                    aria-label={isConfirmPasswordVisible ? t('auth.hidePassword') : t('auth.showPassword')}
+                                >
+                                    <i className={`fas ${isConfirmPasswordVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {error && <p className="text-red-400 text-sm" role="alert">{error}</p>}
                     <button 
                         type="submit"

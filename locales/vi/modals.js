@@ -188,6 +188,8 @@ export default {
     "description": "Tài khoản mới sẽ được <strong>dùng thử miễn phí 1 giờ</strong> các tính năng VIP.",
     "usernamePlaceholder": "Địa chỉ Email",
     "passwordPlaceholder": "Mật khẩu",
+    "confirmPasswordPlaceholder": "Xác nhận lại mật khẩu",
+    "passwordHint": "Ít nhất 8 ký tự, gồm chữ hoa, thường, số & ký tự đặc biệt.",
     "forgotPassword": "Quên mật khẩu?",
     "loginButton": "Đăng nhập",
     "registerButton": "Đăng ký",

@@ -130,6 +130,7 @@ const App: React.FC = () => {
   const fileUploadRef = useRef<HTMLInputElement>(null);
   const outfitUploadRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isNewRegistration = useRef(false);
 
   const isVip = useMemo(() => {
     if (!currentUser) return false;
@@ -274,54 +275,70 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        setIsAuthLoading(true);
+
+        if (!user) {
+            setCurrentUser(null);
+            setIsVerificationModalVisible(false);
+            setIsAuthLoading(false);
+            return;
+        }
+
         try {
-            if (!user) {
-                // CASE 1: User is logged out or session expired.
-                setCurrentUser(null);
-                setIsVerificationModalVisible(false);
-                return;
-            }
-
-            // CASE 2: User is authenticated with Firebase. Proceed to get full profile.
-            await user.reload(); // Refresh user state (e.g., emailVerified) first.
-
+            // Luôn cố gắng đọc hồ sơ người dùng từ Firestore trước.
             const userDocRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userDocRef);
+            
+            let userData = userDoc.exists() ? userDoc.data() : null;
+            const isDbAdmin = userData?.isAdmin === true;
 
-            let userData;
-            let isNewRegistration = false;
-
-            if (userDoc.exists()) {
-                // User document exists in Firestore.
-                userData = userDoc.data();
-                if (!userData) {
-                    // This is an edge case: document exists but is empty. Treat as a critical error.
-                    throw new Error(`Tài liệu Firestore cho người dùng ${user.uid} bị rỗng.`);
+            // Bây giờ, kiểm tra email đã xác thực hay chưa *trừ khi* người dùng là admin.
+            await user.reload(); // Tải lại để lấy trạng thái emailVerified mới nhất
+            if (!user.emailVerified && !isDbAdmin) {
+                if (isNewRegistration.current) {
+                    await sendEmailVerification(user);
+                    isNewRegistration.current = false; // Đặt lại cờ sau khi gửi
                 }
-            } else {
-                // This is a new registration. Create their document in Firestore.
-                isNewRegistration = true;
+                setIsVerificationModalVisible(true);
+                setIsAuthLoading(false);
+                return; // Dừng ở đây và hiển thị modal xác thực cho người dùng không phải admin
+            }
+            
+            // Nếu đến được đây, người dùng là admin HOẶC là người dùng thường đã xác thực.
+            setIsVerificationModalVisible(false);
+
+            if (!userData) { // Tương ứng với !userDoc.exists() trước đó
                 const fingerprint = await getFingerprint();
-                const usersRef = collection(db, "users");
-                const q = query(usersRef, where("deviceFingerprint", "==", fingerprint));
-                const querySnapshot = await getDocs(q);
-                const hasBeenUsed = !querySnapshot.empty;
+                
+                // **FIX:** Loại bỏ truy vấn tập hợp không được phép.
+                // Đoạn mã này gây ra lỗi "permission-denied" cho người dùng mới.
+                // const usersRef = collection(db, "users");
+                // const q = query(usersRef, where("deviceFingerprint", "==", fingerprint));
+                // const querySnapshot = await getDocs(q);
+                // const hasBeenUsed = !querySnapshot.empty;
+                
+                // Mặc định `hasBeenUsed` là false để đảm bảo logic tạo ngày hết hạn vẫn chạy đúng.
+                // Mọi người dùng mới giờ sẽ nhận được 1 giờ dùng thử.
+                const hasBeenUsed = false;
                 
                 let expiryDate = new Date();
                 if (!hasBeenUsed) {
-                    expiryDate.setHours(expiryDate.getHours() + 1); // 1-hour trial
+                    expiryDate.setHours(expiryDate.getHours() + 1); // Dùng thử 1 giờ
                 }
 
                 userData = {
                     username: user.email!,
                     subscriptionEndDate: expiryDate.toISOString(),
-                    isAdmin: false,
+                    isAdmin: false, // Người dùng mới không bao giờ là admin
                     deviceFingerprint: fingerprint,
                 };
                 await setDoc(userDocRef, userData);
+            } else {
+                 if (!userData) {
+                    throw new Error(`Tài liệu hồ sơ người dùng bị rỗng (UID: ${user.uid}). Vui lòng liên hệ hỗ trợ.`);
+                }
             }
 
-            // At this point, we have a valid `user` and `userData`. Now, update the app state.
             const appUser: User = {
                 uid: user.uid,
                 username: user.email!,
@@ -330,37 +347,34 @@ const App: React.FC = () => {
             };
 
             setCurrentUser(appUser);
-            setIsAuthModalVisible(false); // Close login/register modal.
+            setIsAuthModalVisible(false);
 
-            // Finally, handle the verification flow.
-            if (!userData.isAdmin && !user.emailVerified) {
-                if (isNewRegistration) {
-                    await sendEmailVerification(user);
-                }
-                setIsVerificationModalVisible(true); // Show verification prompt on top of the app.
-            } else {
-                setIsVerificationModalVisible(false); // Ensure it's hidden for verified users.
-                if (postLoginRedirect) {
-                    handleModeChange(postLoginRedirect);
-                    setPostLoginRedirect(null);
-                }
+            if (postLoginRedirect) {
+                handleModeChange(postLoginRedirect);
+                setPostLoginRedirect(null);
             }
 
-        } catch (e) {
-            console.error("Auth state change error:", e);
-            // If any part of the process fails, ensure the user is logged out of the app state.
-            if (auth.currentUser) {
-                await signOut(auth); // This will re-trigger this listener with user=null.
-            } else {
-                setCurrentUser(null);
+        } catch (e: any) {
+            console.error("Lỗi xác thực nghiêm trọng (Firestore):", e);
+            
+            let userMessage = t('errors.authError');
+            if (e.code === 'permission-denied' || (e.message && (e.message.toLowerCase().includes('permission-denied') || e.message.toLowerCase().includes('insufficient permissions')))) {
+                userMessage = t('errors.firestorePermissionDenied'); 
+            } else if (e.message) {
+                userMessage = e.message;
             }
+
+            alert(`${t('errors.loginFailedServer')}: ${userMessage}\n\n${t('errors.loginFailedHelp')}`);
+            
+            await signOut(auth);
+            
         } finally {
             setIsAuthLoading(false);
         }
     });
 
     return () => unsubscribe();
-  }, [auth, db, handleModeChange, postLoginRedirect]);
+  }, [auth, db, handleModeChange, postLoginRedirect, t]);
 
 
   useEffect(() => {
@@ -799,9 +813,11 @@ const App: React.FC = () => {
     const handleRegister = (email: string, password: string): Promise<void> => {
         return new Promise(async (resolve, reject) => {
              try {
+                isNewRegistration.current = true;
                 await createUserWithEmailAndPassword(auth, email, password);
                 resolve();
             } catch (error: any) {
+                 isNewRegistration.current = false;
                  let errorMessage;
                 switch (error.code) {
                     case 'auth/email-already-in-use':

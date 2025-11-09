@@ -23,8 +23,8 @@ export default {
     "subscriptionExpired": "Gói của bạn đã hết hạn. Vui lòng liên hệ quản trị viên.",
     "fillAllFields": "Vui lòng điền đầy đủ thông tin.",
     "passwordsDoNotMatch": "Mật khẩu không khớp.",
-    "passwordTooShort": "Mật khẩu mới phải có ít nhất 6 ký tự.",
-    "passwordTooShortSimple": "Mật khẩu mới phải có ít nhất 4 ký tự.",
+    "passwordTooShort": "Mật khẩu phải có ít nhất {{min}} ký tự.",
+    "passwordComplexity": "Mật khẩu phải chứa ít nhất một chữ hoa, chữ thường, số và ký tự đặc biệt.",
     "passwordResetError": "Lỗi đặt lại mật khẩu.",
     "invalidImageFile": "Tệp không hợp lệ. Vui lòng chọn một tệp ảnh.",
     "previewCreationError": "Lỗi tạo bản xem trước",
@@ -41,6 +41,9 @@ export default {
     "invalidCredential": "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra lại email và mật khẩu.",
     "userDisabled": "Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.",
     "apiKeyInvalid": "API Key không hợp lệ. Vui lòng kiểm tra lại cấu hình. Nếu bạn là người dùng, hãy liên hệ với quản trị viên để được hỗ trợ.",
-    "quotaExceeded": "Bạn đã vượt quá hạn ngạch sử dụng miễn phí cho hôm nay. Vui lòng thử lại sau 24 giờ hoặc liên hệ quản trị viên để nâng cấp."
+    "quotaExceeded": "Bạn đã vượt quá hạn ngạch sử dụng miễn phí cho hôm nay. Vui lòng thử lại sau 24 giờ hoặc liên hệ quản trị viên để nâng cấp.",
+    "loginFailedServer": "Đăng nhập thất bại do lỗi phía máy chủ",
+    "loginFailedHelp": "Vui lòng kiểm tra lại kết nối mạng hoặc liên hệ hỗ trợ. Bạn sẽ được đăng xuất.",
+    "firestorePermissionDenied": "Lỗi quyền truy cập cơ sở dữ liệu (Firestore). Nguyên nhân khả năng cao là do 'Quy tắc Bảo mật' (Security Rules) của dự án Firebase chưa cho phép người dùng mới tạo hồ sơ. Vui lòng liên hệ quản trị viên để cấu hình lại."
   }
 }

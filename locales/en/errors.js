@@ -23,8 +23,8 @@ export default {
     "subscriptionExpired": "Your package has expired. Please contact the administrator.",
     "fillAllFields": "Please fill in all fields.",
     "passwordsDoNotMatch": "Passwords do not match.",
-    "passwordTooShort": "New password must be at least 6 characters long.",
-    "passwordTooShortSimple": "New password must be at least 4 characters long.",
+    "passwordTooShort": "Password must be at least {{min}} characters long.",
+    "passwordComplexity": "Password must contain at least one uppercase, lowercase, number, and special character.",
     "passwordResetError": "Error resetting password.",
     "invalidImageFile": "Invalid file. Please select an image file.",
     "previewCreationError": "Error creating preview",
@@ -41,6 +41,9 @@ export default {
     "invalidCredential": "Invalid credentials. Please check your email and password.",
     "userDisabled": "This account has been disabled. Please contact an administrator for support.",
     "apiKeyInvalid": "Invalid API Key. Please check the configuration. If you are a user, please contact the administrator for support.",
-    "quotaExceeded": "You have exceeded your free usage quota for today. Please try again in 24 hours or contact an administrator to upgrade."
+    "quotaExceeded": "You have exceeded your free usage quota for today. Please try again in 24 hours or contact an administrator to upgrade.",
+    "loginFailedServer": "Login failed due to a server-side error",
+    "loginFailedHelp": "Please check your network connection or contact support. You will be logged out.",
+    "firestorePermissionDenied": "Database access permission error (Firestore). This is likely because the Firebase project's 'Security Rules' do not allow new users to create their own profile. Please contact the administrator to configure this."
   }
 }
