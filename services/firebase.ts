@@ -70,6 +70,3 @@ export const getDbInstance = (): Firestore => {
     if (!db) throw new Error("Firestore is not initialized. Call initializeFirebase() first.");
     return db;
 };
-
-// Xuất các biến đã được khởi tạo để các thành phần khác có thể sử dụng (giữ lại để tương thích nếu cần)
-export { app, auth, db };
