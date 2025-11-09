@@ -768,54 +768,61 @@ const App: React.FC = () => {
     }
 }, [handleResetRestorationTool, t]);
 
-  const translateFirebaseError = useCallback((error: any): string => {
-    const errorCode = error.code || '';
-    const errorMessage = error.message || '';
-
-    if (errorCode.includes('auth/user-disabled') || errorMessage.includes('auth/user-disabled')) {
-        return t('errors.userDisabled');
-    }
-    if (errorCode.includes('auth/wrong-password') || errorCode.includes('auth/invalid-credential')) {
-        return t('errors.invalidCredential');
-    }
-    if (errorCode.includes('auth/weak-password')) {
-        return t('errors.passwordTooShort');
-    }
-    
-    // Fallback to the original message if it's not a recognized error, 
-    // but try to provide a generic one if the message is empty.
-    return errorMessage || t('errors.unknownError');
-  }, [t]);
-
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
         try {
-            // This logic attempts to create a user first.
+            // Step 1: Attempt to create a new user. This is the primary action.
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // If successful, a verification email is sent and the promise resolves.
+            // The onAuthStateChanged listener will handle the rest.
             await sendEmailVerification(userCredential.user);
             resolve();
         } catch (registrationError: any) {
-            // If the user already exists, it catches the 'auth/email-already-in-use' error 
-            // and then tries to sign in.
-            if (registrationError.code === 'auth/email-already-in-use') {
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    resetAllTools();
-                    setIsAuthModalVisible(false);
-                    resolve();
-                } catch (loginError: any) {
-                    // For any login error, translate it and reject.
-                    const translatedError = translateFirebaseError(loginError);
-                    reject(new Error(translatedError));
-                }
-            } else {
-                // For any other registration error, translate it and reject.
-                const translatedError = translateFirebaseError(registrationError);
-                reject(new Error(translatedError));
+            // Step 2: If user creation fails, analyze the error.
+            switch (registrationError.code) {
+                case 'auth/email-already-in-use':
+                    // This is an expected failure. The user exists, so try to sign them in.
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                        // Login successful.
+                        resetAllTools();
+                        setIsAuthModalVisible(false); // Close modal on success
+                        resolve();
+                    } catch (loginError: any) {
+                        // Step 3: Handle errors from the sign-in attempt.
+                        switch (loginError.code) {
+                            case 'auth/user-disabled':
+                                reject(new Error(t('errors.userDisabled')));
+                                break;
+                            case 'auth/wrong-password':
+                            case 'auth/invalid-credential':
+                                reject(new Error(t('errors.invalidCredential')));
+                                break;
+                            default:
+                                // For any other login error, reject with a generic message.
+                                reject(new Error(loginError.message || t('errors.unknownError')));
+                        }
+                    }
+                    break;
+
+                case 'auth/user-disabled':
+                    // This handles the edge case where a disabled user tries to "register" again.
+                    reject(new Error(t('errors.userDisabled')));
+                    break;
+                    
+                case 'auth/weak-password':
+                    // Handle weak password error during registration.
+                    reject(new Error(t('errors.passwordTooShort')));
+                    break;
+
+                default:
+                    // For any other unexpected registration error.
+                    reject(new Error(registrationError.message || t('errors.unknownError')));
+                    break;
             }
         }
     });
-  };
+};
 
   const handleGoogleSignIn = async (): Promise<void> => {
     const provider = new GoogleAuthProvider();
