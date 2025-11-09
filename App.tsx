@@ -771,6 +771,8 @@ const App: React.FC = () => {
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
         try {
+            // This logic attempts to create a user first. If the user already exists,
+            // it catches the 'auth/email-already-in-use' error and then tries to sign in.
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await sendEmailVerification(userCredential.user);
             resolve();
@@ -782,18 +784,28 @@ const App: React.FC = () => {
                     setIsAuthModalVisible(false);
                     resolve();
                 } catch (loginError: any) {
+                    // Specific check for user disabled during login attempt
                     if (loginError.code === 'auth/user-disabled') {
                         reject(new Error(t('errors.userDisabled')));
                     } else {
+                        // Any other login error (e.g., wrong password) is treated as invalid credentials
                         reject(new Error(t('errors.invalidCredential')));
                     }
                 }
             } else if (error.code === 'auth/user-disabled') {
+                // Specific check for user disabled during registration attempt
                 reject(new Error(t('errors.userDisabled')));
             } else if (error.code === 'auth/weak-password') {
                 reject(new Error(t('errors.passwordTooShort')));
             } else {
-                reject(new Error(error.message));
+                // Failsafe catch-all. This is where the raw Firebase error was likely exposed.
+                // We add a specific check for the 'user-disabled' string in the message
+                // to handle cases where the error code is not specific.
+                if (error.message && error.message.includes('auth/user-disabled')) {
+                    reject(new Error(t('errors.userDisabled')));
+                } else {
+                    reject(new Error(error.message));
+                }
             }
         }
     });
