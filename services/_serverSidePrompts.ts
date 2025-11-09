@@ -238,3 +238,41 @@ export const buildImageVariationPrompt = (
   ];
   return `Generate 1 image at ${aspectRatio} in ${style} style using the uploaded reference as the subject to preserve identity (strength = ${identityLock}/100). Variation policy: target ~${variationStrength}% visual change. ${themeAnchorInstruction} Produce ONE image with these micro-variations: ${variationDetails[variationIndex]}. General constraints: Keep hairstyle/clothing consistent. Avoid repetitive framing. Photorealistic detail. No logos/text. Return only the image.`;
 };
+
+// --- NEW PROMPTS FOR CREATIVE STUDIO FEATURES ---
+
+export const buildProductPhotoPrompt = (formData: any): string => {
+    return `Chụp một bức ảnh sản phẩm chuyên nghiệp. Người mẫu (giữ nguyên khuôn mặt từ ảnh) đang tạo dáng với sản phẩm. ${formData.prompt_detail || ''}. Phong cách chụp: ${formData.frame_style}. Tỷ lệ: ${formData.aspect_ratio}.`;
+};
+
+export const buildTryOnOutfitPrompt = (formData: any): string => {
+    return `Người mẫu (giữ nguyên khuôn mặt từ ảnh 1) đang mặc trang phục từ ảnh 2. Bối cảnh: ${formData.prompt_detail || 'studio chuyên nghiệp'}. Phong cách chụp: ${formData.frame_style}. Tỷ lệ: ${formData.aspect_ratio}.`;
+};
+
+export const buildPlaceInScenePrompt = (formData: any): string => {
+    let background = formData.custom_background_prompt || formData.background_options.join(', ') || 'studio đơn giản';
+    return `Ghép người mẫu (giữ nguyên khuôn mặt từ ảnh) vào bối cảnh sau: ${background}. Phong cách chụp: ${formData.frame_style}. Tỷ lệ: ${formData.aspect_ratio}.`;
+};
+
+export const buildBirthdayPhotoPrompt = (formData: any): string => {
+    return `Tạo một bức ảnh sinh nhật cho người trong ảnh (giữ nguyên khuôn mặt). Concept: ${formData.birthday_scenes.join(', ')}. Phong cách chụp: ${formData.frame_style}. Tỷ lệ: ${formData.aspect_ratio}.`;
+};
+
+export const buildCoupleComposePrompt = (formData: any): string => {
+    return `Tạo ảnh cặp đôi. Người 1 (ảnh 1, ${formData.person_left_gender}) và Người 2 (ảnh 2, ${formData.person_right_gender}) đang ${formData.affection_action}. Bối cảnh: ${formData.couple_background}. Phong cách ảnh: ${formData.aesthetic_style}. Phong cách chụp: ${formData.frame_style}. Tỷ lệ: ${formData.aspect_ratio}.`;
+};
+
+export const buildChangeHairstylePrompt = (formData: any): string => {
+    return `Thay đổi kiểu tóc cho người trong ảnh (giữ nguyên khuôn mặt). Kiểu tóc mới: ${formData.hairstyle}. Màu tóc: ${formData.hair_color}. Độ dài: ${formData.hair_length}. Tỷ lệ: ${formData.aspect_ratio}.`;
+};
+
+export const buildCreativeCompositePrompt = (formData: any): string => {
+    let prompt = `Tạo một bức ảnh σύνθετο. Chủ thể chính là '${formData.main_subject_description || 'người trong ảnh'}' từ ảnh chính. Bối cảnh được mô tả là: '${formData.scene_description}'.`;
+    if (formData.additional_components) {
+        formData.additional_components.forEach((comp: any, index: number) => {
+            prompt += ` Thêm thành phần phụ ${index + 1} từ ảnh phụ ${index + 1}, mô tả là '${formData[`additional_components_${index}_description`] || 'đối tượng trong ảnh'}'.`;
+        });
+    }
+    prompt += ` Tỷ lệ ảnh cuối cùng là ${formData.aspect_ratio}.`;
+    return prompt;
+};

@@ -16,6 +16,7 @@ export default {
     "generating": "Generating...",
     "noTurns": "No turns left",
     "generate": "Generate",
+    "comingSoon": "Coming Soon",
     "library": {
       "title": "Library",
       "openAria": "Open image library",

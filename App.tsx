@@ -310,16 +310,16 @@ const App: React.FC = () => {
             if (!userData) { // Tương ứng với !userDoc.exists() trước đó
                 const fingerprint = await getFingerprint();
                 
-                // **FIX:** Loại bỏ truy vấn tập hợp không được phép.
-                // Đoạn mã này gây ra lỗi "permission-denied" cho người dùng mới.
-                // const usersRef = collection(db, "users");
-                // const q = query(usersRef, where("deviceFingerprint", "==", fingerprint));
-                // const querySnapshot = await getDocs(q);
-                // const hasBeenUsed = !querySnapshot.empty;
-                
-                // Mặc định `hasBeenUsed` là false để đảm bảo logic tạo ngày hết hạn vẫn chạy đúng.
-                // Mọi người dùng mới giờ sẽ nhận được 1 giờ dùng thử.
-                const hasBeenUsed = false;
+                // **FIX:** Triển khai lại logic kiểm tra fingerprint một cách an toàn.
+                // Thay vì truy vấn tập hợp 'users', chúng ta sẽ kiểm tra sự tồn tại của
+                // một tài liệu trong tập hợp 'device_fingerprints' có thể đọc công khai.
+                const fingerprintRef = doc(db, 'device_fingerprints', fingerprint);
+                const fingerprintDoc = await getDoc(fingerprintRef);
+                const hasBeenUsed = fingerprintDoc.exists();
+
+                if (hasBeenUsed) {
+                    alert(t('auth.trialNotice.message'));
+                }
                 
                 let expiryDate = new Date();
                 if (!hasBeenUsed) {
@@ -343,7 +343,8 @@ const App: React.FC = () => {
                 uid: user.uid,
                 username: user.email!,
                 isAdmin: userData.isAdmin,
-                subscriptionEndDate: userData.subscriptionEndDate
+                subscriptionEndDate: userData.subscriptionEndDate,
+                providerId: user.providerData?.[0]?.providerId
             };
 
             setCurrentUser(appUser);
@@ -824,7 +825,7 @@ const App: React.FC = () => {
                         errorMessage = t('auth.emailAlreadyInUse');
                         break;
                     case 'auth/weak-password':
-                        errorMessage = t('errors.passwordTooShort');
+                        errorMessage = t('errors.passwordTooShort', {min: 8});
                         break;
                     default:
                         errorMessage = error.message || t('errors.unknownError');

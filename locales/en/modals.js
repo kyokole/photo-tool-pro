@@ -218,7 +218,10 @@ export default {
     "registerNow": "Register now",
     "hasAccount": "Already have an account?",
     "loginNow": "Login now",
-    "emailAlreadyInUse": "This email is already in use. Please log in or use a different email."
+    "emailAlreadyInUse": "This email is already in use. Please log in or use a different email.",
+    "trialNotice": {
+      "message": "This device has been used to register an account before. Therefore, you are not eligible for the 1-hour free trial. Please contact support to upgrade your plan."
+    }
   },
   "changePassword": {
     "title": "Change Password",

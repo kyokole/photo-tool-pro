@@ -73,6 +73,7 @@ export interface User {
   subscriptionEndDate: string; // ISO 8601 date string
   isAdmin?: boolean;
   deviceFingerprint?: string;
+  providerId?: string;
 }
 
 // --- Types for the new Fashion Studio ---

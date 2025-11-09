@@ -187,13 +187,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                     />
                 )}
             </div>
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--border-color)]">
-                <button 
-                    onClick={onChangePasswordClick} 
-                    className="text-center text-xs text-[var(--accent-blue)] hover:text-[var(--accent-cyan)] hover:underline"
-                >
-                    {t('user.changePassword')}
-                </button>
+            <div className={`grid ${currentUser.providerId === 'password' ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-2 border-t border-[var(--border-color)]`}>
+                {currentUser.providerId === 'password' && (
+                    <button 
+                        onClick={onChangePasswordClick} 
+                        className="text-center text-xs text-[var(--accent-blue)] hover:text-[var(--accent-cyan)] hover:underline"
+                    >
+                        {t('user.changePassword')}
+                    </button>
+                )}
                 <button 
                     onClick={onLogout} 
                     className="text-center text-xs text-[var(--text-secondary)] hover:text-white hover:underline"

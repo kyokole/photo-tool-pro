@@ -16,6 +16,7 @@ export default {
     "generating": "Đang tạo...",
     "noTurns": "Hết lượt",
     "generate": "Tạo ảnh",
+    "comingSoon": "Sắp ra mắt",
     "library": {
       "title": "Thư viện",
       "openAria": "Mở thư viện ảnh",

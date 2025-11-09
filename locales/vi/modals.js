@@ -218,7 +218,10 @@ export default {
     "registerNow": "Đăng ký ngay",
     "hasAccount": "Đã có tài khoản?",
     "loginNow": "Đăng nhập ngay",
-    "emailAlreadyInUse": "Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác."
+    "emailAlreadyInUse": "Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác.",
+    "trialNotice": {
+      "message": "Thiết bị của bạn đã được sử dụng để đăng ký một tài khoản trước đây. Do đó, bạn không đủ điều kiện nhận 1 giờ dùng thử miễn phí. Vui lòng liên hệ hỗ trợ để nâng cấp gói."
+    }
   },
   "changePassword": {
     "title": "Đổi mật khẩu",
