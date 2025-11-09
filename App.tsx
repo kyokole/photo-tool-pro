@@ -771,37 +771,48 @@ const App: React.FC = () => {
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
       try {
-        // First, try to sign in. This is the most common case for a combined button.
+        // Step 1: Attempt to sign in. This is the most common action.
         await signInWithEmailAndPassword(auth, email, password);
-        // Successful sign-in is handled by onAuthStateChanged, which will resolve the flow.
+        // Success is handled by the onAuthStateChanged listener, so we just resolve.
         resolve();
-      } catch (error: any) {
-        // If sign-in fails, check the reason.
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
-          // If the user doesn't exist, try creating a new account.
-          try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            // After creation, send verification. onAuthStateChanged will handle the rest.
-            await sendEmailVerification(userCredential.user);
-            resolve();
-          } catch (createError: any) {
-            // Handle specific creation errors.
-            if (createError.code === 'auth/weak-password') {
-              reject(new Error(t('errors.passwordTooShort')));
-            } else {
-              // For other creation errors (network, etc.), show the original message.
-              reject(new Error(createError.message));
+      } catch (signInError: any) {
+        // Step 2: If sign-in fails, analyze the error code to decide the next action.
+        switch (signInError.code) {
+          // Case A: User doesn't exist. Attempt to create a new account.
+          case 'auth/user-not-found':
+          case 'auth/invalid-email': // Can sometimes indicate a non-existent user.
+            try {
+              const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+              // After creation, send verification email. onAuthStateChanged will handle UI updates.
+              await sendEmailVerification(userCredential.user);
+              resolve();
+            } catch (createError: any) {
+              // Handle specific errors that can occur during account creation.
+              switch (createError.code) {
+                case 'auth/weak-password':
+                  reject(new Error(t('errors.passwordTooShort')));
+                  break;
+                default:
+                  // For other creation errors (e.g., network issue), show the raw message.
+                  reject(new Error(createError.message));
+              }
             }
-          }
-        } else if (error.code === 'auth/user-disabled') {
-          // Explicitly handle the 'user-disabled' error with a translated message.
-          reject(new Error(t('errors.userDisabled')));
-        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-          // Handle wrong password and other invalid credential errors.
-          reject(new Error(t('errors.invalidCredential')));
-        } else {
-          // For any other sign-in errors, show the original Firebase message as a fallback.
-          reject(new Error(error.message));
+            break;
+
+          // Case B: User account is disabled. This is a critical error to catch.
+          case 'auth/user-disabled':
+            reject(new Error(t('errors.userDisabled')));
+            break;
+
+          // Case C: Incorrect password or other invalid credential issues.
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            reject(new Error(t('errors.invalidCredential')));
+            break;
+
+          // Default Case: For any other unexpected sign-in errors.
+          default:
+            reject(new Error(signInError.message));
         }
       }
     });
