@@ -272,10 +272,12 @@ const App: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
+          // Người dùng đã đăng nhập vào Firebase
           const userDocRef = doc(db, 'users', user.uid);
           let userDoc = await getDoc(userDocRef);
           const isNewUserInFirestore = !userDoc.exists();
-
+  
+          // Nếu là người dùng mới trong Firestore, tạo tài liệu cho họ
           if (isNewUserInFirestore) {
             const fingerprint = await getFingerprint();
             const usersRef = collection(db, "users");
@@ -283,6 +285,7 @@ const App: React.FC = () => {
             const querySnapshot = await getDocs(q);
             const hasBeenUsed = !querySnapshot.empty;
             let expiryDate = new Date();
+            // Chỉ cho 1 giờ dùng thử nếu thiết bị này chưa từng được sử dụng để đăng ký
             if (!hasBeenUsed) {
               expiryDate.setHours(expiryDate.getHours() + 1);
             }
@@ -292,51 +295,56 @@ const App: React.FC = () => {
               isAdmin: false,
               deviceFingerprint: fingerprint,
             });
-            userDoc = await getDoc(userDocRef);
+            userDoc = await getDoc(userDocRef); // Tải lại tài liệu vừa tạo
           }
           
           const userData = userDoc.data();
           if (!userData) {
+            // Trường hợp cực hiếm: không thể đọc dữ liệu vừa tạo. Đăng xuất an toàn.
             await signOut(auth);
             return;
           }
-
+  
+          // Luôn tải lại trạng thái mới nhất của người dùng từ Firebase Auth
           await user.reload();
           
-          const isAdmin = userData.isAdmin || false;
-
-          // **TRIỆT ĐỂ & ĐƠN GIẢN HÓA LOGIC:**
-          // Một người dùng cần xác thực CHỈ KHI họ không phải admin VÀ email của họ chưa được xác thực.
-          // Logic này an toàn vì người dùng Google/OAuth luôn có email đã được xác thực.
-          // Nó chỉ nhắm đến những người dùng đăng ký bằng email/mật khẩu chưa nhấn vào liên kết.
-          const needsVerification = !isAdmin && !user.emailVerified;
-
-          if (needsVerification) {
-            if (isNewUserInFirestore) {
-              await sendEmailVerification(user);
-            }
-            setIsVerificationModalVisible(true);
-            setCurrentUser(null);
+          // --- BẮT ĐẦU LOGIC XÁC THỰC MỚI, TỐI ƯU ---
+          // Logic này xử lý rõ ràng các trường hợp để tránh lỗi vòng lặp và mang lại trải nghiệm người dùng tốt hơn.
+  
+          // TRƯỚC TIÊN, KIỂM TRA XÁC THỰC.
+          // 1. Admin được vào ngay.
+          // 2. Người dùng đã xác thực email (bao gồm cả người dùng Google/OAuth vì họ luôn được xác thực) được vào ngay.
+          if (userData.isAdmin || user.emailVerified) {
+              // Người dùng hợp lệ, cho phép đăng nhập vào ứng dụng
+              setIsAuthModalVisible(false);
+              setIsVerificationModalVisible(false);
+              setCurrentUser({
+                  uid: user.uid,
+                  username: user.email!,
+                  isAdmin: userData.isAdmin,
+                  subscriptionEndDate: userData.subscriptionEndDate
+              });
+              
+              if (postLoginRedirect) {
+                  handleModeChange(postLoginRedirect);
+                  setPostLoginRedirect(null);
+              }
           } else {
-            // TẤT CẢ người dùng khác (Google, đã xác thực, admin) đều được đăng nhập.
-            setIsAuthModalVisible(false);
-            setIsVerificationModalVisible(false);
-            setCurrentUser({
-              uid: user.uid,
-              username: user.email!,
-              isAdmin: userData.isAdmin,
-              subscriptionEndDate: userData.subscriptionEndDate
-            });
-            
-            if (postLoginRedirect) {
-              handleModeChange(postLoginRedirect);
-              setPostLoginRedirect(null);
-            }
+              // 3. Người dùng đăng ký qua email nhưng CHƯA xác thực
+              // Chỉ hiển thị modal yêu cầu xác thực và không làm gì khác.
+              // Điều này ngăn chặn việc ứng dụng bị đặt lại về trạng thái "chưa đăng nhập" một cách sai lầm.
+              if (isNewUserInFirestore) {
+                  // Chỉ gửi email nếu đây là lần đầu tiên họ đăng ký
+                  await sendEmailVerification(user);
+              }
+              setIsAuthModalVisible(false); // Ẩn modal đăng nhập/đăng ký
+              setIsVerificationModalVisible(true); // Hiển thị modal yêu cầu xác thực
+              setCurrentUser(null); // Giữ người dùng ở trạng thái "chưa đăng nhập" đối với app cho đến khi họ xác thực
           }
         } else {
-          // User is logged out or not yet authenticated
+          // Người dùng đã đăng xuất hoặc chưa đăng nhập
           setCurrentUser(null);
-          setIsVerificationModalVisible(false);
+          setIsVerificationModalVisible(false); // Đảm bảo modal xác thực bị ẩn khi không có người dùng
         }
       } catch (e) {
         console.error("Auth state change error:", e);
@@ -345,7 +353,7 @@ const App: React.FC = () => {
         setIsAuthLoading(false);
       }
     });
-
+  
     return () => unsubscribe();
   }, [handleModeChange, postLoginRedirect]);
 
