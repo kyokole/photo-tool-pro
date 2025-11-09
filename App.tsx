@@ -770,36 +770,40 @@ const App: React.FC = () => {
 
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
-        try {
+      try {
+        // First, try to sign in. This is the most common case for a combined button.
+        await signInWithEmailAndPassword(auth, email, password);
+        // Successful sign-in is handled by onAuthStateChanged, which will resolve the flow.
+        resolve();
+      } catch (error: any) {
+        // If sign-in fails, check the reason.
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+          // If the user doesn't exist, try creating a new account.
+          try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // After creation, send verification. onAuthStateChanged will handle the rest.
             await sendEmailVerification(userCredential.user);
-            
-            // User document creation is now handled by onAuthStateChanged.
-            // Don't close modal here; wait for verification flow.
             resolve();
-        } catch (error: any) {
-            if (error.code === 'auth/email-already-in-use') {
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    // onAuthStateChanged will handle the rest.
-                    resetAllTools();
-                    setIsAuthModalVisible(false);
-                    resolve();
-                } catch (loginError: any) {
-                    if (loginError.code === 'auth/user-disabled') {
-                        reject(new Error(t('errors.userDisabled')));
-                    } else {
-                        // This will cover 'auth/wrong-password', 'auth/invalid-credential', etc.
-                        reject(new Error(t('errors.invalidCredential')));
-                    }
-                }
-            } else if (error.code === 'auth/weak-password') {
-                reject(new Error(t('errors.passwordTooShort')));
+          } catch (createError: any) {
+            // Handle specific creation errors.
+            if (createError.code === 'auth/weak-password') {
+              reject(new Error(t('errors.passwordTooShort')));
+            } else {
+              // For other creation errors (network, etc.), show the original message.
+              reject(new Error(createError.message));
             }
-            else {
-                reject(new Error(error.message));
-            }
+          }
+        } else if (error.code === 'auth/user-disabled') {
+          // Explicitly handle the 'user-disabled' error with a translated message.
+          reject(new Error(t('errors.userDisabled')));
+        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+          // Handle wrong password and other invalid credential errors.
+          reject(new Error(t('errors.invalidCredential')));
+        } else {
+          // For any other sign-in errors, show the original Firebase message as a fallback.
+          reject(new Error(error.message));
         }
+      }
     });
   };
 
