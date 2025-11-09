@@ -311,6 +311,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             return null;
     }
   }
+  
+  const paperMode = settings.paperBackground === '#ffffff' ? 'white' : settings.paperBackground === '#DDDDDD' ? 'gray' : 'custom';
 
   return (
     <aside className="w-full bg-[var(--bg-component)] flex flex-col flex-shrink-0 border-l border-[var(--border-color)] overflow-y-auto scrollbar-thin animate-fade-in flex-1 rounded-xl relative">
@@ -373,13 +375,34 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                  </div>
                  <div>
                     <label className="text-sm font-semibold block mb-1">{t('controlPanel.print.paper.label')}</label>
-                    <div className="grid grid-cols-2 gap-2">
-                       {(['white', 'gray'] as PaperBackground[]).map(bg => (
-                            <button key={bg} onClick={() => onPrintSettingChange(prev => ({...prev, paperBackground: bg}))} className={getOptionButtonClass(settings.paperBackground === bg)}>
-                                {t(`controlPanel.print.paper.options.${bg}`)}
-                            </button>
-                        ))}
+                    <div className="grid grid-cols-3 gap-2">
+                        <button key="white" onClick={() => onPrintSettingChange(prev => ({...prev, paperBackground: '#ffffff'}))} className={getOptionButtonClass(paperMode === 'white')}>
+                            {t('controlPanel.print.paper.options.white')}
+                        </button>
+                        <button key="gray" onClick={() => onPrintSettingChange(prev => ({...prev, paperBackground: '#DDDDDD'}))} className={getOptionButtonClass(paperMode === 'gray')}>
+                            {t('controlPanel.print.paper.options.gray')}
+                        </button>
+                        <button key="custom" onClick={() => { if (paperMode !== 'custom') { onPrintSettingChange(prev => ({...prev, paperBackground: '#A0AEC0'})); } }} className={getOptionButtonClass(paperMode === 'custom')}>
+                            {t('controlPanel.print.paper.options.custom')}
+                        </button>
                     </div>
+                    {paperMode === 'custom' && (
+                        <div className="flex items-center space-x-2 p-2 mt-2 bg-black/20 rounded-md animate-fade-in">
+                            <input 
+                                type="color" 
+                                value={settings.paperBackground} 
+                                onChange={e => onPrintSettingChange(prev => ({...prev, paperBackground: e.target.value}))} 
+                                className="w-8 h-8 p-0 border-none rounded cursor-pointer bg-transparent" 
+                                style={{'WebkitAppearance': 'none'}} 
+                            />
+                            <input 
+                                type="text" 
+                                value={settings.paperBackground} 
+                                onChange={e => onPrintSettingChange(prev => ({...prev, paperBackground: e.target.value}))} 
+                                className="w-full bg-transparent text-sm font-mono" 
+                            />
+                        </div>
+                    )}
                  </div>
              </div>
         </div>

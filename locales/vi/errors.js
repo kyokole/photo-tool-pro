@@ -39,6 +39,7 @@ export default {
     "noResultToExport": "Không có kết quả để xuất.",
     "imageUploadFailed": "Đã có lỗi xảy ra khi tải ảnh lên.",
     "invalidCredential": "Thông tin đăng nhập không hợp lệ. Vui lòng kiểm tra lại email và mật khẩu.",
+    "userDisabled": "Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.",
     "apiKeyInvalid": "API Key không hợp lệ. Vui lòng kiểm tra lại cấu hình. Nếu bạn là người dùng, hãy liên hệ với quản trị viên để được hỗ trợ.",
     "quotaExceeded": "Bạn đã vượt quá hạn ngạch sử dụng miễn phí cho hôm nay. Vui lòng thử lại sau 24 giờ hoặc liên hệ quản trị viên để nâng cấp."
   }

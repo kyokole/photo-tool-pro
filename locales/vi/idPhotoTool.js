@@ -77,7 +77,8 @@ export default {
         "label": "Nền giấy in",
         "options": {
           "white": "Trắng",
-          "gray": "Xám"
+          "gray": "Xám",
+          "custom": "Tùy chỉnh"
         }
       }
     },

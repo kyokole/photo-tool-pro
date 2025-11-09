@@ -289,8 +289,8 @@ const App: React.FC = () => {
 
             let expiryDate = new Date(); // Default to expired
             if (!hasBeenUsed) {
-              console.log("New device detected. Granting 10-minute VIP trial.");
-              expiryDate.setMinutes(expiryDate.getMinutes() + 10);
+              console.log("New device detected. Granting 1-hour VIP trial.");
+              expiryDate.setHours(expiryDate.getHours() + 1);
             } else {
               console.log("Device fingerprint already used. Not granting VIP trial.");
             }
@@ -313,13 +313,19 @@ const App: React.FC = () => {
 
           await user.reload();
 
-          if (isNewUserInFirestore && !user.emailVerified) {
+          const isEmailPasswordProvider = user.providerData.some(
+            (provider) => provider.providerId === 'password'
+          );
+
+          if (isNewUserInFirestore && isEmailPasswordProvider && !user.emailVerified) {
             await sendEmailVerification(user);
           }
           
           const isAdmin = userData.isAdmin || false;
 
-          if (!isAdmin && !user.emailVerified) {
+          // ONLY enforce email verification for the email/password provider.
+          // Google, Facebook, etc. users are considered verified.
+          if (!isAdmin && isEmailPasswordProvider && !user.emailVerified) {
             setIsVerificationModalVisible(true);
             setCurrentUser(null);
           } else {
@@ -780,7 +786,12 @@ const App: React.FC = () => {
                     setIsAuthModalVisible(false);
                     resolve();
                 } catch (loginError: any) {
-                    reject(new Error(t('errors.invalidCredential')));
+                    if (loginError.code === 'auth/user-disabled') {
+                        reject(new Error(t('errors.userDisabled')));
+                    } else {
+                        // This will cover 'auth/wrong-password', 'auth/invalid-credential', etc.
+                        reject(new Error(t('errors.invalidCredential')));
+                    }
                 }
             } else if (error.code === 'auth/weak-password') {
                 reject(new Error(t('errors.passwordTooShort')));

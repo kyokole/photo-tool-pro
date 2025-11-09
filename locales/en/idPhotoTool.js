@@ -77,7 +77,8 @@ export default {
         "label": "Print Paper Background",
         "options": {
           "white": "White",
-          "gray": "Gray"
+          "gray": "Gray",
+          "custom": "Custom"
         }
       }
     },

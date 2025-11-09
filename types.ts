@@ -7,7 +7,7 @@ export type OutfitMode = 'preset' | 'custom' | 'upload';
 export type HairStyle = 'auto' | 'down' | 'slicked_back' | 'keep_original';
 export type BackgroundMode = 'white' | 'light_blue' | 'custom' | 'ai';
 export type PrintLayout = 'none' | '10x15' | '13x18' | '20x30';
-export type PaperBackground = 'white' | 'gray';
+export type PaperBackground = string;
 export type AccordionSection = 'layout' | 'outfit' | 'face' | 'background' | '';
 
 

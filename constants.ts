@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   safe5x5Layout: true,
   printLayout: 'none',
-  paperBackground: 'white',
+  paperBackground: '#ffffff',
 };
 
 // OUTFIT_PRESETS now uses keys for names, which will be translated by the UI, and includes a previewUrl

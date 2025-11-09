@@ -183,7 +183,7 @@ export default {
   },
   "auth": {
     "title": "Login or Register",
-    "description": "New accounts get a <strong>free 10-minute trial</strong> of VIP features.",
+    "description": "New accounts get a <strong>free 1-hour trial</strong> of VIP features.",
     "usernamePlaceholder": "Email Address",
     "passwordPlaceholder": "Password",
     "forgotPassword": "Forgot password?",

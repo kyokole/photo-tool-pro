@@ -10,37 +10,50 @@ let auth: Auth;
 let db: Firestore;
 
 // Hàm này sẽ được gọi một lần duy nhất khi ứng dụng khởi động.
-// Nó sẽ lấy cấu hình từ một API endpoint an toàn phía server.
 export const initializeFirebase = async () => {
   if (app) {
     return; // Đã khởi tạo rồi thì không làm gì cả
   }
 
+  let firebaseConfig;
+
   try {
+    // 1. Cố gắng lấy cấu hình từ Vercel Serverless Function (dành cho production)
     const response = await fetch('/api/config');
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch Firebase config: ${errorText}`);
+    
+    if (response.ok) {
+        // Nếu thành công (đang chạy trên Vercel), lấy config từ API
+        firebaseConfig = await response.json();
+        if (!firebaseConfig.apiKey) {
+            throw new Error("API config from server is missing apiKey.");
+        }
+        console.log("Firebase config loaded from /api/config (Production Mode)");
+    } else {
+        // 2. Nếu thất bại (lỗi 404 trong AI Studio), sử dụng DUMMY config
+        console.warn("Could not fetch /api/config. AI Studio environment detected. Initializing Firebase with a DUMMY config to allow the app to run. Auth features will be disabled.");
+        firebaseConfig = {
+            apiKey: "AIzaSy...",
+            authDomain: "dummy-project.firebaseapp.com",
+            projectId: "dummy-project",
+            storageBucket: "dummy-project.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:dummy",
+        };
     }
-    const firebaseConfig = await response.json();
 
-    if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AIzaSyXXX")) {
-        throw new Error("Invalid or placeholder Firebase config received from server. Please check Vercel environment variables.");
-    }
-
-    // Khởi tạo Firebase với cấu hình nhận được
+    // 3. Khởi tạo Firebase với cấu hình đã có
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
 
     console.log("Firebase initialized successfully.");
+
   } catch (error) {
     console.error("Fatal error initializing Firebase:", error);
     // Ném lỗi ra ngoài để `index.tsx` có thể bắt và hiển thị thông báo lỗi
-    throw error;
+    throw new Error(`Failed to initialize Firebase: ${(error as Error).message}`);
   }
 };
 
 // Xuất các biến đã được khởi tạo để các thành phần khác có thể sử dụng
-// Lưu ý: Các thành phần import cần đảm bảo `initializeFirebase` đã chạy xong.
 export { app, auth, db };

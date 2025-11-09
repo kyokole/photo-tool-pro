@@ -198,7 +198,7 @@ export const generatePaperPreview = (
                 ctx.shadowColor = 'rgba(0,0,0,0.2)';
                 ctx.shadowBlur = 15;
                 ctx.shadowOffsetY = 5;
-                ctx.fillStyle = paperBackground === 'gray' ? '#f0f0f0' : '#ffffff';
+                ctx.fillStyle = paperBackground;
                 drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 8);
                 ctx.fill();
                 ctx.restore();
@@ -260,7 +260,7 @@ export const generatePrintSheet = (
                 const ctx = canvas.getContext('2d');
                 if (!ctx) return reject(new Error("Không thể tạo context cho canvas."));
 
-                ctx.fillStyle = paperBackground === 'gray' ? '#DDDDDD' : 'white';
+                ctx.fillStyle = paperBackground;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 
                 for (let r = 0; r < layout.rows; r++) {

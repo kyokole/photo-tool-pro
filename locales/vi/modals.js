@@ -183,7 +183,7 @@ export default {
   },
   "auth": {
     "title": "Đăng nhập hoặc Đăng ký",
-    "description": "Tài khoản mới sẽ được <strong>dùng thử miễn phí 10 phút</strong> các tính năng VIP.",
+    "description": "Tài khoản mới sẽ được <strong>dùng thử miễn phí 1 giờ</strong> các tính năng VIP.",
     "usernamePlaceholder": "Địa chỉ Email",
     "passwordPlaceholder": "Mật khẩu",
     "forgotPassword": "Quên mật khẩu?",
