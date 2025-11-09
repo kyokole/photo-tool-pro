@@ -770,50 +770,32 @@ const App: React.FC = () => {
 
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
-      try {
-        // Step 1: Attempt to sign in.
-        await signInWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged will handle success
-        resolve();
-      } catch (error: any) {
-        // Step 2: Handle sign-in errors
-        const errorCode = error.code;
-  
-        // Prioritize critical errors first
-        if (errorCode === 'auth/user-disabled') {
-          reject(new Error(t('errors.userDisabled')));
-          return;
-        }
-  
-        if (errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-          reject(new Error(t('errors.invalidCredential')));
-          return;
-        }
-  
-        // If user is not found, attempt to create a new account
-        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/invalid-email') {
-          try {
+        try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await sendEmailVerification(userCredential.user);
-            // onAuthStateChanged will handle the rest
             resolve();
-          } catch (createError: any) {
-            // Handle specific account creation errors
-            if (createError.code === 'auth/weak-password') {
-              reject(new Error(t('errors.passwordTooShort')));
+        } catch (error: any) {
+            if (error.code === 'auth/email-already-in-use') {
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    resetAllTools();
+                    setIsAuthModalVisible(false);
+                    resolve();
+                } catch (loginError: any) {
+                    if (loginError.code === 'auth/user-disabled') {
+                        reject(new Error(t('errors.userDisabled')));
+                    } else {
+                        reject(new Error(t('errors.invalidCredential')));
+                    }
+                }
+            } else if (error.code === 'auth/user-disabled') {
+                reject(new Error(t('errors.userDisabled')));
+            } else if (error.code === 'auth/weak-password') {
+                reject(new Error(t('errors.passwordTooShort')));
             } else {
-              // For other creation errors, reject with the message.
-              // This could be 'auth/email-already-in-use' if there's a race condition,
-              // or a network error.
-              reject(new Error(createError.message));
+                reject(new Error(error.message));
             }
-          }
-          return; // Important: stop execution after attempting creation
         }
-  
-        // Default case for any other unhandled sign-in errors
-        reject(new Error(error.message));
-      }
     });
   };
 
