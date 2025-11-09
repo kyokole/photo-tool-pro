@@ -768,44 +768,50 @@ const App: React.FC = () => {
     }
 }, [handleResetRestorationTool, t]);
 
+  const translateFirebaseError = useCallback((error: any): string => {
+    const errorCode = error.code || '';
+    const errorMessage = error.message || '';
+
+    if (errorCode.includes('auth/user-disabled') || errorMessage.includes('auth/user-disabled')) {
+        return t('errors.userDisabled');
+    }
+    if (errorCode.includes('auth/wrong-password') || errorCode.includes('auth/invalid-credential')) {
+        return t('errors.invalidCredential');
+    }
+    if (errorCode.includes('auth/weak-password')) {
+        return t('errors.passwordTooShort');
+    }
+    
+    // Fallback to the original message if it's not a recognized error, 
+    // but try to provide a generic one if the message is empty.
+    return errorMessage || t('errors.unknownError');
+  }, [t]);
+
   const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
         try {
-            // This logic attempts to create a user first. If the user already exists,
-            // it catches the 'auth/email-already-in-use' error and then tries to sign in.
+            // This logic attempts to create a user first.
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await sendEmailVerification(userCredential.user);
             resolve();
-        } catch (error: any) {
-            if (error.code === 'auth/email-already-in-use') {
+        } catch (registrationError: any) {
+            // If the user already exists, it catches the 'auth/email-already-in-use' error 
+            // and then tries to sign in.
+            if (registrationError.code === 'auth/email-already-in-use') {
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
                     resetAllTools();
                     setIsAuthModalVisible(false);
                     resolve();
                 } catch (loginError: any) {
-                    // Specific check for user disabled during login attempt
-                    if (loginError.code === 'auth/user-disabled') {
-                        reject(new Error(t('errors.userDisabled')));
-                    } else {
-                        // Any other login error (e.g., wrong password) is treated as invalid credentials
-                        reject(new Error(t('errors.invalidCredential')));
-                    }
+                    // For any login error, translate it and reject.
+                    const translatedError = translateFirebaseError(loginError);
+                    reject(new Error(translatedError));
                 }
-            } else if (error.code === 'auth/user-disabled') {
-                // Specific check for user disabled during registration attempt
-                reject(new Error(t('errors.userDisabled')));
-            } else if (error.code === 'auth/weak-password') {
-                reject(new Error(t('errors.passwordTooShort')));
             } else {
-                // Failsafe catch-all. This is where the raw Firebase error was likely exposed.
-                // We add a specific check for the 'user-disabled' string in the message
-                // to handle cases where the error code is not specific.
-                if (error.message && error.message.includes('auth/user-disabled')) {
-                    reject(new Error(t('errors.userDisabled')));
-                } else {
-                    reject(new Error(error.message));
-                }
+                // For any other registration error, translate it and reject.
+                const translatedError = translateFirebaseError(registrationError);
+                reject(new Error(translatedError));
             }
         }
     });
