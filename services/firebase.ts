@@ -55,5 +55,21 @@ export const initializeFirebase = async () => {
   }
 };
 
-// Xuất các biến đã được khởi tạo để các thành phần khác có thể sử dụng
+// Các hàm "getter" để đảm bảo luôn trả về instance đã được khởi tạo
+export const getAppInstance = (): FirebaseApp => {
+    if (!app) throw new Error("Firebase App is not initialized. Call initializeFirebase() first.");
+    return app;
+};
+
+export const getAuthInstance = (): Auth => {
+    if (!auth) throw new Error("Firebase Auth is not initialized. Call initializeFirebase() first.");
+    return auth;
+};
+
+export const getDbInstance = (): Firestore => {
+    if (!db) throw new Error("Firestore is not initialized. Call initializeFirebase() first.");
+    return db;
+};
+
+// Xuất các biến đã được khởi tạo để các thành phần khác có thể sử dụng (giữ lại để tương thích nếu cần)
 export { app, auth, db };

@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth, db } from './services/firebase';
+import { getAuthInstance, getDbInstance } from './services/firebase';
 import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, AccordionSection, HeadshotStyle, RestorationResult, FashionStudioSettings, FashionStudioResult, IdPhotoJob } from './types';
 import { generateIdPhoto, generateHeadshot, initialCleanImage, advancedRestoreImage, colorizeImage, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
@@ -62,6 +62,10 @@ const getFingerprint = async (): Promise<string> => {
 
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
+  
+  // Lấy các instance đã được khởi tạo của Firebase
+  const auth = getAuthInstance();
+  const db = getDbInstance();
 
   // ID Photo State
   const [settings, setSettings] = useState<Settings>(loadSettingsFromSession());
@@ -147,7 +151,7 @@ const App: React.FC = () => {
   useEffect(() => {
     document.documentElement.lang = i18n.language;
     auth.languageCode = i18n.language;
-  }, [i18n.language]);
+  }, [i18n.language, auth]);
   
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -164,7 +168,7 @@ const App: React.FC = () => {
         console.error("Failed to load all users from Firestore", e);
         setAllUsers([]);
     }
-  }, [currentUser?.isAdmin]);
+  }, [currentUser?.isAdmin, db]);
   
   const handleAbort = () => {
     if (abortControllerRef.current) {
@@ -355,7 +359,7 @@ const App: React.FC = () => {
     });
   
     return () => unsubscribe();
-  }, [handleModeChange, postLoginRedirect]);
+  }, [auth, db, handleModeChange, postLoginRedirect]);
 
 
   useEffect(() => {
@@ -886,7 +890,7 @@ const App: React.FC = () => {
         console.error("Failed to grant subscription:", e);
         alert(t('errors.saveUserError'));
     }
-  }, [currentUser, loadAllUsers, t]);
+  }, [currentUser, loadAllUsers, t, db]);
 
   const handleToggleAdmin = useCallback(async (uid: string) => {
     if (!currentUser?.isAdmin || currentUser.uid === uid) {
@@ -912,7 +916,7 @@ const App: React.FC = () => {
         console.error("Failed to toggle admin status:", e);
         alert(t('errors.saveUserError'));
     }
-  }, [currentUser, loadAllUsers, t]);
+  }, [currentUser, loadAllUsers, t, db]);
 
 
   const handleResetUserPassword = useCallback(async (email: string): Promise<void> => {
@@ -928,7 +932,7 @@ const App: React.FC = () => {
         }
         throw new Error(t('errors.passwordResetError'));
     }
-  }, [currentUser, t]);
+  }, [currentUser, t, auth]);
 
   const handleIdPhotoSelect = () => {
     if (appMode !== 'id_photo') handleModeChange('id_photo');
