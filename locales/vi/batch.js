@@ -1,7 +1,9 @@
 export default {
     "batch": {
-        "title": "Trình tạo ảnh hàng loạt 8K",
-        "subtitle": "Xếp hàng đợi nhiều tác vụ tạo ảnh với cài đặt tùy chỉnh và xử lý chúng đồng thời.",
+        // --- Keys for Creative Studio Batch Processor (and shared keys) ---
+        "title": "Xử lý Ảnh thẻ Hàng loạt", // Ghi đè cho Ảnh thẻ
+        "subtitle": "Xếp hàng đợi {{count}} ảnh để xử lý với cùng một cài đặt.", // Ghi đè cho Ảnh thẻ
+
         "addQueue": "1. Thêm tác vụ vào hàng đợi",
         "results": "2. Kết quả & Tiến trình",
         "promptLabel": "Nội dung mô tả",
@@ -24,10 +26,16 @@ export default {
         "clearAll": "Xóa tất cả",
         "noSuccess": "Không có ảnh nào thành công để tải xuống.",
         "status": {
+            // Creative Studio
             "queued": "Đang chờ",
             "running": "Đang xử lý",
             "success": "Thành công",
-            "failed": "Thất bại"
+            "failed": "Thất bại",
+            // ID Photo
+            "pending": "Đang chờ",
+            "processing": "Đang xử lý",
+            "done": "Hoàn tất",
+            "error": "Lỗi"
         },
         "retry": "Thử lại",
         "error": "Lỗi",
@@ -42,6 +50,21 @@ export default {
             "jsonInvalidObject": "Đối tượng không hợp lệ trong JSON tại chỉ mục {{index}}: {{item}}",
             "unsupportedFormat": "Định dạng tệp không được hỗ trợ. Vui lòng sử dụng .txt, .csv hoặc .json.",
             "fileProcessingError": "Lỗi khi xử lý tệp: {{error}}"
+        },
+
+        // --- Keys for ID Photo Batch Processor ---
+        "jobList": "Danh sách tác vụ",
+        "statusSummary": "{{completed}}/{{total}} ảnh đã hoàn tất",
+        "addPhotos": "Thêm ảnh",
+        "clear": "Xóa hàng đợi",
+        "settingsTitle": "Cài đặt hàng loạt",
+        "processingAll": "Đang xử lý tất cả...",
+        "generateAll": "Tạo tất cả ({{count}} ảnh)",
+        "zoom": "Phóng to",
+        "vipLock": {
+            "title": "Tính năng VIP xử lý hàng loạt",
+            "description": "Xử lý nhiều ảnh cùng lúc là một tính năng cao cấp. Vui lòng nâng cấp để sử dụng.",
+            "button": "Liên hệ & Nâng cấp"
         }
     }
 }

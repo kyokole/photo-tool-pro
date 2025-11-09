@@ -297,7 +297,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme }
                     ) : resultImage ? (
                         <div className="w-full h-full flex flex-col">
                             <div className="w-full h-full relative group flex-1">
-                                <img src={resultImage} alt="Generated result" className="w-full h-full object-contain rounded-lg"/>
+                                <img src={resultImage} alt="Generated result" className="w-full h-full object-cover rounded-lg"/>
                                 <a href={resultImage} download={`four-seasons-${activeSeason}.png`} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                     <i className="fas fa-download fa-2x text-white"></i>
                                 </a>

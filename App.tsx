@@ -310,19 +310,16 @@ const App: React.FC = () => {
             if (!userData) { // Tương ứng với !userDoc.exists() trước đó
                 const fingerprint = await getFingerprint();
                 
-                // **FIX:** Triển khai lại logic kiểm tra fingerprint một cách an toàn.
-                // Thay vì truy vấn tập hợp 'users', chúng ta sẽ kiểm tra sự tồn tại của
-                // một tài liệu trong tập hợp 'device_fingerprints' có thể đọc công khai.
-                const fingerprintRef = doc(db, 'device_fingerprints', fingerprint);
-                const fingerprintDoc = await getDoc(fingerprintRef);
+                // **GIẢI PHÁP CHUYÊN NGHIỆP:** Kiểm tra `fingerprint` trong một tập hợp riêng.
+                const fingerprintDocRef = doc(db, 'deviceFingerprints', fingerprint);
+                const fingerprintDoc = await getDoc(fingerprintDocRef);
                 const hasBeenUsed = fingerprintDoc.exists();
-
-                if (hasBeenUsed) {
-                    alert(t('auth.trialNotice.message'));
-                }
                 
                 let expiryDate = new Date();
-                if (!hasBeenUsed) {
+                if (hasBeenUsed) {
+                    alert(t('modals.deviceInUse'));
+                    await signOut(auth); // Đăng xuất người dùng nếu thiết bị đã được sử dụng.
+                } else {
                     expiryDate.setHours(expiryDate.getHours() + 1); // Dùng thử 1 giờ
                 }
 
@@ -333,6 +330,11 @@ const App: React.FC = () => {
                     deviceFingerprint: fingerprint,
                 };
                 await setDoc(userDocRef, userData);
+
+                // Nếu là thiết bị mới, hãy ghi lại fingerprint để chống lạm dụng
+                if (!hasBeenUsed) {
+                    await setDoc(fingerprintDocRef, { firstSeen: new Date().toISOString() });
+                }
             } else {
                  if (!userData) {
                     throw new Error(`Tài liệu hồ sơ người dùng bị rỗng (UID: ${user.uid}). Vui lòng liên hệ hỗ trợ.`);
@@ -825,7 +827,7 @@ const App: React.FC = () => {
                         errorMessage = t('auth.emailAlreadyInUse');
                         break;
                     case 'auth/weak-password':
-                        errorMessage = t('errors.passwordTooShort', {min: 8});
+                        errorMessage = t('errors.passwordTooShort');
                         break;
                     default:
                         errorMessage = error.message || t('errors.unknownError');

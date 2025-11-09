@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Spinner } from './Spinner';
 import { ZoomModal } from './ZoomModal';
+import { smartDownload } from '../../utils/canvasUtils';
 
 interface ImageGalleryProps {
   isLoading: boolean;
@@ -22,12 +23,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ isLoading, images, n
   };
 
   const handleDownload = (base64Image: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = `data:image/png;base64,${base64Image}`;
-    link.download = `ai_studio_image_${index + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const imageUrl = `data:image/png;base64,${base64Image}`;
+    const fileName = `ai_studio_image_${index + 1}.png`;
+    smartDownload(imageUrl, fileName);
   }
 
   const handleCloseModals = () => {

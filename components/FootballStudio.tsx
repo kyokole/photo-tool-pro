@@ -5,6 +5,7 @@ import { generateFootballPhoto } from '../services/footballService';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { FOOTBALL_ASPECT_RATIOS, FOOTBALL_TEAMS, FOOTBALL_PLAYERS, FOOTBALL_IDOL_SCENES, FOOTBALL_OUTFIT_SCENES, FOOTBALL_STYLES, DEFAULT_FOOTBALL_SETTINGS } from '../constants/footballConstants';
 import { Spinner } from './creativestudio/Spinner';
+import { smartDownload } from '../utils/canvasUtils';
 
 interface FootballStudioProps {
     theme: string;
@@ -233,11 +234,11 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                                 <div className="text-center p-8"><Spinner /></div>
                             ) : result ? (
                                 <div className="group relative w-full h-full">
-                                    <img src={result.imageUrl} alt="Generated football photo" className="object-contain w-full h-full animate-fade-in" />
+                                    <img src={result.imageUrl} alt="Generated football photo" className="object-cover w-full h-full animate-fade-in rounded-lg" />
                                     <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg">
-                                        <a href={result.imageUrl} download={`football-studio-${result.id}.png`} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
+                                        <button onClick={() => smartDownload(result.imageUrl, `football-studio-${result.id}.png`)} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
                                             <i className="fas fa-download mr-2"></i> {t('footballStudio.download')}
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                             ) : error ? (

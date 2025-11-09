@@ -218,10 +218,7 @@ export default {
     "registerNow": "Register now",
     "hasAccount": "Already have an account?",
     "loginNow": "Login now",
-    "emailAlreadyInUse": "This email is already in use. Please log in or use a different email.",
-    "trialNotice": {
-      "message": "This device has been used to register an account before. Therefore, you are not eligible for the 1-hour free trial. Please contact support to upgrade your plan."
-    }
+    "emailAlreadyInUse": "This email is already in use. Please log in or use a different email."
   },
   "changePassword": {
     "title": "Change Password",
@@ -266,5 +263,6 @@ export default {
     "footerNote": "If you don't verify your email, you will not be able to access the application's features.",
     "resendSuccess": "Verification email sent successfully!",
     "resendError": "Failed to resend email. Please try again later."
-  }
+  },
+  "deviceInUse": "This device has already been used to register an account and receive trial hours. Each device is only allowed one trial to ensure fairness. Please log in to your old account or contact support if you believe this is a mistake."
 }

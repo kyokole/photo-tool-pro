@@ -1,7 +1,9 @@
 export default {
     "batch": {
-        "title": "Gemini 8K Batch Image Generator",
-        "subtitle": "Queue multiple image generation tasks with custom settings and process them concurrently.",
+        // --- Keys for Creative Studio Batch Processor (and shared keys) ---
+        "title": "ID Photo Batch Processor", // Overwritten for ID Photo
+        "subtitle": "Queue {{count}} photos to process with the same settings.", // Overwritten for ID Photo
+
         "addQueue": "1. Add Tasks to Queue",
         "results": "2. Results & Progress",
         "promptLabel": "Prompt",
@@ -24,10 +26,16 @@ export default {
         "clearAll": "Clear All",
         "noSuccess": "No successful images to download.",
         "status": {
+            // Creative Studio
             "queued": "Queued",
             "running": "Running",
             "success": "Success",
-            "failed": "Failed"
+            "failed": "Failed",
+            // ID Photo
+            "pending": "Pending",
+            "processing": "Processing",
+            "done": "Done",
+            "error": "Error"
         },
         "retry": "Retry",
         "error": "Error",
@@ -42,6 +50,21 @@ export default {
             "jsonInvalidObject": "Invalid object in JSON at index {{index}}: {{item}}",
             "unsupportedFormat": "Unsupported file format. Please use .txt, .csv, or .json.",
             "fileProcessingError": "Error processing file: {{error}}"
+        },
+
+        // --- Keys for ID Photo Batch Processor ---
+        "jobList": "Job List",
+        "statusSummary": "{{completed}}/{{total}} photos completed",
+        "addPhotos": "Add Photos",
+        "clear": "Clear Queue",
+        "settingsTitle": "Batch Settings",
+        "processingAll": "Processing All...",
+        "generateAll": "Generate All ({{count}} photos)",
+        "zoom": "Zoom",
+        "vipLock": {
+            "title": "VIP Batch Processing Feature",
+            "description": "Processing multiple photos at once is a premium feature. Please upgrade to use it.",
+            "button": "Contact & Upgrade"
         }
     }
 }

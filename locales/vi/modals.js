@@ -218,10 +218,7 @@ export default {
     "registerNow": "Đăng ký ngay",
     "hasAccount": "Đã có tài khoản?",
     "loginNow": "Đăng nhập ngay",
-    "emailAlreadyInUse": "Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác.",
-    "trialNotice": {
-      "message": "Thiết bị của bạn đã được sử dụng để đăng ký một tài khoản trước đây. Do đó, bạn không đủ điều kiện nhận 1 giờ dùng thử miễn phí. Vui lòng liên hệ hỗ trợ để nâng cấp gói."
-    }
+    "emailAlreadyInUse": "Email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng email khác."
   },
   "changePassword": {
     "title": "Đổi mật khẩu",
@@ -266,5 +263,6 @@ export default {
     "footerNote": "Nếu không xác thực email, bạn sẽ không thể truy cập các tính năng của ứng dụng.",
     "resendSuccess": "Đã gửi lại email xác thực thành công!",
     "resendError": "Gửi lại email thất bại. Vui lòng thử lại sau."
-  }
+  },
+  "deviceInUse": "Thiết bị này đã được sử dụng để đăng ký tài khoản và nhận giờ dùng thử. Mỗi thiết bị chỉ được nhận dùng thử một lần để đảm bảo công bằng. Vui lòng đăng nhập vào tài khoản cũ hoặc liên hệ hỗ trợ nếu bạn cho rằng đây là một sự nhầm lẫn."
 }

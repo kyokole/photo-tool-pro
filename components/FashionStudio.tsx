@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { FashionStudioSettings, FashionStudioResult, FashionCategory, FashionAspectRatio, FashionStyle } from '../types';
 import { FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES, FASHION_ASPECT_RATIOS } from '../constants';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
+import { smartDownload } from '../utils/canvasUtils';
 
 interface FashionStudioProps {
     sourceFile: File | null;
@@ -254,11 +255,11 @@ const FashionStudio: React.FC<FashionStudioProps> = ({
                                 </div>
                             ) : result ? (
                                 <div className="group relative w-full h-full">
-                                    <img src={result.imageUrl} alt={t('fashionStudio.resultAlt')} className="object-contain w-full h-full animate-fade-in" />
+                                    <img src={result.imageUrl} alt={t('fashionStudio.resultAlt')} className="object-cover w-full h-full animate-fade-in rounded-lg" />
                                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg">
-                                       <a href={result.imageUrl} download={`fashion-studio-${result.id}.png`} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
+                                       <button onClick={() => smartDownload(result.imageUrl, `fashion-studio-${result.id}.png`)} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
                                             <i className="fas fa-download mr-2"></i> {t('common.download')}
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
                             ) : error ? (

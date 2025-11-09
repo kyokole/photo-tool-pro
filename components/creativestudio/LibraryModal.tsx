@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ZoomModal } from './ZoomModal';
+import { smartDownload } from '../../utils/canvasUtils';
 
 interface LibraryModalProps {
   isOpen: boolean;
@@ -19,12 +20,9 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ima
   }
 
   const handleDownload = (base64Image: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = `data:image/png;base64,${base64Image}`;
-    link.download = `ai_studio_library_${index}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const imageUrl = `data:image/png;base64,${base64Image}`;
+    const fileName = `ai_studio_library_${index}.png`;
+    smartDownload(imageUrl, fileName);
   };
 
   const handleDelete = (e: React.MouseEvent, index: number) => {

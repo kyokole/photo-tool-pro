@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { HeadshotStyle, HeadshotResult } from '../types';
 import { HEADSHOT_STYLES } from '../constants';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
+import { smartDownload } from '../utils/canvasUtils';
 
 interface HeadshotGeneratorProps {
     sourceFile: File | null;
@@ -170,9 +171,9 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
                                 {results.map(result => (
                                     <div key={result.id} className="relative group overflow-hidden rounded-lg aspect-w-1 aspect-h-1 bg-black/20">
                                         <img src={result.imageUrl} alt={t('headshot.resultAlt')} className="w-full h-full object-cover animate-fade-in" />
-                                         <a href={result.imageUrl} download={`headshot-${result.id}.png`} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                         <button onClick={() => smartDownload(result.imageUrl, `headshot-${result.id}.png`)} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                             <i className="fas fa-download fa-2x text-white"></i>
-                                        </a>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
