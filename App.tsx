@@ -313,19 +313,19 @@ const App: React.FC = () => {
 
           await user.reload();
 
-          const isEmailPasswordProvider = user.providerData.some(
-            (provider) => provider.providerId === 'password'
-          );
+          const hasPasswordProvider = user.providerData.some(p => p.providerId === 'password');
+          const hasOAuthProvider = user.providerData.some(p => p.providerId !== 'password');
 
-          if (isNewUserInFirestore && isEmailPasswordProvider && !user.emailVerified) {
+          // Send verification email only for new, pure email/password signups.
+          if (isNewUserInFirestore && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified) {
             await sendEmailVerification(user);
           }
           
           const isAdmin = userData.isAdmin || false;
 
-          // ONLY enforce email verification for the email/password provider.
-          // Google, Facebook, etc. users are considered verified.
-          if (!isAdmin && isEmailPasswordProvider && !user.emailVerified) {
+          // Show verification modal only for pure email/password users who are unverified.
+          // OAuth users (Google etc.) are considered verified by their provider.
+          if (!isAdmin && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified) {
             setIsVerificationModalVisible(true);
             setCurrentUser(null);
           } else {
