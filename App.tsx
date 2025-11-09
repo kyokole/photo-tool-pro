@@ -297,8 +297,6 @@ const App: React.FC = () => {
           
           const userData = userDoc.data();
           if (!userData) {
-             // This could happen in a race condition where the doc is deleted.
-             // Log out to be safe.
             await signOut(auth);
             return;
           }
@@ -306,20 +304,21 @@ const App: React.FC = () => {
           await user.reload();
           
           const isAdmin = userData.isAdmin || false;
-          // **FIXED LOGIC**: This is a much safer and more explicit way to check for users
-          // who signed up ONLY with email/password and haven't verified yet.
-          const isPasswordOnlyUser = user.providerData.length === 1 && user.providerData[0].providerId === 'password';
-          const needsVerification = !isAdmin && isPasswordOnlyUser && !user.emailVerified;
+
+          // **TRIỆT ĐỂ & ĐƠN GIẢN HÓA LOGIC:**
+          // Một người dùng cần xác thực CHỈ KHI họ không phải admin VÀ email của họ chưa được xác thực.
+          // Logic này an toàn vì người dùng Google/OAuth luôn có email đã được xác thực.
+          // Nó chỉ nhắm đến những người dùng đăng ký bằng email/mật khẩu chưa nhấn vào liên kết.
+          const needsVerification = !isAdmin && !user.emailVerified;
 
           if (needsVerification) {
-            // Only send the verification email ONCE when they are first created.
             if (isNewUserInFirestore) {
               await sendEmailVerification(user);
             }
             setIsVerificationModalVisible(true);
             setCurrentUser(null);
           } else {
-            // ALL other users (Google users, verified password users, admins) get logged in.
+            // TẤT CẢ người dùng khác (Google, đã xác thực, admin) đều được đăng nhập.
             setIsAuthModalVisible(false);
             setIsVerificationModalVisible(false);
             setCurrentUser({
