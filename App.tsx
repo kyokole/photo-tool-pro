@@ -274,90 +274,91 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          // Người dùng đã đăng nhập vào Firebase
-          const userDocRef = doc(db, 'users', user.uid);
-          let userDoc = await getDoc(userDocRef);
-          const isNewUserInFirestore = !userDoc.exists();
-  
-          // Nếu là người dùng mới trong Firestore, tạo tài liệu cho họ
-          if (isNewUserInFirestore) {
-            const fingerprint = await getFingerprint();
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("deviceFingerprint", "==", fingerprint));
-            const querySnapshot = await getDocs(q);
-            const hasBeenUsed = !querySnapshot.empty;
-            let expiryDate = new Date();
-            // Chỉ cho 1 giờ dùng thử nếu thiết bị này chưa từng được sử dụng để đăng ký
-            if (!hasBeenUsed) {
-              expiryDate.setHours(expiryDate.getHours() + 1);
+        try {
+            if (!user) {
+                // CASE 1: User is logged out or session expired.
+                setCurrentUser(null);
+                setIsVerificationModalVisible(false);
+                return;
             }
-            await setDoc(userDocRef, {
-              username: user.email!,
-              subscriptionEndDate: expiryDate.toISOString(),
-              isAdmin: false,
-              deviceFingerprint: fingerprint,
-            });
-            userDoc = await getDoc(userDocRef); // Tải lại tài liệu vừa tạo
-          }
-          
-          const userData = userDoc.data();
-          if (!userData) {
-            // Trường hợp cực hiếm: không thể đọc dữ liệu vừa tạo. Đăng xuất an toàn.
-            await signOut(auth);
-            return;
-          }
-  
-          // Luôn tải lại trạng thái mới nhất của người dùng từ Firebase Auth
-          await user.reload();
-          
-          // --- BẮT ĐẦU LOGIC XÁC THỰC MỚI, TỐI ƯU ---
-          // Logic này xử lý rõ ràng các trường hợp để tránh lỗi vòng lặp và mang lại trải nghiệm người dùng tốt hơn.
-  
-          // TRƯỚC TIÊN, KIỂM TRA XÁC THỰC.
-          // 1. Admin được vào ngay.
-          // 2. Người dùng đã xác thực email (bao gồm cả người dùng Google/OAuth vì họ luôn được xác thực) được vào ngay.
-          if (userData.isAdmin || user.emailVerified) {
-              // Người dùng hợp lệ, cho phép đăng nhập vào ứng dụng
-              setIsAuthModalVisible(false);
-              setIsVerificationModalVisible(false);
-              setCurrentUser({
-                  uid: user.uid,
-                  username: user.email!,
-                  isAdmin: userData.isAdmin,
-                  subscriptionEndDate: userData.subscriptionEndDate
-              });
-              
-              if (postLoginRedirect) {
-                  handleModeChange(postLoginRedirect);
-                  setPostLoginRedirect(null);
-              }
-          } else {
-              // 3. Người dùng đăng ký qua email nhưng CHƯA xác thực
-              // Chỉ hiển thị modal yêu cầu xác thực và không làm gì khác.
-              // Điều này ngăn chặn việc ứng dụng bị đặt lại về trạng thái "chưa đăng nhập" một cách sai lầm.
-              if (isNewUserInFirestore) {
-                  // Chỉ gửi email nếu đây là lần đầu tiên họ đăng ký
-                  await sendEmailVerification(user);
-              }
-              setIsAuthModalVisible(false); // Ẩn modal đăng nhập/đăng ký
-              setIsVerificationModalVisible(true); // Hiển thị modal yêu cầu xác thực
-              setCurrentUser(null); // Giữ người dùng ở trạng thái "chưa đăng nhập" đối với app cho đến khi họ xác thực
-          }
-        } else {
-          // Người dùng đã đăng xuất hoặc chưa đăng nhập
-          setCurrentUser(null);
-          setIsVerificationModalVisible(false); // Đảm bảo modal xác thực bị ẩn khi không có người dùng
+
+            // CASE 2: User is authenticated with Firebase. Proceed to get full profile.
+            await user.reload(); // Refresh user state (e.g., emailVerified) first.
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            let userData;
+            let isNewRegistration = false;
+
+            if (userDoc.exists()) {
+                // User document exists in Firestore.
+                userData = userDoc.data();
+                if (!userData) {
+                    // This is an edge case: document exists but is empty. Treat as a critical error.
+                    throw new Error(`Tài liệu Firestore cho người dùng ${user.uid} bị rỗng.`);
+                }
+            } else {
+                // This is a new registration. Create their document in Firestore.
+                isNewRegistration = true;
+                const fingerprint = await getFingerprint();
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("deviceFingerprint", "==", fingerprint));
+                const querySnapshot = await getDocs(q);
+                const hasBeenUsed = !querySnapshot.empty;
+                
+                let expiryDate = new Date();
+                if (!hasBeenUsed) {
+                    expiryDate.setHours(expiryDate.getHours() + 1); // 1-hour trial
+                }
+
+                userData = {
+                    username: user.email!,
+                    subscriptionEndDate: expiryDate.toISOString(),
+                    isAdmin: false,
+                    deviceFingerprint: fingerprint,
+                };
+                await setDoc(userDocRef, userData);
+            }
+
+            // At this point, we have a valid `user` and `userData`. Now, update the app state.
+            const appUser: User = {
+                uid: user.uid,
+                username: user.email!,
+                isAdmin: userData.isAdmin,
+                subscriptionEndDate: userData.subscriptionEndDate
+            };
+
+            setCurrentUser(appUser);
+            setIsAuthModalVisible(false); // Close login/register modal.
+
+            // Finally, handle the verification flow.
+            if (!userData.isAdmin && !user.emailVerified) {
+                if (isNewRegistration) {
+                    await sendEmailVerification(user);
+                }
+                setIsVerificationModalVisible(true); // Show verification prompt on top of the app.
+            } else {
+                setIsVerificationModalVisible(false); // Ensure it's hidden for verified users.
+                if (postLoginRedirect) {
+                    handleModeChange(postLoginRedirect);
+                    setPostLoginRedirect(null);
+                }
+            }
+
+        } catch (e) {
+            console.error("Auth state change error:", e);
+            // If any part of the process fails, ensure the user is logged out of the app state.
+            if (auth.currentUser) {
+                await signOut(auth); // This will re-trigger this listener with user=null.
+            } else {
+                setCurrentUser(null);
+            }
+        } finally {
+            setIsAuthLoading(false);
         }
-      } catch (e) {
-        console.error("Auth state change error:", e);
-        setCurrentUser(null);
-      } finally {
-        setIsAuthLoading(false);
-      }
     });
-  
+
     return () => unsubscribe();
   }, [auth, db, handleModeChange, postLoginRedirect]);
 
