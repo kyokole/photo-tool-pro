@@ -4,7 +4,7 @@
 
 import { GoogleGenAI, Modality, Part } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { FeatureAction } from '../types';
+
 
 // --- MERGED TYPES from types.ts ---
 // These types are included directly to make this file self-contained.
@@ -64,6 +64,25 @@ interface FootballStudioSettings {
   aspectRatio: string;
   style: string;
   customPrompt: string;
+}
+export enum FeatureAction {
+  PRODUCT_PHOTO = 'product_photo',
+  TRY_ON_OUTFIT = 'try_on_outfit',
+  PLACE_IN_SCENE = 'place_in_scene',
+  COUPLE_COMPOSE = 'couple_compose',
+  FASHION_STUDIO = 'fashion_studio',
+  EXTRACT_OUTFIT = 'extract_outfit',
+  CHANGE_HAIRSTYLE = 'change_hairstyle',
+  CREATE_ALBUM = 'create_album',
+  CREATIVE_COMPOSITE = 'creative_composite',
+  BIRTHDAY_PHOTO = 'birthday_photo',
+  HOT_TREND_PHOTO = 'hot_trend_photo',
+  AI_TRAINER = 'ai_trainer',
+  ID_PHOTO = 'id_photo',
+  AI_THUMBNAIL_DESIGNER = 'ai_thumbnail_designer',
+  BATCH_GENERATOR = 'batch_generator',
+  IMAGE_VARIATION_GENERATOR = 'image_variation_generator',
+  KOREAN_STYLE_STUDIO = 'korean_style_studio',
 }
 
 // --- MERGED CONSTANTS from constants.ts ---
@@ -293,29 +312,29 @@ const buildFootballOutfitPrompt = (settings: FootballStudioSettings) => {
 ${customPrompt ? `- **Custom Request:** ${customPrompt}\n` : ''}
 **OUTPUT:** Generate ONLY the final image.`;
 };
-const createFinalPrompt = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
+const createFinalPromptVn = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
     if (!hasIdentityImages) {
-        return `**TASK:** Create a high-quality, artistic photograph based on the user request.\n\n**USER REQUEST (Vietnamese):** ${userRequest}`;
+        return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}`;
     }
 
-    let identityDescription = "The very first image provided is the IDENTITY REFERENCE image.";
+    let identityDescription = "Ảnh đầu tiên được cung cấp là ảnh THAM CHIẾU NHẬN DẠNG.";
     if (isCouple) {
-        const g1 = gender1 ? `a ${gender1}, ` : '';
-        const g2 = gender2 ? `a ${gender2}, ` : '';
-        identityDescription = `The FIRST image is IDENTITY_PERSON_1 (${g1}on the left). The SECOND image is IDENTITY_PERSON_2 (${g2}on the right).`;
+        const g1_vn = gender1 === 'male' ? 'một người Nam' : gender1 === 'female' ? 'một người Nữ' : 'một người';
+        const g2_vn = gender2 === 'male' ? 'một người Nam' : gender2 === 'female' ? 'một người Nữ' : 'một người';
+        identityDescription = `Ảnh ĐẦU TIÊN là NHẬN DẠNG_NGƯỜI_1 (${g1_vn}, bên trái). Ảnh THỨ HAI là NHẬN DẠNG_NGƯỜI_2 (${g2_vn}, bên phải).`;
     }
 
-    return `**UNBREAKABLE DIRECTIVE: IDENTITY PRESERVATION**
-**PRIMARY GOAL:** Your single most important task is to generate an image where the face(s) of the person(s) are an **IDENTICAL, FLAWLESS, PERFECT COPY** of the face(s) from the IDENTITY REFERENCE image(s).
-**NON-NEGOTIABLE RULES:**
-1.  **IDENTITY SOURCE:** ${identityDescription}
-2.  **FACE REPLICATION:** The face(s) in the final output **MUST BE A PIXEL-PERFECT, 1:1 REPLICA**. Do NOT change facial structure, features, expression, or skin texture.
-3.  **USER REQUEST:** Execute the user's request below, but **ONLY** after satisfying all identity preservation rules.
+    return `**CHỈ THỊ TỐI THƯỢNG: BẢO TOÀN NHẬN DẠNG**
+**MỤC TIÊU CHÍNH:** Nhiệm vụ quan trọng nhất của bạn là tạo ra một hình ảnh trong đó (các) khuôn mặt của (những) người là một **BẢN SAO HOÀN HẢO, KHÔNG TÌ VẾT, GIỐNG HỆT** với (các) khuôn mặt từ (những) ảnh THAM CHIẾU NHẬN DẠNG.
+**QUY TẮC BẤT DI BẤT DỊCH:**
+1.  **NGUỒN NHẬN DẠNG:** ${identityDescription}
+2.  **SAO CHÉP KHUÔN MẶT:** (Các) khuôn mặt trong ảnh cuối cùng **PHẢI LÀ BẢN SAO CHÍNH XÁC 1:1**. KHÔNG được thay đổi cấu trúc khuôn mặt, các đường nét, biểu cảm, hoặc kết cấu da.
+3.  **YÊU CẦU NGƯỜI DÙNG:** Thực hiện yêu cầu của người dùng dưới đây, nhưng **CHỈ SAU KHI** đã thỏa mãn tất cả các quy tắc bảo toàn nhận dạng.
 ---
-**USER REQUEST (Vietnamese):**
+**YÊU CẦU (Tiếng Việt):**
 ${userRequest}
 ---
-**FINAL CHECK:** Before generating, confirm your plan involves a perfect replication of the identity face(s).`;
+**KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận kế hoạch của bạn bao gồm việc sao chép hoàn hảo (các) khuôn mặt nhận dạng.`;
 };
 const buildImageVariationPrompt = (
   options: { aspectRatio: string; identityLock: number; variationStrength: number; themeAnchor: string; style: string; },
@@ -345,7 +364,6 @@ const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => (
 });
 
 const getAi = () => {
-    // **FIX:** Check for both the user-defined key and the standard key for robustness.
     const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
         throw new Error("API Key của máy chủ chưa được cấu hình. Vui lòng kiểm tra biến môi trường GEMINI_API_KEY hoặc API_KEY và liên hệ quản trị viên.");
@@ -373,8 +391,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const models = ai.models;
 
         switch (action) {
-            // ... (existing cases for idphoto, headshot, restoration, fashionstudio, fourseasons, prompts, football)
-
             case 'generateIdPhoto': {
                 if (!payload || !payload.originalImage || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
                 const { originalImage, settings, outfitImagePart } = payload;
@@ -492,6 +508,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateFootballPhoto': {
                 if (!payload || !payload.settings) return res.status(400).json({ error: 'Thiếu cài đặt.' });
                 const { settings } = payload;
+                if (!settings.sourceImage) {
+                    throw new Error("Thiếu ảnh nguồn cho tính năng Studio Bóng Đá.");
+                }
 
                 const { mode } = settings;
                 let prompt = '';
@@ -508,50 +527,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
 
-
             case 'generateImagesFromFeature': {
                 const { featureAction, formData, numImages } = payload;
                 if (!featureAction || !formData) return res.status(400).json({ error: 'Thiếu action hoặc dữ liệu form.' });
-
-                const parts: Part[] = [];
-                let finalPrompt = '';
-                let isCouple = false;
-                let gender1, gender2: string | undefined;
 
                 let promptsToRun: { prompt: string, parts: Part[], isCouple?: boolean, gender1?: string, gender2?: string }[] = [];
 
                 switch(featureAction) {
                     case FeatureAction.TRY_ON_OUTFIT: {
-                        finalPrompt = `Người mẫu (từ ảnh 1) mặc trang phục (từ ảnh 2). ${formData.prompt_detail || ''}. Khung hình: ${formData.frame_style}.`;
-                        parts.push(base64ToPart(formData.subject_image));
-                        parts.push(base64ToPart(formData.outfit_image));
-                        promptsToRun.push({ prompt: finalPrompt, parts });
+                        const { subject_image, outfit_image, prompt_detail, frame_style } = formData;
+                        if (!subject_image || !outfit_image) throw new Error('Thiếu ảnh người mẫu hoặc ảnh trang phục.');
+                        const prompt = `Người mẫu (từ ảnh 1) mặc trang phục (từ ảnh 2). ${prompt_detail || ''}. Khung hình: ${frame_style}.`;
+                        const parts = [base64ToPart(subject_image), base64ToPart(outfit_image)];
+                        promptsToRun.push({ prompt, parts });
                         break;
                     }
-
                     case FeatureAction.PLACE_IN_SCENE:
                     case FeatureAction.BIRTHDAY_PHOTO:
                     case FeatureAction.HOT_TREND_PHOTO:
                     case FeatureAction.CREATE_ALBUM: {
-                        const baseParts = [base64ToPart(formData.subject_image)];
+                        const { subject_image } = formData;
+                        if (!subject_image) throw new Error('Thiếu ảnh chủ thể.');
+                        const baseParts = [base64ToPart(subject_image)];
                         let combinations: { pose?: string, background?: string }[] = [];
 
                         if (featureAction === FeatureAction.CREATE_ALBUM) {
                             const poses = formData.poses || [];
                             const backgrounds = formData.backgrounds || [];
-                            if (poses.length === 0 || backgrounds.length === 0) break;
-                            poses.forEach((pose: string) => {
-                                backgrounds.forEach((bg: string) => {
-                                    combinations.push({ pose, background: bg });
-                                });
-                            });
+                            if (poses.length === 0 || backgrounds.length === 0) throw new Error('Vui lòng chọn ít nhất một tư thế và một bối cảnh.');
+                            poses.forEach((pose: string) => backgrounds.forEach((bg: string) => combinations.push({ pose, background: bg })));
                         } else {
-                            let backgrounds: string[] = [];
-                            if (featureAction === FeatureAction.PLACE_IN_SCENE) backgrounds = formData.background_options || [];
-                            if (featureAction === FeatureAction.BIRTHDAY_PHOTO) backgrounds = formData.birthday_scenes || [];
-                            if (featureAction === FeatureAction.HOT_TREND_PHOTO) backgrounds = formData.selected_trends || [];
+                            const backgrounds: string[] = formData.background_options || formData.birthday_scenes || formData.selected_trends || [];
                             backgrounds.forEach(bg => combinations.push({ background: bg }));
-                             if (featureAction === FeatureAction.PLACE_IN_SCENE && formData.custom_background_prompt) {
+                            if (featureAction === FeatureAction.PLACE_IN_SCENE && formData.custom_background_prompt) {
                                 combinations.push({ background: formData.custom_background_prompt });
                             }
                         }
@@ -562,48 +570,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             if (formData.frame_style) prompt += ` Khung hình: ${formData.frame_style}.`;
                             promptsToRun.push({ prompt, parts: baseParts });
                         });
+
                         if (featureAction === FeatureAction.PLACE_IN_SCENE && formData.background_image) {
+                            if (!subject_image) throw new Error('Thiếu ảnh chủ thể.');
                             promptsToRun.push({ prompt: 'Ghép người vào ảnh nền được cung cấp.', parts: [baseParts[0], base64ToPart(formData.background_image)] });
                         }
                         break;
                     }
-                        
-                    case FeatureAction.COUPLE_COMPOSE:
-                        gender1 = formData.person_left_gender.replace('aiStudio.inputs.couple_compose.genders.', '');
-                        gender2 = formData.person_right_gender.replace('aiStudio.inputs.couple_compose.genders.', '');
-                        finalPrompt = `Hành động: ${formData.affection_action}. Phong cách: ${formData.aesthetic_style}.`;
-                         if (formData.person_left_image && formData.person_right_image) {
-                             parts.push(base64ToPart(formData.person_left_image));
-                             parts.push(base64ToPart(formData.person_right_image));
-                             isCouple = true;
-                         }
+                    case FeatureAction.COUPLE_COMPOSE: {
+                        const { person_left_image, person_right_image, person_left_gender, person_right_gender } = formData;
+                        if (!person_left_image || !person_right_image) throw new Error('Thiếu ảnh của một hoặc cả hai người.');
+                        const gender1 = person_left_gender?.replace('aiStudio.inputs.couple_compose.genders.', '');
+                        const gender2 = person_right_gender?.replace('aiStudio.inputs.couple_compose.genders.', '');
+                        let prompt = `Hành động: ${formData.affection_action}. Phong cách: ${formData.aesthetic_style}.`;
+                        const parts = [base64ToPart(person_left_image), base64ToPart(person_right_image)];
                         if (formData.custom_background) {
                             parts.push(base64ToPart(formData.custom_background));
-                            finalPrompt += `\nBối cảnh: Sử dụng bối cảnh từ ảnh cuối cùng.`;
+                            prompt += ` Bối cảnh: Sử dụng bối cảnh từ ảnh cuối cùng.`;
                         } else if (formData.couple_background) {
-                            finalPrompt += `\nBối cảnh: ${formData.couple_background}.`;
+                            prompt += ` Bối cảnh: ${formData.couple_background}.`;
                         }
-                        promptsToRun.push({ prompt: finalPrompt, parts, isCouple, gender1, gender2 });
-                        break;
-                    
-                    case FeatureAction.CHANGE_HAIRSTYLE: {
-                        finalPrompt = `Đổi kiểu tóc thành ${formData.hairstyle}, màu ${formData.hair_color}, độ dài ${formData.hair_length}.`;
-                        parts.push(base64ToPart(formData.subject_image));
-                        promptsToRun.push({ prompt: finalPrompt, parts });
+                        promptsToRun.push({ prompt, parts, isCouple: true, gender1, gender2 });
                         break;
                     }
-                    
-                    // Add other cases here...
-                    default:
-                        // Use the generic logic for other simple cases
-                        const prompt = Object.values(formData).filter(v => typeof v === 'string').join('. ');
-                        for (const key in formData) {
-                            if (formData[key] && typeof formData[key] === 'object' && formData[key].base64) {
-                                parts.push(base64ToPart(formData[key]));
-                            }
-                        }
-                        promptsToRun.push({ prompt: prompt || 'Tạo ảnh theo yêu cầu', parts });
+                    case FeatureAction.CHANGE_HAIRSTYLE: {
+                        const { subject_image, hairstyle, hair_color, hair_length } = formData;
+                        if (!subject_image || !hairstyle || !hair_color || !hair_length) throw new Error('Vui lòng điền đầy đủ thông tin kiểu tóc.');
+                        const prompt = `Đổi kiểu tóc thành ${hairstyle}, màu ${hair_color}, độ dài ${hair_length}.`;
+                        const parts = [base64ToPart(subject_image)];
+                        promptsToRun.push({ prompt, parts });
                         break;
+                    }
+                    case FeatureAction.EXTRACT_OUTFIT: {
+                        const { subject_image } = formData;
+                        if (!subject_image) throw new Error('Thiếu ảnh chủ thể cho tính năng Tách Trang phục.');
+                        const parts = [base64ToPart(subject_image)];
+                        const prompt = `Phân tích người trong ảnh này. Nhiệm vụ của bạn là "cắt" kỹ thuật số CHỈ quần áo của họ. Tạo một hình ảnh mới chỉ chứa trang phục, với người và nền đã được loại bỏ hoàn toàn. Đầu ra phải là quần áo trên nền trong suốt hoặc nền trung tính.`;
+                        promptsToRun.push({ prompt, parts });
+                        break;
+                    }
+                    default:
+                        throw new Error(`Tính năng '${featureAction}' chưa được triển khai trên backend.`);
                 }
 
                 if (promptsToRun.length === 0) {
@@ -611,9 +618,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
 
                 const promises = promptsToRun.flatMap(({ prompt, parts, isCouple, gender1, gender2 }) => {
-                    const userRequest = createFinalPrompt(prompt, parts.length > 0, isCouple, gender1, gender2);
+                    const userRequest = createFinalPromptVn(prompt, parts.length > 0, isCouple, gender1, gender2);
                     const finalParts = [...parts, { text: userRequest }];
-                    return Array(numImages > promptsToRun.length ? 1 : numImages).fill(0).map(() => models.generateContent({
+                    const loopCount = promptsToRun.length > 1 ? 1 : numImages;
+                    
+                    return Array(loopCount).fill(0).map(() => models.generateContent({
                         model: 'gemini-2.5-flash-image',
                         contents: { parts: finalParts },
                         config: { responseModalities: [Modality.IMAGE] }
