@@ -133,185 +133,6 @@ Hãy tiến hành tô màu cho bức ảnh.
 `;
 
 // --- MERGED PROMPTS from _serverSidePrompts.ts ---
-const buildIdPhotoPrompt = (settings: Settings): string => {
-    let prompt = `**CRITICAL PRE-PROCESSING STEP: MENTAL PORTRAIT CROP**
-Before any other edits, you MUST analyze the source image. If it is a wide shot, landscape, or contains a lot of background, your first task is to mentally crop to a standard head-and-shoulders portrait. Focus exclusively on the primary subject's head and upper torso. Discard all other scenic elements. All subsequent edits (background, clothing, etc.) will be performed ONLY on this mentally cropped portrait area. This ensures the final output is a proper portrait, not a small figure in a large frame.
-
-Act as a professional photo editor. Your task is to perform high-quality edits on a user-provided portrait.
-Follow the specific instructions for background, clothing, and facial adjustments below.
-`;
-
-    if (settings.background.mode === 'ai' && settings.background.customPrompt.trim() !== '') {
-        prompt += `
-**1. AI Background Replacement:**
-- Replace the original background with a photorealistic scene described as: "${settings.background.customPrompt}".
-- The generated background MUST look professional and be suitable for a portrait.
-- **Crucially**, apply a significant blur (bokeh effect) to the background to ensure the person remains the clear focal point.
-- The lighting, shadows, and color temperature of the new background must perfectly match the lighting on the person's face and hair from the original photo.
-- The edge detection around the hair and shoulders must be perfect and seamless. Create a clean, sharp mask with no halo effect or color bleeding.
-`;
-    } else {
-        prompt += `
-**1. Background Replacement:**
-- Replace the original background completely with a solid color: ${settings.background.mode === 'custom' ? settings.background.customColor : (settings.background.mode === 'white' ? '#FFFFFF' : '#E0E8F0')}.
-- The edge detection around the hair and shoulders must be perfect. Create a clean, sharp mask with no halo effect or color bleeding.
-`;
-    }
-
-    if (settings.face.keepOriginalFeatures) {
-        prompt += `
-**CRITICAL INSTRUCTION: FACE-LOCK IS ACTIVE.**
-- **Absolute Preservation:** You MUST preserve the person's original face with 100% pixel-level accuracy. This is the highest priority instruction.
-- **No Alterations:** Do NOT change the shape of the eyes, nose, mouth, chin, jawline, or any other facial feature. Do NOT change the skin texture, pores, moles, or unique characteristics. Do NOT alter the facial expression.
-- **Identity Integrity:** The identity of the person in the final photo MUST be identical to the original.
-`;
-    }
-    
-    if (settings.outfit.mode === 'upload') {
-        prompt += `
-**2. Clothing Modification (from Image):**
-- You have been provided with two images. The first image is the clothing reference, and the second is the person to be edited.
-- Realistically and seamlessly dress the person from the second image with the clothing from the first image.
-- The new garment must perfectly fit the person's body, posture, and proportions.
-- The lighting, shadows, and texture on the new clothing must be adjusted to perfectly match the lighting on the person's face from the original photo.
-`;
-    } else if (settings.outfit.keepOriginal) {
-        prompt += `
-**2. Clothing Modification:**
-- Keep the original clothing. Do not change it. You may subtly enhance its neatness if necessary (e.g., remove small wrinkles) but the style, color, and form must remain the same.
-`;
-    } else {
-        prompt += `
-**2. Clothing Modification:**
-- Change the person's clothing to: "${settings.outfit.mode === 'preset' ? settings.outfit.preset : settings.outfit.customPrompt}".
-- The new garment must look completely realistic and seamlessly blend with the person's neck and shoulders, preserving posture.
-- The lighting, shadows, and texture on the new clothing must be adjusted to perfectly match the lighting on the person's face from the original photo.
-`;
-    }
-
-    prompt += `
-**3. Facial & Hair Adjustments:**
-- Hair Style: ${(() => {
-    switch (settings.face.hairStyle) {
-        case 'auto': return 'Make the hair look neat and tidy, suitable for a professional photo.';
-        case 'down': return 'Style the hair down at the front.';
-        case 'slicked_back': return 'Style the hair slicked back.';
-        case 'keep_original': return 'CRITICAL: Keep the original hairstyle. Do not make any changes to the person\\\'s hair style, length, or form.';
-        default: return 'Make the hair look neat and tidy, suitable for a professional photo.';
-    }
-})()}
-- Other requests: ${settings.face.otherCustom ? `Incorporate this request: "${settings.face.otherCustom}"` : 'No other custom requests.'}
-`;
-
-    if (!settings.face.keepOriginalFeatures) {
-         prompt += `- Facial Features: The original facial features should be recognizable, but you may make subtle enhancements for a professional look.
-- Expression: ${settings.face.slightSmile ? 'Adjust the facial expression to a gentle, slight, closed-mouth smile appropriate for a professional setting.' : 'Keep the original facial expression.'}
-`;
-    }
-    
-    if (settings.face.smoothSkin) {
-        if (settings.face.keepOriginalFeatures) {
-             prompt += `- Skin Retouching (Gentle Mode): With FACE-LOCK active, apply an extremely subtle skin smoothing effect. Only target minor blemishes or oily shine. It is ESSENTIAL to maintain the original, natural skin texture and pores.
-`;
-        } else {
-            prompt += `- Skin Retouching: Apply a professional skin smoothing effect. Remove minor blemishes and oily shine, but maintain natural skin texture. The result should look clean and natural, not artificial.
-`;
-        }
-    }
-
-    prompt += `
-**4. Final Output Composition (ABSOLUTELY CRITICAL):**
-- After all edits are complete, do NOT crop the image.
-- Instead, place the edited person onto a new, larger canvas.
-- **This new canvas MUST have a standard portrait aspect ratio (e.g., approximately 3:4 or 2:3).**
-- Fill this canvas completely with the specified background color from step 1.
-- Ensure there is significant empty space (padding) around the person on all sides. This is crucial for later processing.
-- **Generate ONLY the final image with padding.**
-`;
-    return prompt;
-}
-const buildHeadshotPrompt = (stylePrompt: string) => `
-    Act as a professional headshot photographer and retoucher.
-    Take the user-provided image and generate a new headshot based on the following style.
-    
-    **CRITICAL INSTRUCTIONS:**
-    1.  **Preserve Identity:** The generated person's face MUST be unmistakably the same person as in the original photo. Preserve all key facial features.
-    2.  **High Quality:** The final image must be high-resolution, sharp, and photorealistic.
-    3.  **Seamless Integration:** The person must blend perfectly with the new background and clothing. Lighting and shadows must be consistent.
-
-    **Style Request:**
-    "${stylePrompt}"
-
-    Generate the final headshot.
-`;
-const buildFashionStudioPrompt = (settings: FashionStudioSettings) => {
-    const userDescription = settings.description ? `${settings.description}. ` : '';
-    const highQualityPrompt = settings.highQuality ? 'Chất lượng 4K, độ phân giải siêu cao, chi tiết cực cao. ' : '';
-    const basePrompt = `GIỮ NGUYÊN GƯƠNG MẶT từ ảnh tải lên. Tỉ lệ khung: ${settings.aspectRatio}. ${highQualityPrompt}Không chữ, không logo, không viền, không watermark.`;
-    
-    switch (settings.category) {
-        case 'female': return `Ảnh nữ doanh nhân cao cấp, phong cách ${settings.style}, bối cảnh studio sang trọng tông màu hài hoà, ánh sáng điện ảnh. ${userDescription}${basePrompt}`;
-        case 'male': return `Ảnh nam doanh nhân cao cấp, phong cách ${settings.style}, bối cảnh studio sang trọng tông màu hài hoà, ánh sáng điện ảnh. ${userDescription}${basePrompt}`;
-        case 'girl': return `Ảnh lookbook thời trang bé gái chuyên nghiệp, mặc trang phục ${settings.style}, bối cảnh studio hoặc ngoài trời phù hợp, ánh sáng tự nhiên. ${userDescription}${basePrompt}`;
-        case 'boy': return `Ảnh lookbook thời trang bé trai chuyên nghiệp, mặc trang phục ${settings.style}, bối cảnh studio hoặc ngoài trời phù hợp, năng động. ${userDescription}${basePrompt}`;
-    }
-}
-const buildFourSeasonsPrompt = (scene: Scene, season: string, aspectRatio: string, customDescription: string) => {
-    const themeTitle = season === 'spring' ? 'mùa xuân' : season === 'summer' ? 'mùa hạ' : season === 'autumn' ? 'mùa thu' : 'mùa đông';
-    return `--- HIERARCHY OF COMMANDS ---
-**PRIORITY #1 (ABSOLUTE & NON-NEGOTIABLE): FACIAL IDENTITY REPLICATION**
-- **Core Command:** Preserve the exact facial identity of the reference photo.
-- **Feature Lock:** Lock facial features to match the reference image exactly.
-- **Quality & Realism:** Ultra-detailed 8K portrait, realistic texture.
-
-**PRIORITY #2 (SECONDARY): SCENE & STYLE**
-- **Bối cảnh ${themeTitle}:** "${scene.title} - ${scene.desc}".
-- **Trang phục:** Người trong ảnh phải mặc trang phục phù hợp với bối cảnh và mùa.
-- **Chi tiết tùy chỉnh:** ${customDescription.trim() !== '' ? `Thêm các chi tiết sau: "${customDescription}".` : 'Không có chi tiết tùy chỉnh.'}
-
-**PRIORITY #3 (TERTIARY): PHOTOGRAPHIC DETAILS**
-- **Máy ảnh & Ống kính:** Mô phỏng ảnh chụp bằng Canon EOS R5, ống kính 85mm f/1.8.
-- **Ánh sáng:** Ánh sáng điện ảnh phù hợp với mùa, hậu cảnh xóa phông (bokeh).
-- **Lấy nét:** Lấy nét cực sắc vào mắt.
-- **Tỷ lệ khung hình:** Ảnh cuối cùng BẮT BUỘC phải có tỷ lệ ${aspectRatio}.`;
-};
-const BASE_PROMPT_INSTRUCTION = `You are a world-class expert in reverse-engineering images into prompts for generative AI. Your sole task is to analyze the provided image with microscopic detail and generate a prompt that can be used by an advanced AI image generator to reconstruct the original image with near-perfect, 1:1 fidelity. Your output MUST be a single, long, cohesive paragraph of descriptive phrases separated by commas. Do not use any other formatting. Your entire response must be ONLY the prompt.`;
-const FACE_LOCK_INSTRUCTION = `**SPECIAL INSTRUCTION: FACE LOCK ACTIVE** For the **Facial Description** step, your task changes. Instead of creating a similar face, you must describe the provided face with 100% accuracy to ensure the AI reconstructs the *exact same person*. Detail the unique shape of their eyes, nose, lips, jawline, and chin with extreme precision. The goal is to retain the person's identity perfectly.`;
-const buildFootballIdolPrompt = (settings: FootballStudioSettings) => {
-    const { category, team, player, scene, aspectRatio, customPrompt } = settings;
-    const playerDescription = category === 'legendary'
-        ? `a football legend inspired by ${player} affiliated with ${team}`
-        : `a football player inspired by ${player} from the ${team} national team`;
-    
-    return `**TASK:** Generate an ultra-realistic, natural-looking photo of the user (from the provided image) standing or interacting with a football player character.
-**UNBREAKABLE DIRECTIVE: USER IDENTITY PRESERVATION**
-- **PRIMARY GOAL:** The user's face MUST BE AN IDENTICAL, FLAWLESS, PERFECT COPY of the face from the provided user image. This rule is absolute.
-- **NON-NEGOTIABLE RULES:**
-    1.  **FACE REPLICATION:** The user's face in the final output MUST BE A PIXEL-PERFECT, 1:1 REPLICA.
-**INSTRUCTIONS:**
-1.  **User:** The user is the person in the uploaded photo. Their face MUST be preserved.
-2.  **Player Character:** Create ${playerDescription}.
-3.  **Scene:** Place both in this scene: "${scene}".
-4.  **Interaction:** Ensure lighting and perspective match. Both subjects should look natural.
-5.  **Aesthetics:** The final image must look like a genuine photograph.
-6.  **Aspect Ratio:** The final composition must be ${aspectRatio}.
-${customPrompt ? `- **Custom Request:** ${customPrompt}\n` : ''}
-**OUTPUT:** Generate ONLY the final image.`;
-};
-const buildFootballOutfitPrompt = (settings: FootballStudioSettings) => {
-    const { team, player, scene, aspectRatio, style, customPrompt } = settings;
-    return `**TASK:** Edit an image to create a dynamic sports marketing visual, placing a piece of clothing onto a football player.
-**CRITICAL RULE - PRODUCT ACCURACY:** The product is the main subject of the provided image. You MUST render this product with 100% accuracy.
-**INSTRUCTIONS:**
-1.  **Product:** The product is from the provided image.
-2.  **Subject:** The subject is football superstar ${player} from ${team}.
-3.  **Action:** The player is performing this action: "${scene}".
-4.  **Integration:** Seamlessly fit the product onto the player.
-5.  **Art Style:** The final image must have a "${style}" aesthetic.
-6.  **Aspect Ratio:** The final composition must be ${aspectRatio}.
-${customPrompt ? `- **Custom Request:** ${customPrompt}\n` : ''}
-**OUTPUT:** Generate ONLY the final image.`;
-};
 const createFinalPromptVn = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
     if (!hasIdentityImages) {
         return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}`;
@@ -336,6 +157,91 @@ ${userRequest}
 ---
 **KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận kế hoạch của bạn bao gồm việc sao chép hoàn hảo (các) khuôn mặt nhận dạng.`;
 };
+const buildIdPhotoPrompt = (settings: Settings): string => {
+    let prompt = `**Bước tiền xử lý quan trọng: Cắt ảnh chân dung trong đầu**
+Trước mọi chỉnh sửa khác, bạn PHẢI phân tích ảnh gốc. Nếu đó là ảnh góc rộng, ảnh phong cảnh, hoặc chứa nhiều hậu cảnh, nhiệm vụ đầu tiên của bạn là cắt ảnh trong đầu thành một bức chân dung tiêu chuẩn từ đầu đến vai. Chỉ tập trung vào đầu và phần thân trên của chủ thể chính. Loại bỏ tất cả các yếu tố cảnh quan khác. Tất cả các chỉnh sửa tiếp theo (nền, quần áo, v.v.) sẽ CHỈ được thực hiện trên khu vực chân dung đã cắt trong đầu này. Điều này đảm bảo đầu ra cuối cùng là một bức chân dung đúng nghĩa, không phải là một hình người nhỏ trong một khung hình lớn.
+
+Hãy đóng vai một biên tập viên ảnh chuyên nghiệp. Nhiệm vụ của bạn là thực hiện các chỉnh sửa chất lượng cao trên một bức chân dung do người dùng cung cấp.
+Làm theo các hướng dẫn cụ thể về nền, quần áo và điều chỉnh khuôn mặt dưới đây.
+`;
+
+    if (settings.background.mode === 'ai' && settings.background.customPrompt.trim() !== '') {
+        prompt += `
+**1. Thay nền AI:**
+- Thay thế nền gốc bằng một cảnh thực tế được mô tả là: "${settings.background.customPrompt}".
+- Nền được tạo PHẢI trông chuyên nghiệp và phù hợp với một bức chân dung.
+- **Quan trọng**, áp dụng hiệu ứng làm mờ đáng kể (hiệu ứng bokeh) cho nền để đảm bảo người vẫn là tiêu điểm rõ ràng.
+- Ánh sáng, bóng đổ và nhiệt độ màu của nền mới phải hoàn toàn khớp với ánh sáng trên khuôn mặt và tóc của người từ ảnh gốc.
+- Việc phát hiện cạnh xung quanh tóc và vai phải hoàn hảo và liền mạch. Tạo một mặt nạ sạch, sắc nét không có hiệu ứng hào quang hoặc loang màu.
+`;
+    } else {
+        prompt += `
+**1. Thay nền:**
+- Thay thế hoàn toàn nền gốc bằng một màu đồng nhất: ${settings.background.mode === 'custom' ? settings.background.customColor : (settings.background.mode === 'white' ? '#FFFFFF' : '#E0E8F0')}.
+- Việc phát hiện cạnh xung quanh tóc và vai phải hoàn hảo. Tạo một mặt nạ sạch, sắc nét không có hiệu ứng hào quang hoặc loang màu.
+`;
+    }
+    
+    if (settings.outfit.mode === 'upload') {
+        prompt += `
+**2. Chỉnh sửa trang phục (từ ảnh):**
+- Bạn đã được cung cấp hai hình ảnh. Hình ảnh đầu tiên là tham chiếu quần áo, và hình ảnh thứ hai là người cần chỉnh sửa.
+- Mặc cho người từ hình ảnh thứ hai bộ quần áo từ hình ảnh đầu tiên một cách thực tế và liền mạch.
+- Trang phục mới phải hoàn toàn vừa vặn với cơ thể, tư thế và tỷ lệ của người đó.
+- Ánh sáng, bóng đổ và kết cấu trên quần áo mới phải được điều chỉnh để hoàn toàn khớp với ánh sáng trên khuôn mặt của người từ ảnh gốc.
+`;
+    } else if (settings.outfit.keepOriginal) {
+        prompt += `
+**2. Chỉnh sửa trang phục:**
+- Giữ lại quần áo gốc. Không thay đổi nó. Bạn có thể tinh chỉnh nhẹ nhàng sự gọn gàng nếu cần (ví dụ: loại bỏ các nếp nhăn nhỏ) nhưng kiểu dáng, màu sắc và hình thức phải giữ nguyên.
+`;
+    } else {
+        prompt += `
+**2. Chỉnh sửa trang phục:**
+- Thay đổi quần áo của người đó thành: "${settings.outfit.mode === 'preset' ? settings.outfit.preset : settings.outfit.customPrompt}".
+- Trang phục mới phải trông hoàn toàn thực tế và hòa quyện liền mạch với cổ và vai của người, giữ nguyên tư thế.
+- Ánh sáng, bóng đổ và kết cấu trên quần áo mới phải được điều chỉnh để hoàn toàn khớp với ánh sáng trên khuôn mặt của người từ ảnh gốc.
+`;
+    }
+
+    prompt += `
+**3. Điều chỉnh mặt & tóc:**
+- Kiểu tóc: ${(() => {
+    switch (settings.face.hairStyle) {
+        case 'auto': return 'Làm cho tóc trông gọn gàng, phù hợp với ảnh chuyên nghiệp.';
+        case 'down': return 'Tạo kiểu tóc thả xuống phía trước.';
+        case 'slicked_back': return 'Tạo kiểu tóc vuốt ngược ra sau.';
+        case 'keep_original': return 'QUAN TRỌNG: Giữ lại kiểu tóc gốc. Không thực hiện bất kỳ thay đổi nào về kiểu dáng, độ dài hoặc hình thức tóc của người đó.';
+        default: return 'Làm cho tóc trông gọn gàng, phù hợp với ảnh chuyên nghiệp.';
+    }
+})()}
+- Yêu cầu khác: ${settings.face.otherCustom ? `Kết hợp yêu cầu này: "${settings.face.otherCustom}"` : 'Không có yêu cầu tùy chỉnh nào khác.'}
+`;
+
+    if (!settings.face.keepOriginalFeatures) {
+         prompt += `- Đặc điểm khuôn mặt: Các đặc điểm khuôn mặt gốc phải dễ nhận biết, nhưng bạn có thể tinh chỉnh nhẹ để có vẻ ngoài chuyên nghiệp.
+- Biểu cảm: ${settings.face.slightSmile ? 'Điều chỉnh biểu cảm khuôn mặt thành một nụ cười mỉm nhẹ, khép miệng phù hợp với môi trường chuyên nghiệp.' : 'Giữ lại biểu cảm khuôn mặt gốc.'}
+`;
+    }
+    
+    if (settings.face.smoothSkin) {
+        prompt += `- Chỉnh sửa da: Áp dụng hiệu ứng làm mịn da chuyên nghiệp. Loại bỏ các khuyết điểm nhỏ và độ bóng dầu, nhưng vẫn duy trì kết cấu da tự nhiên. Kết quả phải trông sạch sẽ và tự nhiên, không nhân tạo.
+`;
+    }
+
+    prompt += `
+**4. Bố cục đầu ra cuối cùng (CỰC KỲ QUAN TRỌNG):**
+- Sau khi hoàn tất tất cả các chỉnh sửa, KHÔNG cắt ảnh.
+- Thay vào đó, đặt người đã chỉnh sửa lên một canvas mới, lớn hơn.
+- **Canvas mới này PHẢI có tỷ lệ khung hình chân dung tiêu chuẩn (ví dụ: khoảng 3:4 hoặc 2:3).**
+- Lấp đầy hoàn toàn canvas này bằng màu nền đã chỉ định ở bước 1.
+- Đảm bảo có không gian trống đáng kể (padding) xung quanh người ở tất cả các phía. Điều này rất quan trọng cho quá trình xử lý sau này.
+- **CHỈ tạo ra hình ảnh cuối cùng có phần đệm.**
+`;
+    return prompt;
+}
+const BASE_PROMPT_INSTRUCTION = `You are a world-class expert in reverse-engineering images into prompts for generative AI. Your sole task is to analyze the provided image with microscopic detail and generate a prompt that can be used by an advanced AI image generator to reconstruct the original image with near-perfect, 1:1 fidelity. Your output MUST be a single, long, cohesive paragraph of descriptive phrases separated by commas. Do not use any other formatting. Your entire response must be ONLY the prompt.`;
+const FACE_LOCK_INSTRUCTION = `**SPECIAL INSTRUCTION: FACE LOCK ACTIVE** For the **Facial Description** step, your task changes. Instead of creating a similar face, you must describe the provided face with 100% accuracy to ensure the AI reconstructs the *exact same person*. Detail the unique shape of their eyes, nose, lips, jawline, and chin with extreme precision. The goal is to retain the person's identity perfectly.`;
 const buildImageVariationPrompt = (
   options: { aspectRatio: string; identityLock: number; variationStrength: number; themeAnchor: string; style: string; },
   variationIndex: number
@@ -395,12 +301,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (!payload || !payload.originalImage || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
                 const { originalImage, settings, outfitImagePart } = payload;
                 
-                const prompt = buildIdPhotoPrompt(settings);
+                const requestPrompt = buildIdPhotoPrompt(settings);
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
+
                 const imagePart: Part = { inlineData: { data: originalImage.split(',')[1], mimeType: originalImage.split(';')[0].split(':')[1] } };
                 const parts: Part[] = [];
                 if (outfitImagePart) parts.push(outfitImagePart);
                 parts.push(imagePart);
-                parts.push({ text: prompt });
+                parts.push({ text: fullPrompt });
 
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
@@ -413,7 +321,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (!payload || !payload.imagePart || !payload.prompt) return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
                 const { imagePart, prompt } = payload;
 
-                const fullPrompt = buildHeadshotPrompt(prompt);
+                const fullPrompt = createFinalPromptVn(prompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
@@ -440,10 +348,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             
             case 'generateFashionPhoto': {
                 if (!payload || !payload.imagePart || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh hoặc cài đặt.' });
-                const { imagePart, settings } = payload;
-
-                const prompt = buildFashionStudioPrompt(settings);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const { imagePart, settings } = payload as { imagePart: Part, settings: FashionStudioSettings };
+                
+                const { category, style, description, highQuality, aspectRatio } = settings;
+                const userDescription = description ? `${description}. ` : '';
+                const highQualityPrompt = highQuality ? 'Chất lượng 4K, độ phân giải siêu cao, chi tiết cực cao. ' : '';
+                
+                let requestPrompt = '';
+                switch (category) {
+                    case 'female': requestPrompt = `Ảnh nữ doanh nhân cao cấp, phong cách ${style}, bối cảnh studio sang trọng tông màu hài hoà, ánh sáng điện ảnh. ${userDescription}`; break;
+                    case 'male': requestPrompt = `Ảnh nam doanh nhân cao cấp, phong cách ${style}, bối cảnh studio sang trọng tông màu hài hoà, ánh sáng điện ảnh. ${userDescription}`; break;
+                    case 'girl': requestPrompt = `Ảnh lookbook thời trang bé gái chuyên nghiệp, mặc trang phục ${style}, bối cảnh studio hoặc ngoài trời phù hợp, ánh sáng tự nhiên. ${userDescription}`; break;
+                    case 'boy': requestPrompt = `Ảnh lookbook thời trang bé trai chuyên nghiệp, mặc trang phục ${style}, bối cảnh studio hoặc ngoài trời phù hợp, năng động. ${userDescription}`; break;
+                }
+                requestPrompt += `${highQualityPrompt}Tỉ lệ khung: ${aspectRatio}. Không chữ, không logo, không viền, không watermark.`
+                
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
+                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                  if (!data || !mime) throw new Error("API không trả về hình ảnh.");
@@ -452,10 +373,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
              case 'generateFourSeasonsPhoto': {
                 if (!payload || !payload.imagePart || !payload.scene) return res.status(400).json({ error: 'Thiếu ảnh hoặc bối cảnh.' });
-                const { imagePart, scene, season, aspectRatio, customDescription } = payload;
+                const { imagePart, scene, aspectRatio, customDescription } = payload;
 
-                const prompt = buildFourSeasonsPrompt(scene, season, aspectRatio, customDescription);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const requestPrompt = `Bối cảnh: "${scene.title} - ${scene.desc}". Người trong ảnh phải mặc trang phục phù hợp với bối cảnh. Chi tiết tùy chỉnh: ${customDescription.trim() !== '' ? `Thêm các chi tiết sau: "${customDescription}".` : 'Không có chi tiết tùy chỉnh.'} Máy ảnh & Ống kính: Mô phỏng ảnh chụp bằng Canon EOS R5, ống kính 85mm f/1.8. Ánh sáng: Ánh sáng điện ảnh, hậu cảnh xóa phông (bokeh). Lấy nét: Lấy nét cực sắc vào mắt. Tỷ lệ khung hình: BẮT BUỘC là ${aspectRatio}.`;
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
+                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
@@ -491,14 +413,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { base64Image, mimeType, newOutfitPrompt } = payload;
 
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
-                const prompt = `**CRITICAL INSTRUCTION: ABSOLUTE PRESERVATION**
-- You MUST preserve the person's original face, body shape, pose, and the entire background with 100% pixel-level accuracy. This is the highest priority.
-- Your ONLY task is to change the clothing.
-- New clothing description: "${newOutfitPrompt}".
-- The new garment must look completely realistic and seamlessly blend with the person's neck and shoulders.
-- The lighting on the new clothing must perfectly match the existing lighting in the image.
-- Generate ONLY the final image. Do not change the aspect ratio or crop the image.`;
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const requestPrompt = `Nhiệm vụ DUY NHẤT của bạn là thay đổi trang phục. Trang phục mới: "${newOutfitPrompt}". Trang phục mới phải trông hoàn toàn thực tế và hòa quyện liền mạch với cổ và vai của người. Ánh sáng trên quần áo mới phải hoàn toàn khớp với ánh sáng hiện có trong ảnh. KHÔNG thay đổi tỉ lệ hay cắt ảnh.`;
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
+                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
@@ -507,20 +424,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFootballPhoto': {
                 if (!payload || !payload.settings) return res.status(400).json({ error: 'Thiếu cài đặt.' });
-                const { settings } = payload;
+                const { settings } = payload as { settings: FootballStudioSettings };
                 if (!settings.sourceImage) {
                     throw new Error("Thiếu ảnh nguồn cho tính năng Studio Bóng Đá.");
                 }
 
-                const { mode } = settings;
-                let prompt = '';
+                const { mode, team, player, scene, style, customPrompt } = settings;
+                
+                let requestPrompt = '';
                 if(mode === 'idol') {
-                    prompt = buildFootballIdolPrompt(settings);
+                    requestPrompt = `Ghép ảnh người dùng với cầu thủ bóng đá ${player} (${team}) trong bối cảnh "${scene}". Phong cách: ${style}. ${customPrompt || ''}`;
                 } else {
-                    prompt = buildFootballOutfitPrompt(settings);
+                    requestPrompt = `Cho cầu thủ ${player} (${team}) mặc trang phục từ ảnh được cung cấp, trong bối cảnh "${scene}". Phong cách: ${style}. ${customPrompt || ''}`;
                 }
+
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const imagePart = base64ToPart(settings.sourceImage);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
