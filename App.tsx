@@ -294,30 +294,32 @@ const App: React.FC = () => {
             });
             userDoc = await getDoc(userDocRef);
           }
-
+          
           const userData = userDoc.data();
           if (!userData) {
+             // This could happen in a race condition where the doc is deleted.
+             // Log out to be safe.
             await signOut(auth);
             return;
           }
 
           await user.reload();
           
-          const hasPasswordProvider = user.providerData.some(p => p.providerId === 'password');
-          const hasOAuthProvider = user.providerData.some(p => p.providerId !== 'password');
-
-          if (isNewUserInFirestore && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified) {
-            await sendEmailVerification(user);
-          }
-          
           const isAdmin = userData.isAdmin || false;
-
-          const needsVerification = !isAdmin && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified;
+          // **FIXED LOGIC**: This is a much safer and more explicit way to check for users
+          // who signed up ONLY with email/password and haven't verified yet.
+          const isPasswordOnlyUser = user.providerData.length === 1 && user.providerData[0].providerId === 'password';
+          const needsVerification = !isAdmin && isPasswordOnlyUser && !user.emailVerified;
 
           if (needsVerification) {
+            // Only send the verification email ONCE when they are first created.
+            if (isNewUserInFirestore) {
+              await sendEmailVerification(user);
+            }
             setIsVerificationModalVisible(true);
             setCurrentUser(null);
           } else {
+            // ALL other users (Google users, verified password users, admins) get logged in.
             setIsAuthModalVisible(false);
             setIsVerificationModalVisible(false);
             setCurrentUser({
@@ -333,6 +335,7 @@ const App: React.FC = () => {
             }
           }
         } else {
+          // User is logged out or not yet authenticated
           setCurrentUser(null);
           setIsVerificationModalVisible(false);
         }
