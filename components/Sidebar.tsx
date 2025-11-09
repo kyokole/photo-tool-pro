@@ -254,7 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                  )}
 
                  <button onClick={onHeadshotClick} className={getToolButtonClasses('headshot')}>
-                    <i className="fas fa-camera-retro w-5 h-5"></i>
+                    <i className="fas fa-camera w-5 h-5"></i>
                     <span>{t('tools.headshot')}</span>
                 </button>
                  <button onClick={onIdPhotoClick} className={getToolButtonClasses('id_photo')}>

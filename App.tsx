@@ -302,18 +302,20 @@ const App: React.FC = () => {
           }
 
           await user.reload();
-
+          
           const hasPasswordProvider = user.providerData.some(p => p.providerId === 'password');
           const hasOAuthProvider = user.providerData.some(p => p.providerId !== 'password');
 
+          // If a user registers with email/pass but hasn't verified, send the email.
+          // This avoids sending it if they signed up with Google and then linked a password.
           if (isNewUserInFirestore && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified) {
             await sendEmailVerification(user);
           }
           
           const isAdmin = userData.isAdmin || false;
 
-          // **THE FIX:** If user is logged in via OAuth (Google), they are considered verified.
           // The verification modal should ONLY show for PURE email/password users who are unverified.
+          // If they've logged in via another provider (like Google), they are considered verified.
           const needsVerification = !isAdmin && hasPasswordProvider && !hasOAuthProvider && !user.emailVerified;
 
           if (needsVerification) {
@@ -758,21 +760,27 @@ const App: React.FC = () => {
     }
 }, [handleResetRestorationTool, t]);
 
-  const handleLogin = (email: string, password: string): Promise<void> => {
+    const handleLogin = (email: string, password: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
         try {
+            // Attempt to create a new user first.
             await createUserWithEmailAndPassword(auth, email, password);
+            // If successful, onAuthStateChanged will handle the rest.
             resolve();
         } catch (registrationError: any) {
+            // Handle registration errors.
             switch (registrationError.code) {
                 case 'auth/email-already-in-use':
+                    // This is the expected path for an existing user. Now, try to sign them in.
                     try {
                         await signInWithEmailAndPassword(auth, email, password);
+                        // Sign-in successful. Reset UI and close modal.
                         resetAllTools();
                         setIsAuthModalVisible(false);
                         resolve();
                     } catch (loginError: any) {
-                         let errorMessage = loginError.message || t('errors.unknownError');
+                        // Sign-in failed. Translate the specific login error.
+                        let errorMessage;
                         switch (loginError.code) {
                             case 'auth/user-disabled':
                                 errorMessage = t('errors.userDisabled');
@@ -781,20 +789,32 @@ const App: React.FC = () => {
                             case 'auth/invalid-credential':
                                 errorMessage = t('errors.invalidCredential');
                                 break;
-                        }
-                        if (loginError.message?.includes('auth/user-disabled')) {
-                            errorMessage = t('errors.userDisabled');
+                            default:
+                                // Fallback for errors without a .code or unhandled codes.
+                                // Check the message string as a backup.
+                                if (loginError.message?.includes('auth/user-disabled')) {
+                                    errorMessage = t('errors.userDisabled');
+                                } else {
+                                    errorMessage = loginError.message || t('errors.unknownError');
+                                }
+                                break;
                         }
                         reject(new Error(errorMessage));
                     }
                     break;
+
                 case 'auth/weak-password':
                     reject(new Error(t('errors.passwordTooShort')));
                     break;
+                
                 default:
-                    let regErrorMessage = registrationError.message || t('errors.unknownError');
+                    // Handle other, unexpected registration errors.
+                    let regErrorMessage;
+                    // Check message as a backup, just in case.
                     if (registrationError.message?.includes('auth/user-disabled')) {
-                        regErrorMessage = t('errors.userDisabled');
+                         regErrorMessage = t('errors.userDisabled');
+                    } else {
+                         regErrorMessage = registrationError.message || t('errors.unknownError');
                     }
                     reject(new Error(regErrorMessage));
                     break;
@@ -950,16 +970,7 @@ const App: React.FC = () => {
   };
 
   const handleHeadshotSelect = () => {
-    if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'headshot') handleModeChange('headshot');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
-    } else {
-        setPostLoginRedirect('headshot');
-        setIsAuthModalVisible(true);
-    }
+    if (appMode !== 'headshot') handleModeChange('headshot');
   };
   
   const handleRestorationSelect = () => {
@@ -1160,7 +1171,7 @@ const App: React.FC = () => {
 
   const handleSubscriptionExpired = useCallback(() => {
     if (currentUser && !currentUser.isAdmin) {
-      const vipModes: AppMode[] = ['headshot', 'restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
+      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
       
       if (vipModes.includes(appMode) || isBatchMode) {
         handleModeChange('id_photo');
