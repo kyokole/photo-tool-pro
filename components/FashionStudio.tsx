@@ -247,15 +247,15 @@ const FashionStudio: React.FC<FashionStudioProps> = ({
                     </div>
                     <div className="bg-[var(--bg-component)] rounded-xl p-3 flex flex-col min-h-0 flex-1 border border-[var(--border-color)] shadow-lg">
                         <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase text-center tracking-wider">{t('fashionStudio.resultsTitle')}</h2>
-                        <div className="flex-1 grid place-items-center bg-[var(--bg-deep-space)] rounded-lg p-4 shadow-inner">
+                        <div className="flex-1 grid place-items-center bg-[var(--bg-deep-space)] rounded-lg p-4 shadow-inner overflow-hidden">
                            {isLoading ? (
                                 <div className="text-center p-8">
                                     <svg className="animate-spin h-10 w-10 text-[var(--accent-cyan)] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                     <p className="mt-4 text-gray-400 animate-pulse">{t('fashionStudio.generatingText')}</p>
                                 </div>
                             ) : result ? (
-                                <div className="group relative w-full h-full">
-                                    <img src={result.imageUrl} alt={t('fashionStudio.resultAlt')} className="object-cover w-full h-full animate-fade-in rounded-lg" />
+                                <div className="group relative w-full h-full overflow-hidden rounded-lg">
+                                    <img src={result.imageUrl} alt={t('fashionStudio.resultAlt')} className="object-cover w-full h-full animate-fade-in" />
                                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg">
                                        <button onClick={() => smartDownload(result.imageUrl, `fashion-studio-${result.id}.png`)} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
                                             <i className="fas fa-download mr-2"></i> {t('common.download')}

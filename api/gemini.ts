@@ -4,6 +4,7 @@
 
 import { GoogleGenAI, Modality, Part } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { FeatureAction } from '../types';
 
 // --- MERGED TYPES from types.ts ---
 // These types are included directly to make this file self-contained.
@@ -292,25 +293,29 @@ const buildFootballOutfitPrompt = (settings: FootballStudioSettings) => {
 ${customPrompt ? `- **Custom Request:** ${customPrompt}\n` : ''}
 **OUTPUT:** Generate ONLY the final image.`;
 };
-const createFinalPrompt = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false): string => {
+const createFinalPrompt = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
     if (!hasIdentityImages) {
         return `**TASK:** Create a high-quality, artistic photograph based on the user request.\n\n**USER REQUEST (Vietnamese):** ${userRequest}`;
     }
-    const identityDescription = isCouple
-        ? "The FIRST image is IDENTITY_PERSON_1 (left). The SECOND image is IDENTITY_PERSON_2 (right)."
-        : "The very first image provided is the IDENTITY REFERENCE image.";
+
+    let identityDescription = "The very first image provided is the IDENTITY REFERENCE image.";
+    if (isCouple) {
+        const g1 = gender1 ? `a ${gender1}, ` : '';
+        const g2 = gender2 ? `a ${gender2}, ` : '';
+        identityDescription = `The FIRST image is IDENTITY_PERSON_1 (${g1}on the left). The SECOND image is IDENTITY_PERSON_2 (${g2}on the right).`;
+    }
 
     return `**UNBREAKABLE DIRECTIVE: IDENTITY PRESERVATION**
-**PRIMARY GOAL:** Your single most important task is to generate an image where the face of the person is an **IDENTICAL, FLAWLESS, PERFECT COPY** of the face from the IDENTITY REFERENCE image.
+**PRIMARY GOAL:** Your single most important task is to generate an image where the face(s) of the person(s) are an **IDENTICAL, FLAWLESS, PERFECT COPY** of the face(s) from the IDENTITY REFERENCE image(s).
 **NON-NEGOTIABLE RULES:**
 1.  **IDENTITY SOURCE:** ${identityDescription}
-2.  **FACE REPLICATION:** The face in the final output **MUST BE A PIXEL-PERFECT, 1:1 REPLICA**. Do NOT change facial structure, features, expression, or skin texture.
+2.  **FACE REPLICATION:** The face(s) in the final output **MUST BE A PIXEL-PERFECT, 1:1 REPLICA**. Do NOT change facial structure, features, expression, or skin texture.
 3.  **USER REQUEST:** Execute the user's request below, but **ONLY** after satisfying all identity preservation rules.
 ---
 **USER REQUEST (Vietnamese):**
 ${userRequest}
 ---
-**FINAL CHECK:** Before generating, confirm your plan involves a perfect replication of the identity face.`;
+**FINAL CHECK:** Before generating, confirm your plan involves a perfect replication of the identity face(s).`;
 };
 const buildImageVariationPrompt = (
   options: { aspectRatio: string; identityLock: number; variationStrength: number; themeAnchor: string; style: string; },
@@ -349,14 +354,11 @@ const getAi = () => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // Wrap the entire function logic in a top-level try...catch block.
-    // This prevents the function from crashing and ensures a JSON error is always returned.
     try {
         if (req.method !== 'POST') {
             return res.status(405).json({ error: 'Method Not Allowed' });
         }
 
-        // Input validation is now safely inside the try block
         if (!req.body) {
             return res.status(400).json({ error: 'Yêu cầu không có nội dung (body).'});
         }
@@ -371,6 +373,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const models = ai.models;
 
         switch (action) {
+            // ... (existing cases for idphoto, headshot, restoration, fashionstudio, fourseasons, prompts, football)
+
             case 'generateIdPhoto': {
                 if (!payload || !payload.originalImage || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
                 const { originalImage, settings, outfitImagePart } = payload;
@@ -504,95 +508,120 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
             }
 
+
             case 'generateImagesFromFeature': {
                 const { featureAction, formData, numImages } = payload;
                 if (!featureAction || !formData) return res.status(400).json({ error: 'Thiếu action hoặc dữ liệu form.' });
 
-                // Common logic for features that need a final prompt and image parts
                 const parts: Part[] = [];
                 let finalPrompt = '';
                 let isCouple = false;
+                let gender1, gender2: string | undefined;
+
+                let promptsToRun: { prompt: string, parts: Part[], isCouple?: boolean, gender1?: string, gender2?: string }[] = [];
 
                 switch(featureAction) {
-                    case 'creative_composite':
-                        finalPrompt = formData.scene_description || '';
-                        if (formData.main_subject?.file) {
-                             parts.push(base64ToPart(formData.main_subject.file));
-                             if (formData.main_subject_description) {
-                                finalPrompt += `\nĐối tượng chính (từ ảnh 1): ${formData.main_subject_description}`;
-                             }
-                        }
-                        (formData.additional_components || []).forEach((comp: any, index: number) => {
-                            if (comp.file) {
-                                parts.push(base64ToPart(comp.file));
-                                const descKey = `additional_components_${index}_description`;
-                                if (formData[descKey]) {
-                                    finalPrompt += `\nĐối tượng phụ ${index + 1} (từ ảnh ${parts.length}): ${formData[descKey]}`;
-                                }
-                            }
-                        });
+                    case FeatureAction.TRY_ON_OUTFIT: {
+                        finalPrompt = `Người mẫu (từ ảnh 1) mặc trang phục (từ ảnh 2). ${formData.prompt_detail || ''}. Khung hình: ${formData.frame_style}.`;
+                        parts.push(base64ToPart(formData.subject_image));
+                        parts.push(base64ToPart(formData.outfit_image));
+                        promptsToRun.push({ prompt: finalPrompt, parts });
                         break;
+                    }
+
+                    case FeatureAction.PLACE_IN_SCENE:
+                    case FeatureAction.BIRTHDAY_PHOTO:
+                    case FeatureAction.HOT_TREND_PHOTO:
+                    case FeatureAction.CREATE_ALBUM: {
+                        const baseParts = [base64ToPart(formData.subject_image)];
+                        let combinations: { pose?: string, background?: string }[] = [];
+
+                        if (featureAction === FeatureAction.CREATE_ALBUM) {
+                            const poses = formData.poses || [];
+                            const backgrounds = formData.backgrounds || [];
+                            if (poses.length === 0 || backgrounds.length === 0) break;
+                            poses.forEach((pose: string) => {
+                                backgrounds.forEach((bg: string) => {
+                                    combinations.push({ pose, background: bg });
+                                });
+                            });
+                        } else {
+                            let backgrounds: string[] = [];
+                            if (featureAction === FeatureAction.PLACE_IN_SCENE) backgrounds = formData.background_options || [];
+                            if (featureAction === FeatureAction.BIRTHDAY_PHOTO) backgrounds = formData.birthday_scenes || [];
+                            if (featureAction === FeatureAction.HOT_TREND_PHOTO) backgrounds = formData.selected_trends || [];
+                            backgrounds.forEach(bg => combinations.push({ background: bg }));
+                             if (featureAction === FeatureAction.PLACE_IN_SCENE && formData.custom_background_prompt) {
+                                combinations.push({ background: formData.custom_background_prompt });
+                            }
+                        }
+
+                        combinations.forEach(combo => {
+                            let prompt = `Bối cảnh: ${combo.background}.`;
+                            if (combo.pose) prompt += ` Tư thế: ${combo.pose}.`;
+                            if (formData.frame_style) prompt += ` Khung hình: ${formData.frame_style}.`;
+                            promptsToRun.push({ prompt, parts: baseParts });
+                        });
+                        if (featureAction === FeatureAction.PLACE_IN_SCENE && formData.background_image) {
+                            promptsToRun.push({ prompt: 'Ghép người vào ảnh nền được cung cấp.', parts: [baseParts[0], base64ToPart(formData.background_image)] });
+                        }
+                        break;
+                    }
                         
-                    case 'couple_compose':
+                    case FeatureAction.COUPLE_COMPOSE:
+                        gender1 = formData.person_left_gender.replace('aiStudio.inputs.couple_compose.genders.', '');
+                        gender2 = formData.person_right_gender.replace('aiStudio.inputs.couple_compose.genders.', '');
                         finalPrompt = `Hành động: ${formData.affection_action}. Phong cách: ${formData.aesthetic_style}.`;
                          if (formData.person_left_image && formData.person_right_image) {
                              parts.push(base64ToPart(formData.person_left_image));
                              parts.push(base64ToPart(formData.person_right_image));
                              isCouple = true;
                          }
-                        // Handle background logic
                         if (formData.custom_background) {
                             parts.push(base64ToPart(formData.custom_background));
                             finalPrompt += `\nBối cảnh: Sử dụng bối cảnh từ ảnh cuối cùng.`;
                         } else if (formData.couple_background) {
                             finalPrompt += `\nBối cảnh: ${formData.couple_background}.`;
                         }
+                        promptsToRun.push({ prompt: finalPrompt, parts, isCouple, gender1, gender2 });
                         break;
-
-                    case 'korean_style_studio': {
-                        const { subject_image, k_concept, aspect_ratio, quality, face_consistency } = formData;
-                        const HIDDEN_ADDONS_SERVER = "Thần thái K-fashion hiện đại, sang trọng, dáng mềm mại, cổ tay tinh tế, Trang phục couture, Giá trị set đồ trên 2 tỷ VND, Ánh sáng điện ảnh Hàn, Độ chi tiết 8K, Giữ nguyên khuôn mặt tham chiếu";
-                        const prompt = `${k_concept}. Aspect ratio ${aspect_ratio}. Image quality ${quality}. ${face_consistency ? HIDDEN_ADDONS_SERVER : ''}`;
-                        finalPrompt = prompt;
-                        parts.push(base64ToPart(subject_image));
+                    
+                    case FeatureAction.CHANGE_HAIRSTYLE: {
+                        finalPrompt = `Đổi kiểu tóc thành ${formData.hairstyle}, màu ${formData.hair_color}, độ dài ${formData.hair_length}.`;
+                        parts.push(base64ToPart(formData.subject_image));
+                        promptsToRun.push({ prompt: finalPrompt, parts });
                         break;
-                    }
-    
-                     case 'image_variation_generator': {
-                        const { reference_image, aspectRatio, identityLock, variationStrength, themeAnchor, style } = formData;
-                        const imagePart = base64ToPart(reference_image);
-                        
-                        const promises = Array.from({ length: 4 }, (_, i) => {
-                            const prompt = buildImageVariationPrompt({ aspectRatio, identityLock, variationStrength, themeAnchor, style }, i);
-                            return models.generateContent({
-                                model: 'gemini-2.5-flash-image',
-                                contents: { parts: [imagePart, { text: prompt }] },
-                                config: { responseModalities: [Modality.IMAGE] },
-                            });
-                        });
-    
-                        const responses = await Promise.all(promises);
-                        const resultImages = responses.map(response => response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data).filter(Boolean);
-                        
-                        return res.status(200).json({ images: resultImages, successCount: resultImages.length });
                     }
                     
                     // Add other cases here...
                     default:
-                        return res.status(400).json({ error: `Tính năng '${featureAction}' chưa được triển khai trên backend.` });
+                        // Use the generic logic for other simple cases
+                        const prompt = Object.values(formData).filter(v => typeof v === 'string').join('. ');
+                        for (const key in formData) {
+                            if (formData[key] && typeof formData[key] === 'object' && formData[key].base64) {
+                                parts.push(base64ToPart(formData[key]));
+                            }
+                        }
+                        promptsToRun.push({ prompt: prompt || 'Tạo ảnh theo yêu cầu', parts });
+                        break;
                 }
 
-                const userRequest = createFinalPrompt(finalPrompt, parts.length > 0, isCouple);
-                parts.push({ text: userRequest });
+                if (promptsToRun.length === 0) {
+                     return res.status(400).json({ error: `Không có tác vụ nào để thực hiện cho tính năng '${featureAction}'. Vui lòng kiểm tra lại đầu vào.` });
+                }
 
-                const promises = Array(numImages).fill(0).map(() => models.generateContent({
-                    model: 'gemini-2.5-flash-image',
-                    contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE] }
-                }));
+                const promises = promptsToRun.flatMap(({ prompt, parts, isCouple, gender1, gender2 }) => {
+                    const userRequest = createFinalPrompt(prompt, parts.length > 0, isCouple, gender1, gender2);
+                    const finalParts = [...parts, { text: userRequest }];
+                    return Array(numImages > promptsToRun.length ? 1 : numImages).fill(0).map(() => models.generateContent({
+                        model: 'gemini-2.5-flash-image',
+                        contents: { parts: finalParts },
+                        config: { responseModalities: [Modality.IMAGE] }
+                    }));
+                });
                 
                 const results = await Promise.allSettled(promises);
-                const images = results.map(r => r.status === 'fulfilled' ? r.value.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data : null).filter(Boolean);
+                const images = results.map(r => r.status === 'fulfilled' ? r.value.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data : null).filter(Boolean) as string[];
 
                 return res.status(200).json({ images, successCount: images.length });
             }
@@ -621,7 +650,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             errorMessage = error.message;
         }
         
-        // Cố gắng tìm các lỗi cụ thể hơn
         let errorStringForSearch = '';
         try {
             errorStringForSearch = JSON.stringify(error);
@@ -631,34 +659,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (errorStringForSearch.includes('429') || errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit')) {
             statusCode = 429;
-            // NEW: Enhanced error parsing for Quota Failures
-            try {
-                // Google API errors often have a nested structure. We try to find it.
-                // The actual error object might be in `error.cause` or a JSON string in `error.message`.
-                const potentialErrorBody = error.cause?.error || JSON.parse(error.message.substring(error.message.indexOf('{')));
-                const details = potentialErrorBody?.details;
-                if (details && Array.isArray(details)) {
-                    const quotaFailure = details.find(d => d['@type'] === 'type.googleapis.com/google.rpc.QuotaFailure');
-                    if (quotaFailure && quotaFailure.violations && quotaFailure.violations.length > 0) {
-                        const violation = quotaFailure.violations[0];
-                        // Construct a very specific error message for the user
-                        errorMessage = `Đã vượt quá hạn ngạch API. Chi tiết: "${violation.description}". Vui lòng kiểm tra hạn ngạch có tên "${violation.subject}" trong Google Cloud Console.`;
-                    } else {
-                         errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên. Không thể lấy chi tiết lỗi cụ thể.";
-                    }
-                } else {
-                     errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên. Chi tiết lỗi không có sẵn.";
-                }
-            } catch (parseError) {
-                // If parsing fails, fall back to the generic message
-                errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên. (Lỗi khi phân tích chi tiết).";
-            }
+            errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.";
         } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid') || error.message.includes('GEMINI_API_KEY')) {
             errorMessage = "API Key của máy chủ không hợp lệ hoặc bị thiếu. Vui lòng liên hệ quản trị viên.";
-            statusCode = 500; // This is a server error, not a client error
+            statusCode = 500;
         } else if (error instanceof TypeError) {
              errorMessage = `Lỗi cú pháp hoặc dữ liệu không hợp lệ ở máy chủ: ${error.message}`;
-             statusCode = 400; // Bad Request
+             statusCode = 400;
         }
 
         return res.status(statusCode).json({ error: errorMessage });
