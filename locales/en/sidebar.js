@@ -1,6 +1,6 @@
 export default {
   "sidebar": {
-    "mainTitle": "PHOTO TOOL PRO",
+    "mainTitle": "AI PHOTO SUITE",
     "subtitle": "ALL IN ONE",
     "quickPresets": "Quick Presets",
     "freeTools": "Free Tools",

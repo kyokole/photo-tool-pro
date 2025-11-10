@@ -245,7 +245,7 @@ export default {
   },
   "countdown": {
     "expired": "Đã hết hạn",
-    "remainingFull": "Còn lại {{days}} ngày, {{time}}",
+    "remainingFull": "Còn {{days}} ngày, {{time}}",
     "remainingTime": "Còn lại {{time}}",
     "days": "{{count}} ngày"
   },
