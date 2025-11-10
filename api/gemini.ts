@@ -318,28 +318,8 @@ async function checkVipStatus(uid: string): Promise<boolean> {
 }
 
 // --- NEW Professional Watermark Logic using Sharp ---
-const WATERMARK_URL = "https://lh3.googleusercontent.com/d/1LWqVjsorgV7utx8urKXlOh-aIkJkXH5w";
-let watermarkBuffer: Buffer | null = null;
-
-async function getWatermarkBuffer(): Promise<Buffer> {
-    if (watermarkBuffer) {
-        return watermarkBuffer;
-    }
-    try {
-        const response = await fetch(WATERMARK_URL);
-        if (!response.ok) throw new Error(`Failed to fetch watermark image: ${response.statusText}`);
-        const arrayBuffer = await response.arrayBuffer();
-        watermarkBuffer = Buffer.from(arrayBuffer);
-        return watermarkBuffer;
-    } catch (error) {
-        console.error("Could not load watermark image; watermarking will be skipped.", error);
-        throw error;
-    }
-}
-
 async function applyWatermark(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
     try {
-        const logoBuffer = await getWatermarkBuffer();
         const mainImageBuffer = Buffer.from(generatedImageBase64, 'base64');
         const mainImage = sharp(mainImageBuffer);
         const metadata = await mainImage.metadata();
@@ -348,32 +328,34 @@ async function applyWatermark(generatedImageBase64: string, originalMimeType: st
             throw new Error('Could not read image metadata for watermarking.');
         }
 
-        // Watermark width: 20% of main image's width, with min/max constraints for sanity
-        const watermarkWidth = Math.max(80, Math.min(250, Math.floor(metadata.width * 0.20)));
+        // Define watermark text and style
+        const text = 'AI PHOTO SUITE';
+        const fontSize = Math.max(12, Math.floor(metadata.width / 50)); // Dynamic font size based on image width
+        const margin = Math.floor(fontSize * 0.75); // Margin based on font size
 
-        // Process the watermark: resize, and create a buffer for compositing.
-        const resizedWatermarkData = await sharp(logoBuffer)
-            .resize({ width: watermarkWidth })
-            .toBuffer({ resolveWithObject: true });
+        // Create an SVG for the text watermark. This allows for better styling and positioning.
+        const svgText = `
+            <svg width="${metadata.width}" height="${metadata.height}">
+                <style>
+                    .title { 
+                        fill: rgba(255, 255, 255, 0.7); 
+                        font-size: ${fontSize}px; 
+                        font-family: Arial, sans-serif; 
+                        font-weight: bold; 
+                        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+                    }
+                </style>
+                <text x="${metadata.width - margin}" y="${metadata.height - margin}" text-anchor="end" class="title">${text}</text>
+            </svg>
+        `;
+        const textBuffer = Buffer.from(svgText);
 
-        // Create an alpha channel buffer with 80% opacity (255 * 0.8 = 204)
-        const alphaChannel = Buffer.alloc(resizedWatermarkData.info.width * resizedWatermarkData.info.height, 204);
-
-        const watermarkWithOpacity = await sharp(resizedWatermarkData.data)
-            .joinChannel(alphaChannel)
-            .png() // Output as PNG to retain transparency
-            .toBuffer();
-
-        // Margin: 2% of the main image's width
-        const margin = Math.floor(metadata.width * 0.02);
-        
-        // Composite the watermark onto the main image at the bottom-right corner with a margin
+        // Composite the text SVG onto the main image
         const finalBuffer = await mainImage
             .composite([{
-                input: watermarkWithOpacity,
-                gravity: 'southeast',
-                top: margin, // sharp offsets from the gravity point, creating the margin
-                left: margin,
+                input: textBuffer,
+                top: 0,
+                left: 0,
             }])
             .jpeg({ quality: 95 }) // Output as high-quality JPEG
             .toBuffer();
@@ -381,6 +363,7 @@ async function applyWatermark(generatedImageBase64: string, originalMimeType: st
         return { data: finalBuffer.toString('base64'), mimeType: 'image/jpeg' };
     } catch (error) {
         console.error("Watermarking failed, returning original image without watermark.", error);
+        // If even this robust text watermarking fails, return the original image as a last resort.
         return { data: generatedImageBase64, mimeType: originalMimeType };
     }
 }
