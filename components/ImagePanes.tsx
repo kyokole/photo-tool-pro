@@ -41,6 +41,7 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
 }) => {
     const { t } = useTranslation();
     const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [isTipsExpanded, setIsTipsExpanded] = useState<boolean>(false);
     const previewCanvasRef = useRef<HTMLCanvasElement>(null);
     const resultContainerRef = useRef<HTMLDivElement>(null);
     const [previewError, setPreviewError] = useState<string | null>(null);
@@ -255,20 +256,33 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
                                 <i className="fas fa-upload mr-2"></i> {t('imagePanes.uploadButton')}
                             </div>
                             <p className="text-[var(--text-secondary)] mt-3 text-sm">{t('common.uploadPrompt')}</p>
-                            <div className="mt-4 text-left text-sm border-t border-[var(--border-color)] pt-3 w-4/5 sm:w-3/5">
-                                <p className="font-bold text-center mb-3 animated-gradient-text">{t('imagePanes.uploadTips.title')}</p>
-                                <div className="space-y-2 text-[var(--text-secondary)]">
-                                    <div className="flex items-start gap-2">
-                                        <i className="fas fa-check-circle text-[var(--accent-cyan)] mt-1"></i>
-                                        <span>{t('imagePanes.uploadTips.tip1')}</span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <i className="fas fa-check-circle text-[var(--accent-cyan)] mt-1"></i>
-                                        <span>{t('imagePanes.uploadTips.tip2')}</span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <i className="fas fa-check-circle text-[var(--accent-cyan)] mt-1"></i>
-                                        <span>{t('imagePanes.uploadTips.tip3')}</span>
+                            <div className="mt-4 text-left text-sm border-t border-[var(--border-color)] pt-3 w-4/5 sm:w-3/5 pointer-events-auto">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setIsTipsExpanded(!isTipsExpanded); }}
+                                    className="w-full flex justify-between items-center mb-3"
+                                    aria-expanded={isTipsExpanded}
+                                >
+                                    <span className="font-bold animated-gradient-text">{t('imagePanes.uploadTips.title')}</span>
+                                    <i className={`fas fa-chevron-down transition-transform duration-300 text-[var(--accent-cyan)] ${isTipsExpanded ? 'rotate-180' : ''}`}></i>
+                                </button>
+                                <div
+                                    className={`grid overflow-hidden transition-all duration-500 ease-in-out ${isTipsExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                                >
+                                    <div className="min-h-0">
+                                        <div className="space-y-2 text-[var(--text-secondary)] pb-2">
+                                            <div className="flex items-start gap-2">
+                                                <i className="fas fa-check-circle text-[var(--accent-cyan)] mt-1"></i>
+                                                <span>{t('imagePanes.uploadTips.tip1')}</span>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <i className="fas fa-check-circle text-[var(--accent-cyan)] mt-1"></i>
+                                                <span>{t('imagePanes.uploadTips.tip2')}</span>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <i className="fas fa-check-circle text-[var(--accent-cyan)] mt-1"></i>
+                                                <span>{t('imagePanes.uploadTips.tip3')}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

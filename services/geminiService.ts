@@ -1,4 +1,5 @@
 // services/geminiService.ts
+import { getAuthInstance } from '../services/firebase';
 import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene } from '../types';
 
 /**
@@ -9,10 +10,22 @@ import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, Thumbn
  * @returns The result from the backend.
  */
 const callBackendApi = async (action: string, payload: any): Promise<any> => {
+    const auth = getAuthInstance();
+    const user = auth.currentUser;
+    let idToken: string | null = null;
+    if (user) {
+        try {
+            idToken = await user.getIdToken();
+        } catch (error) {
+            console.error("Error getting user ID token:", error);
+            // Proceed without a token if it fails
+        }
+    }
+
     const response = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, payload }),
+        body: JSON.stringify({ action, payload, idToken }),
     });
 
     if (!response.ok) {

@@ -45,21 +45,6 @@ const loadSettingsFromSession = (): Settings => {
     return DEFAULT_SETTINGS;
 };
 
-// Helper to get device fingerprint
-const getFingerprint = async (): Promise<string> => {
-    // @ts-ignore - FingerprintJS is loaded from CDN
-    if (window.FingerprintJS) {
-        // @ts-ignore
-        const fp = await window.FingerprintJS.load();
-        const result = await fp.get();
-        return result.visitorId;
-    }
-    console.error("FingerprintJS script not loaded.");
-    // Fallback to a less reliable but unique-ish ID for this session
-    return `fallback_${Date.now()}_${Math.random()}`;
-};
-
-
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
   
@@ -113,7 +98,7 @@ const App: React.FC = () => {
   const [isSubscriptionModalVisible, setIsSubscriptionModalVisible] = useState<boolean>(false);
   const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState<boolean>(false);
   const [isTermsModalVisible, setIsTermsModalVisible] = useState<boolean>(false);
-  const [appMode, setAppMode] = useState<AppMode>('id_photo');
+  const [appMode, setAppMode] = useState<AppMode>('headshot');
   const [postLoginRedirect, setPostLoginRedirect] = useState<AppMode | null>(null);
   const [theme, setTheme] = useState<string>('galactic-cobalt');
   const [creativeStudioKey, setCreativeStudioKey] = useState(0);
@@ -308,33 +293,17 @@ const App: React.FC = () => {
             setIsVerificationModalVisible(false);
 
             if (!userData) { // Tương ứng với !userDoc.exists() trước đó
-                const fingerprint = await getFingerprint();
-                
-                // **GIẢI PHÁP CHUYÊN NGHIỆP:** Kiểm tra `fingerprint` trong một tập hợp riêng.
-                const fingerprintDocRef = doc(db, 'deviceFingerprints', fingerprint);
-                const fingerprintDoc = await getDoc(fingerprintDocRef);
-                const hasBeenUsed = fingerprintDoc.exists();
-                
-                let expiryDate = new Date();
-                if (hasBeenUsed) {
-                    alert(t('modals.deviceInUse'));
-                    await signOut(auth); // Đăng xuất người dùng nếu thiết bị đã được sử dụng.
-                } else {
-                    expiryDate.setHours(expiryDate.getHours() + 1); // Dùng thử 1 giờ
-                }
+                // Logic mô hình Freemium: Người dùng mới không có thời gian dùng thử.
+                // Ngày hết hạn được đặt thành một ngày trong quá khứ.
+                const expiryDate = new Date(0); // 1970-01-01
 
                 userData = {
                     username: user.email!,
                     subscriptionEndDate: expiryDate.toISOString(),
                     isAdmin: false, // Người dùng mới không bao giờ là admin
-                    deviceFingerprint: fingerprint,
                 };
                 await setDoc(userDocRef, userData);
 
-                // Nếu là thiết bị mới, hãy ghi lại fingerprint để chống lạm dụng
-                if (!hasBeenUsed) {
-                    await setDoc(fingerprintDocRef, { firstSeen: new Date().toISOString() });
-                }
             } else {
                  if (!userData) {
                     throw new Error(`Tài liệu hồ sơ người dùng bị rỗng (UID: ${user.uid}). Vui lòng liên hệ hỗ trợ.`);
@@ -388,7 +357,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (appMode === 'admin' && !currentUser?.isAdmin) {
-      setAppMode('id_photo');
+      setAppMode('headshot');
     }
   }, [appMode, currentUser]);
 
@@ -881,7 +850,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     try {
         await signOut(auth);
-        setAppMode('id_photo');
+        setAppMode('headshot');
         resetAllTools();
     } catch (error) {
         console.error("Logout failed:", error);
@@ -1189,7 +1158,7 @@ const App: React.FC = () => {
       const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
       
       if (vipModes.includes(appMode) || isBatchMode) {
-        handleModeChange('id_photo');
+        handleModeChange('headshot');
         setIsFreeTierLocked(true);
       } else if (appMode === 'id_photo') {
         setIsFreeTierLocked(true);
@@ -1249,7 +1218,7 @@ const App: React.FC = () => {
                   </div>
                 </header>
 
-              <div className="flex-1 flex flex-col md:flex-row overflow-hidden gap-6 px-6 pb-6">
+              <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col md:flex-row overflow-hidden gap-6 px-6 pb-6">
                 <ImagePanes 
                   originalImage={originalImage}
                   processedImage={processedImage}
@@ -1475,6 +1444,7 @@ const App: React.FC = () => {
         onChangePasswordClick={() => setIsChangePasswordModalVisible(true)}
         onSubscriptionExpired={handleSubscriptionExpired}
         isImageUploaded={!!originalImage}
+        isVip={isVip}
       />
 
       <div className="flex-1 flex flex-col transition-all duration-300">

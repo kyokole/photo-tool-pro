@@ -3,7 +3,9 @@ export default {
     "mainTitle": "PHOTO TOOL PRO",
     "subtitle": "ALL IN ONE",
     "quickPresets": "Quick Presets",
+    "freeTools": "Free Tools",
     "tools": "Tools",
+    "vipTools": "VIP Tools",
     "utilities": "Utilities",
     "generateButton": "Generate Photo"
   },

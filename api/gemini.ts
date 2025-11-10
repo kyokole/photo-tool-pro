@@ -4,6 +4,8 @@
 
 import { GoogleGenAI, Modality, Part } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import admin from 'firebase-admin';
+import type { ServiceAccount } from 'firebase-admin';
 
 
 // --- MERGED TYPES from types.ts ---
@@ -260,6 +262,81 @@ const buildImageVariationPrompt = (
 
 // --- END OF MERGED CODE ---
 
+// --- Firebase Admin Initialization ---
+try {
+    if (!admin.apps.length) {
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+        if (!serviceAccountJson) {
+            throw new Error("Biến môi trường FIREBASE_SERVICE_ACCOUNT_JSON không được thiết lập.");
+        }
+        const serviceAccount: ServiceAccount = JSON.parse(serviceAccountJson);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+        });
+        console.log("Firebase Admin SDK initialized successfully.");
+    }
+} catch (error: any) {
+    console.error("Firebase Admin SDK initialization error:", error.message);
+}
+
+// --- Authentication and VIP Status Check ---
+async function verifyToken(token: string) {
+    if (!admin.apps.length) throw new Error("Firebase Admin SDK chưa được khởi tạo.");
+    return admin.auth().verifyIdToken(token);
+}
+
+async function checkVipStatus(uid: string): Promise<boolean> {
+    if (!admin.apps.length) throw new Error("Firebase Admin SDK chưa được khởi tạo.");
+    const db = admin.firestore();
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+        return false;
+    }
+    const userData = userDoc.data();
+    if (userData?.isAdmin) {
+        return true;
+    }
+    if (userData?.subscriptionEndDate) {
+        return new Date(userData.subscriptionEndDate) > new Date();
+    }
+    return false;
+}
+
+// --- Watermark Logic ---
+const WATERMARK_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAEGKSURBVHhe7b3/l1XVdQfw3+8+5/zPueeec++111prbW1ta2trbWttrbXW+uee+3/f53w/nMsc5y6XM+e+z/f9fr/fa6+11t57b73X3nvvtdZa6/1+vx+yIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAiCIAi-..";
+const WATERMARK_MIME_TYPE = "image/png";
+
+async function applyWatermark(generatedImageBase64: string, ai: GoogleGenAI): Promise<string> {
+    const watermarkPart: Part = {
+        inlineData: {
+            data: WATERMARK_BASE64,
+            mimeType: WATERMARK_MIME_TYPE,
+        },
+    };
+    const imagePart: Part = {
+        inlineData: {
+            data: generatedImageBase64,
+            mimeType: 'image/png', // Assume generated image is PNG for simplicity
+        },
+    };
+    const promptPart: Part = {
+        text: "Overlay the second image (the logo) onto the bottom-right corner of the first image. The logo should have about 50% transparency and be scaled down to be noticeable but not obstructive. Do not alter the first image in any other way."
+    };
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [imagePart, watermarkPart, promptPart] },
+        config: { responseModalities: [Modality.IMAGE] }
+    });
+    
+    const watermarkedData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!watermarkedData) {
+        console.warn("Watermarking failed, returning original image.");
+        return generatedImageBase64;
+    }
+    return watermarkedData;
+}
 
 // Helper to convert base64 from client to a format the SDK understands
 const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => ({
@@ -287,7 +364,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Yêu cầu không có nội dung (body).'});
         }
         
-        const { action, payload } = req.body;
+        const { action, payload, idToken } = req.body;
 
         if (!action) {
             return res.status(400).json({ error: 'Thiếu tham số "action" trong yêu cầu.' });
@@ -295,6 +372,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         const ai = getAi();
         const models = ai.models;
+
+        // --- Real VIP Status Check ---
+        let isVip = false;
+        if (idToken) {
+            try {
+                const decodedToken = await verifyToken(idToken as string);
+                isVip = await checkVipStatus(decodedToken.uid);
+            } catch (authError: any) {
+                console.warn('Authentication check failed:', authError.message);
+                // Default to non-VIP if token is invalid, expired, etc.
+                isVip = false;
+            }
+        }
+        // --- End of VIP Status Check ---
 
         switch (action) {
             case 'generateIdPhoto': {
@@ -314,7 +405,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
-                return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
+                
+                const finalData = !isVip ? await applyWatermark(data, ai) : data;
+                return res.status(200).json({ imageData: `data:${mime};base64,${finalData}` });
             }
 
             case 'generateHeadshot': {
@@ -326,7 +419,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
-                return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
+
+                const finalData = !isVip ? await applyWatermark(data, ai) : data;
+                return res.status(200).json({ imageData: `data:${mime};base64,${finalData}` });
             }
             
             case 'initialCleanImage':
@@ -341,8 +436,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 else if (action === 'colorizeImage') prompt = COLORIZATION_PROMPT;
 
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
-                const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                let data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 if (!data) throw new Error("API không trả về hình ảnh.");
+
+                if (!isVip) {
+                    data = await applyWatermark(data, ai);
+                }
                 return res.status(200).json({ imageData: data });
             }
             
@@ -368,7 +467,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                  if (!data || !mime) throw new Error("API không trả về hình ảnh.");
-                return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
+                
+                const finalData = !isVip ? await applyWatermark(data, ai) : data;
+                return res.status(200).json({ imageData: `data:${mime};base64,${finalData}` });
             }
 
              case 'generateFourSeasonsPhoto': {
@@ -381,7 +482,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
-                return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
+
+                const finalData = !isVip ? await applyWatermark(data, ai) : data;
+                return res.status(200).json({ imageData: `data:${mime};base64,${finalData}` });
             }
             
             case 'generatePromptFromImage': {
@@ -419,7 +522,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
-                return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
+
+                const finalData = !isVip ? await applyWatermark(data, ai) : data;
+                return res.status(200).json({ imageData: `data:${mime};base64,${finalData}` });
             }
 
             case 'generateFootballPhoto': {
@@ -444,7 +549,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 const mime = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
                 if (!data || !mime) throw new Error("API không trả về hình ảnh.");
-                return res.status(200).json({ imageData: `data:${mime};base64,${data}` });
+
+                const finalData = !isVip ? await applyWatermark(data, ai) : data;
+                return res.status(200).json({ imageData: `data:${mime};base64,${finalData}` });
             }
 
             case 'generateImagesFromFeature': {
@@ -582,7 +689,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const results = await Promise.allSettled(promises);
                 const images = results.map(r => r.status === 'fulfilled' ? r.value.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data : null).filter(Boolean) as string[];
 
-                return res.status(200).json({ images, successCount: images.length });
+                const finalImages = !isVip ? await Promise.all(images.map(img => applyWatermark(img, ai))) : images;
+
+                return res.status(200).json({ images: finalImages, successCount: finalImages.length });
             }
 
             case 'getHotTrends': {

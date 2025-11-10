@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Settings, AppMode, User } from '../types';
-import { PassportIcon, BriefcaseIcon, SchoolIcon, IdPhotoIcon, RestorationIcon, GuideIcon, UndoIcon, FashionIcon, SparklesIcon } from './icons';
+import { PassportIcon, BriefcaseIcon, SchoolIcon, IdPhotoIcon, UndoIcon, GuideIcon, SparklesIcon } from './icons';
 import SubscriptionCountdown from './SubscriptionCountdown';
 
 const getDisplayName = (username: string | undefined): string => {
@@ -62,6 +62,7 @@ interface SidebarProps {
   onChangePasswordClick: () => void;
   onSubscriptionExpired: () => void;
   isImageUploaded: boolean;
+  isVip: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -85,8 +86,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     onChangePasswordClick,
     onSubscriptionExpired,
     isImageUploaded,
+    isVip
 }) => {
   const { t } = useTranslation();
+  const [isVipToolsExpanded, setIsVipToolsExpanded] = useState(false);
 
   const presets = [
     {
@@ -126,8 +129,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     return baseButtonClasses;
   };
   
-  const showAdvancedTools = appMode === 'creative_studio';
-
+  const getVipToolButtonClasses = (mode: AppMode) => {
+    const base = "flex flex-col items-center justify-center p-2 rounded-lg text-center transition-all duration-200 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] aspect-square";
+    if (appMode === mode) {
+        return `${base} bg-[var(--bg-tertiary)] text-[var(--text-active)] font-semibold shadow-inner ring-2 ring-[var(--ring-color)]`;
+    }
+    return `${base} bg-[var(--bg-interactive)]`;
+  };
+  
   let userStatus: 'admin' | 'vip' | 'member' = 'member';
   let statusIcon = 'fas fa-user';
   let statusColor = 'text-[var(--text-secondary)]';
@@ -143,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           nameColor = 'text-[var(--accent-gold)]';
           statusTooltip = t('user.status.admin');
           iconAnimation = 'animate-pulse-gold';
-      } else if (new Date(currentUser.subscriptionEndDate) > new Date()) {
+      } else if (isVip) {
           userStatus = 'vip';
           statusIcon = 'fas fa-star';
           statusColor = 'text-[var(--accent-cyan)]';
@@ -227,34 +236,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
         
         <div>
-            <h2 className="text-base font-semibold uppercase tracking-wider mb-4 animated-gradient-text">{t('sidebar.tools')}</h2>
+            <h2 className="text-base font-semibold uppercase tracking-wider mb-4 animated-gradient-text">{t('sidebar.freeTools')}</h2>
             <nav className="space-y-1">
-                 <button onClick={onCreativeStudioClick} className={getToolButtonClasses('creative_studio')}>
-                    <i className="fas fa-wand-magic-sparkles w-5 h-5"></i>
-                    <span>{t('tools.creativeStudio')}</span>
-                </button>
-                 
-                {showAdvancedTools && (
-                    <div className="pl-4 border-l-2 border-[var(--border-color)] ml-2 space-y-1 animate-fade-in">
-                        <button onClick={onPromptAnalyzerClick} className={getToolButtonClasses('prompt_analyzer')}>
-                            <div className="w-5 h-5 flex items-center justify-center"><SparklesIcon className="w-5 h-5" /></div>
-                            <span>{t('tools.promptAnalyzer')}</span>
-                        </button>
-                        <button onClick={onFootballStudioClick} className={getToolButtonClasses('football_studio')}>
-                            <i className="fas fa-futbol w-5 h-5"></i>
-                            <span>{t('tools.footballStudio')}</span>
-                        </button>
-                        <button onClick={onFashionStudioClick} className={getToolButtonClasses('fashion_studio')}>
-                            <FashionIcon />
-                            <span>{t('tools.fashionStudio')}</span>
-                        </button>
-                        <button onClick={onFourSeasonsClick} className={getToolButtonClasses('four_seasons_studio')}>
-                            <i className="fas fa-leaf w-5 h-5"></i>
-                            <span>{t('tools.fourSeasons')}</span>
-                        </button>
-                    </div>
-                 )}
-
                  <button onClick={onHeadshotClick} className={getToolButtonClasses('headshot')}>
                     <i className="fas fa-camera w-5 h-5"></i>
                     <span>{t('tools.headshot')}</span>
@@ -263,17 +246,64 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <IdPhotoIcon />
                     <span>{t('tools.idPhoto')}</span>
                 </button>
-                 <button onClick={onRestorationClick} className={getToolButtonClasses('restoration')}>
-                    <RestorationIcon />
-                    <span>{t('tools.restoration')}</span>
+            </nav>
+        </div>
+
+        <div className="pt-4 mt-4 border-t border-[var(--border-color)]">
+          <button
+            onClick={() => setIsVipToolsExpanded(!isVipToolsExpanded)}
+            className="w-full flex items-center justify-between text-sm font-semibold uppercase tracking-wider mb-3 text-[var(--accent-gold)] hover:text-yellow-300 transition-colors"
+            aria-expanded={isVipToolsExpanded}
+            aria-controls="vip-tools-grid"
+          >
+            <div className="flex items-center gap-2">
+              <i className="fas fa-star"></i>
+              {t('sidebar.vipTools')}
+            </div>
+            <i className={`fas fa-chevron-down transition-transform duration-300 ${isVipToolsExpanded ? 'rotate-180' : ''}`}></i>
+          </button>
+          
+          <div
+            id="vip-tools-grid"
+            className={`grid overflow-hidden transition-all duration-500 ease-in-out ${
+              isVipToolsExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+            }`}
+          >
+            <div className="min-h-0"> {/* Wrapper for grid animation */}
+              <nav className="grid grid-cols-2 gap-2 pb-2">
+                <button onClick={onRestorationClick} className={getVipToolButtonClasses('restoration')}>
+                    <i className="fas fa-wand-magic text-2xl mb-1"></i>
+                    <span className="text-xs leading-tight">{t('tools.restoration')}</span>
+                </button>
+                <button onClick={onFashionStudioClick} className={getVipToolButtonClasses('fashion_studio')}>
+                    <i className="fas fa-tshirt text-2xl mb-1"></i>
+                    <span className="text-xs leading-tight">{t('tools.fashionStudio')}</span>
+                </button>
+                 <button onClick={onFootballStudioClick} className={getVipToolButtonClasses('football_studio')}>
+                    <i className="fas fa-futbol text-2xl mb-1"></i>
+                    <span className="text-xs leading-tight">{t('tools.footballStudio')}</span>
+                </button>
+                <button onClick={onCreativeStudioClick} className={getVipToolButtonClasses('creative_studio')}>
+                    <i className="fas fa-wand-magic-sparkles text-2xl mb-1"></i>
+                    <span className="text-xs leading-tight">{t('tools.creativeStudio')}</span>
+                </button>
+                <button onClick={onPromptAnalyzerClick} className={getVipToolButtonClasses('prompt_analyzer')}>
+                    <SparklesIcon className="w-6 h-6 mb-1" />
+                    <span className="text-xs leading-tight">{t('tools.promptAnalyzer')}</span>
+                </button>
+                <button onClick={onFourSeasonsClick} className={getVipToolButtonClasses('four_seasons_studio')}>
+                    <i className="fas fa-leaf text-2xl mb-1"></i>
+                    <span className="text-xs leading-tight">{t('tools.fourSeasons')}</span>
                 </button>
                 {currentUser?.isAdmin && (
-                    <button onClick={onAdminPanelClick} className={getToolButtonClasses('admin')}>
-                        <i className="fas fa-users-cog w-5 h-5"></i>
-                        <span>{t('tools.admin')}</span>
+                    <button onClick={onAdminPanelClick} className={getVipToolButtonClasses('admin')}>
+                        <i className="fas fa-users-cog text-2xl mb-1"></i>
+                        <span className="text-xs leading-tight">{t('tools.admin')}</span>
                     </button>
                 )}
-            </nav>
+              </nav>
+            </div>
+          </div>
         </div>
 
         <div>

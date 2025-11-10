@@ -3,7 +3,9 @@ export default {
     "mainTitle": "PHOTO TOOL PRO",
     "subtitle": "ALL IN ONE",
     "quickPresets": "Cài đặt nhanh",
+    "freeTools": "Công cụ Miễn phí",
     "tools": "Công cụ",
+    "vipTools": "Công cụ VIP",
     "utilities": "Tiện ích",
     "generateButton": "Tạo ảnh"
   },
