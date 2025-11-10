@@ -249,10 +249,16 @@ export default {
     "remainingTime": "{{time}} left",
     "days": "{{count}} days"
   },
-  "subscriptionExpiredModal": {
-    "title": "VIP Package Expired",
-    "description": "The feature you are trying to access requires an active VIP package. Your package has expired. Please contact support to renew.",
-    "contactButton": "Contact Support",
+  "upgradeVipModal": {
+    "title": "Upgrade to VIP Package",
+    "description": "Unlock the full power of the toolkit with exclusive benefits:",
+    "benefits": {
+      "unlimited": "Unlimited generation & no watermark",
+      "allTools": "Unlock all premium VIP tools",
+      "batch": "Batch image processing",
+      "priority": "Priority team support"
+    },
+    "contactButton": "Contact & Upgrade Now",
     "closeButton": "Later"
   },
   "verificationModal": {

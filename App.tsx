@@ -27,7 +27,7 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import CreativeStudio from './components/CreativeStudio';
 import PromptAnalyzer from './components/PromptAnalyzer';
 import { ThemeSelector } from './components/creativestudio/ThemeSelector';
-import SubscriptionExpiredModal from './components/SubscriptionExpiredModal';
+import UpgradeVipModal from './components/SubscriptionExpiredModal';
 import BatchProcessor from './components/BatchProcessor';
 import FourSeasonsStudio from './components/FourSeasonsStudio';
 import LegalModal from './components/LegalModal';
@@ -1389,7 +1389,7 @@ const App: React.FC = () => {
       {isAboutModalVisible && <AboutModal onClose={() => setIsAboutModalVisible(false)} onDonateClick={handleOpenDonateModal} />}
       {isDonateModalVisible && <DonateModal onClose={() => setIsDonateModalVisible(false)} />}
       {isSubscriptionModalVisible && (
-        <SubscriptionExpiredModal 
+        <UpgradeVipModal 
             onClose={() => setIsSubscriptionModalVisible(false)}
             onContact={handleContactFromExpiredModal}
         />

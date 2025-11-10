@@ -1,13 +1,20 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface SubscriptionExpiredModalProps {
+interface UpgradeVipModalProps {
     onClose: () => void;
     onContact: () => void;
 }
 
-const SubscriptionExpiredModal: React.FC<SubscriptionExpiredModalProps> = ({ onClose, onContact }) => {
+const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact }) => {
     const { t } = useTranslation();
+
+    const benefits = [
+        'upgradeVipModal.benefits.unlimited',
+        'upgradeVipModal.benefits.allTools',
+        'upgradeVipModal.benefits.batch',
+        'upgradeVipModal.benefits.priority'
+    ];
 
     return (
         <div
@@ -22,27 +29,36 @@ const SubscriptionExpiredModal: React.FC<SubscriptionExpiredModalProps> = ({ onC
                     <i className="fas fa-times fa-lg"></i>
                 </button>
 
-                <div className="text-red-400 mb-4">
-                    <i className="fas fa-exclamation-triangle fa-3x"></i>
+                <div className="text-[var(--accent-gold)] mb-4 animate-pulse-gold">
+                    <i className="fas fa-crown fa-3x"></i>
                 </div>
 
-                <h2 className="text-2xl font-bold mb-3 text-[var(--text-primary)]">{t('subscriptionExpiredModal.title')}</h2>
+                <h2 className="text-2xl font-bold mb-3 text-[var(--accent-gold)]">{t('upgradeVipModal.title')}</h2>
                 <p className="text-[var(--text-secondary)] mb-6">
-                    {t('subscriptionExpiredModal.description')}
+                    {t('upgradeVipModal.description')}
                 </p>
+
+                <div className="text-left space-y-3 mb-8">
+                    {benefits.map(benefitKey => (
+                        <div key={benefitKey} className="flex items-center gap-3">
+                            <i className="fas fa-check-circle text-green-400"></i>
+                            <span className="text-[var(--text-primary)]">{t(benefitKey)}</span>
+                        </div>
+                    ))}
+                </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <button
                         onClick={onClose}
                         className="w-full btn-secondary text-[var(--text-primary)] font-bold py-3 px-6 rounded-lg transition-all duration-300"
                     >
-                        {t('subscriptionExpiredModal.closeButton')}
+                        {t('upgradeVipModal.closeButton')}
                     </button>
                     <button
                         onClick={onContact}
                         className="w-full btn-gradient text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg"
                     >
-                        {t('subscriptionExpiredModal.contactButton')}
+                        {t('upgradeVipModal.contactButton')}
                     </button>
                 </div>
             </div>
@@ -50,4 +66,4 @@ const SubscriptionExpiredModal: React.FC<SubscriptionExpiredModalProps> = ({ onC
     );
 };
 
-export default SubscriptionExpiredModal;
+export default UpgradeVipModal;

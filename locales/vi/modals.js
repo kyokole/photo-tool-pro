@@ -249,11 +249,17 @@ export default {
     "remainingTime": "Còn lại {{time}}",
     "days": "{{count}} ngày"
   },
-  "subscriptionExpiredModal": {
-    "title": "Gói VIP đã hết hạn",
-    "description": "Tính năng bạn đang cố truy cập yêu cầu gói VIP đang hoạt động. Gói của bạn đã hết hạn. Vui lòng liên hệ bộ phận hỗ trợ để gia hạn.",
-    "contactButton": "Liên hệ Hỗ trợ",
-    "closeButton": "Để sau"
+  "upgradeVipModal": {
+    "title": "Nâng Cấp Lên Gói VIP",
+    "description": "Mở khóa toàn bộ sức mạnh của bộ công cụ với các quyền lợi độc quyền:",
+    "benefits": {
+      "unlimited": "Tạo ảnh không giới hạn & không watermark",
+      "allTools": "Mở khóa tất cả công cụ VIP cao cấp",
+      "batch": "Xử lý ảnh hàng loạt (batch processing)",
+      "priority": "Ưu tiên hỗ trợ từ đội ngũ"
+    },
+    "contactButton": "Liên Hệ & Nâng Cấp Ngay",
+    "closeButton": "Để Sau"
   },
   "verificationModal": {
     "title": "Xác thực Email của bạn",
