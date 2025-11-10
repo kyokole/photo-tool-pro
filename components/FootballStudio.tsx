@@ -233,9 +233,9 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                             {isLoading ? (
                                 <div className="text-center p-8"><Spinner /></div>
                             ) : result ? (
-                                <div className="group relative w-full h-full">
-                                    <img src={result.imageUrl} alt="Generated football photo" className="object-cover w-full h-full animate-fade-in rounded-lg" />
-                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg">
+                                <div className="group relative w-full h-full rounded-lg overflow-hidden">
+                                    <img src={result.imageUrl} alt="Generated football photo" className="object-cover w-full h-full animate-fade-in" />
+                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                         <button onClick={() => smartDownload(result.imageUrl, `football-studio-${result.id}.png`)} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
                                             <i className="fas fa-download mr-2"></i> {t('footballStudio.download')}
                                         </button>

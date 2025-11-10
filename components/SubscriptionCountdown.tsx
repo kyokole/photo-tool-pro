@@ -71,7 +71,7 @@ const SubscriptionCountdown: React.FC<SubscriptionCountdownProps> = ({ endDateSt
   }, [endDateString, onExpire]);
 
   if (isFreemium) {
-    return <span className="font-medium text-[var(--text-secondary)]">{t('user.status.member')}</span>;
+    return <span className="font-medium text-green-400">{t('user.status.member')}</span>;
   }
 
   if (timeLeft.isExpired) {

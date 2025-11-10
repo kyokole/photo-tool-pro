@@ -317,42 +317,70 @@ async function checkVipStatus(uid: string): Promise<boolean> {
     return false;
 }
 
-// --- NEW Watermark Logic using Sharp ---
-const watermarkSvg = Buffer.from(`
-<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
-  <style>
-    .title { fill: rgba(255,255,255,0.35); font-size: 50px; font-family: sans-serif; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-  </style>
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" class="title" transform="rotate(-30 300,200)">AI PHOTO SUITE</text>
-</svg>`);
+// --- NEW Professional Watermark Logic using Sharp ---
+const WATERMARK_URL = "https://lh3.googleusercontent.com/d/1LWqVjsorgV7utx8urKXlOh-aIkJkXH5w";
+let watermarkBuffer: Buffer | null = null;
+
+async function getWatermarkBuffer(): Promise<Buffer> {
+    if (watermarkBuffer) {
+        return watermarkBuffer;
+    }
+    try {
+        const response = await fetch(WATERMARK_URL);
+        if (!response.ok) throw new Error(`Failed to fetch watermark image: ${response.statusText}`);
+        const arrayBuffer = await response.arrayBuffer();
+        watermarkBuffer = Buffer.from(arrayBuffer);
+        return watermarkBuffer;
+    } catch (error) {
+        console.error("Could not load watermark image; watermarking will be skipped.", error);
+        throw error;
+    }
+}
 
 async function applyWatermark(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
     try {
+        const logoBuffer = await getWatermarkBuffer();
         const mainImageBuffer = Buffer.from(generatedImageBase64, 'base64');
-        const metadata = await sharp(mainImageBuffer).metadata();
-        
+        const mainImage = sharp(mainImageBuffer);
+        const metadata = await mainImage.metadata();
+
         if (!metadata.width || !metadata.height) {
             throw new Error('Could not read image metadata for watermarking.');
         }
 
-        const watermarkWidth = Math.floor(metadata.width * 0.7);
-        
-        const watermarkPngBuffer = await sharp(watermarkSvg)
+        // Watermark width: 20% of main image's width, with min/max constraints for sanity
+        const watermarkWidth = Math.max(80, Math.min(250, Math.floor(metadata.width * 0.20)));
+
+        // Process the watermark: resize, and create a buffer for compositing.
+        const resizedWatermarkData = await sharp(logoBuffer)
             .resize({ width: watermarkWidth })
-            .png()
+            .toBuffer({ resolveWithObject: true });
+
+        // Create an alpha channel buffer with 80% opacity (255 * 0.8 = 204)
+        const alphaChannel = Buffer.alloc(resizedWatermarkData.info.width * resizedWatermarkData.info.height, 204);
+
+        const watermarkWithOpacity = await sharp(resizedWatermarkData.data)
+            .joinChannel(alphaChannel)
+            .png() // Output as PNG to retain transparency
             .toBuffer();
 
-        const finalBuffer = await sharp(mainImageBuffer)
-            .composite([{
-                input: watermarkPngBuffer,
-                gravity: 'center',
-            }])
-            .jpeg({ quality: 95 })
-            .toBuffer();
+        // Margin: 2% of the main image's width
+        const margin = Math.floor(metadata.width * 0.02);
         
+        // Composite the watermark onto the main image at the bottom-right corner with a margin
+        const finalBuffer = await mainImage
+            .composite([{
+                input: watermarkWithOpacity,
+                gravity: 'southeast',
+                top: margin, // sharp offsets from the gravity point, creating the margin
+                left: margin,
+            }])
+            .jpeg({ quality: 95 }) // Output as high-quality JPEG
+            .toBuffer();
+            
         return { data: finalBuffer.toString('base64'), mimeType: 'image/jpeg' };
     } catch (error) {
-        console.error("Sharp watermarking failed, returning original image:", error);
+        console.error("Watermarking failed, returning original image without watermark.", error);
         return { data: generatedImageBase64, mimeType: originalMimeType };
     }
 }

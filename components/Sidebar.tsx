@@ -138,8 +138,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
   
   let userStatus: 'admin' | 'vip' | 'member' = 'member';
-  let statusIcon = 'fas fa-user';
-  let statusColor = 'text-[var(--text-secondary)]';
+  let statusIcon = 'fas fa-user-check';
+  let statusColor = 'text-green-400';
   let statusTooltip = t('user.status.member');
   let iconAnimation = '';
   let nameColor = 'text-white';

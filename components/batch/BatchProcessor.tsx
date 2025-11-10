@@ -5,6 +5,7 @@ import type { Job, JobDefinition } from '../../types';
 import { JobInputForm } from './JobInputForm';
 import { JobList } from './JobList';
 import { DownloadIcon, PlayIcon, TrashIcon } from '../icons';
+import { smartDownload } from '../../utils/canvasUtils';
 
 // Make JSZip available from the window object loaded via CDN
 declare const JSZip: any;
@@ -60,12 +61,9 @@ export const BatchProcessor: React.FC = () => {
         }
 
         const blob = await zip.generateAsync({ type: "blob" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "gemini_image_batch.zip";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const url = URL.createObjectURL(blob);
+        smartDownload(url, "gemini_image_batch.zip");
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }, [jobs, t]);
     
     const jobsArray = Array.from<Job>(jobs.values());

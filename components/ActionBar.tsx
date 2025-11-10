@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PrintLayout, AspectRatio, PaperBackground } from '../types';
-import { generatePrintSheet, dataUrlToBlob, downloadBlob, canvasToBlobSafe, extToMime } from '../utils/canvasUtils';
+import { generatePrintSheet, dataUrlToBlob, smartDownload, canvasToBlobSafe, extToMime } from '../utils/canvasUtils';
 
 interface ActionBarProps {
     zoom: number;
@@ -88,7 +88,11 @@ const ActionBar: React.FC<ActionBarProps> = ({ zoom, setZoom, rotation, setRotat
                 filename = `anh-the-pro-${aspectRatio}.${fileExt}`;
             }
             if (blob.size === 0) throw new Error(t('errors.fileCreationError'));
-            downloadBlob(blob, filename);
+            
+            const url = URL.createObjectURL(blob);
+            smartDownload(url, filename);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+
         } catch (error) {
             const msg = error instanceof Error ? error.message : t('errors.unknownError');
             alert(t('errors.downloadFailed', { error: msg }));

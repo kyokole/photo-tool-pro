@@ -66,11 +66,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ isLoading, images, n
       <div className="bg-[var(--bg-secondary)] rounded-2xl p-4 border border-[var(--border-color)] backdrop-blur-xl">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {images.map((base64Image, index) => (
-            <div key={index} className="relative group aspect-square">
+            <div key={index} className="relative group aspect-square rounded-lg overflow-hidden">
               <img
                 src={`data:image/png;base64,${base64Image}`}
                 alt={`Generated image ${index + 1}`}
-                className="w-full h-full object-cover rounded-lg"
+                className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg gap-2">
                  <button title={t('aiStudio.gallery.zoom')} onClick={() => handleOpenZoomModal(base64Image)} className="h-10 w-10 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] rounded-full flex items-center justify-center text-[var(--text-primary)]">

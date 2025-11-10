@@ -4,6 +4,7 @@ import type { Job, GeneratedImage } from '../../types';
 import { JobItem } from './JobItem';
 import { JobStatus } from '../../types';
 import { DownloadIcon } from '../icons';
+import { smartDownload } from '../../utils/canvasUtils';
 
 
 interface JobListProps {
@@ -14,13 +15,10 @@ interface JobListProps {
 
 const ImageGridItem: React.FC<{ image: GeneratedImage, job: Job }> = ({ image, job }) => {
     const handleDownload = () => {
-        const link = document.createElement('a');
-        link.href = `data:image/png;base64,${image.base64}`;
+        const imageUrl = `data:image/png;base64,${image.base64}`;
         const safePrompt = job.prompt.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_');
-        link.download = `job_${job.id.substring(0, 5)}_${safePrompt}_${image.id.substring(0,5)}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const filename = `job_${job.id.substring(0, 5)}_${safePrompt}_${image.id.substring(0,5)}.png`;
+        smartDownload(imageUrl, filename);
     };
 
 

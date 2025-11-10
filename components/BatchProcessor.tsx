@@ -1,10 +1,15 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { IdPhotoJob, Settings, AccordionSection } from '../types';
 import { ControlPanel } from './ControlPanel';
 import { Spinner } from './creativestudio/Spinner';
 import { ZoomModal } from './creativestudio/ZoomModal';
+import { smartDownload } from '../utils/canvasUtils';
+
+// Make JSZip available from the window object loaded via CDN
+declare const JSZip: any;
 
 interface BatchProcessorProps {
     jobs: IdPhotoJob[];
@@ -30,12 +35,7 @@ const JobItem: React.FC<{ job: IdPhotoJob; onRemove: (jobId: string) => void; on
 
     const handleDownload = () => {
         if (!job.processedUrl) return;
-        const link = document.createElement('a');
-        link.href = job.processedUrl;
-        link.download = `pro-id-photo-${job.file.name}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        smartDownload(job.processedUrl, `pro-id-photo-${job.file.name}`);
     };
 
     return (
@@ -119,19 +119,25 @@ const BatchProcessor: React.FC<BatchProcessorProps> = (props) => {
     const pendingJobs = jobs.filter(j => j.status === 'pending').length;
     const completedJobs = jobs.filter(j => j.status === 'done').length;
 
-    const handleDownloadAll = () => {
-        const doneJobs = jobs.filter(j => j.status === 'done');
-        doneJobs.forEach((job, index) => {
-            setTimeout(() => {
-                 if (!job.processedUrl) return;
-                const link = document.createElement('a');
-                link.href = job.processedUrl;
-                link.download = `pro-id-photo-${job.file.name}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }, index * 300); // Stagger downloads
-        });
+    const handleDownloadAll = async () => {
+        const doneJobs = jobs.filter(j => j.status === 'done' && j.processedUrl);
+        if (doneJobs.length === 0) {
+            alert(t('batch.noSuccess'));
+            return;
+        }
+
+        const zip = new JSZip();
+        for (const job of doneJobs) {
+            // Fetch the data URL and convert to blob to add to zip
+            const response = await fetch(job.processedUrl!);
+            const blob = await response.blob();
+            zip.file(`pro-id-photo-${job.file.name}`, blob);
+        }
+
+        const blob = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(blob);
+        smartDownload(url, "id-photo-batch.zip");
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     };
 
     return (
