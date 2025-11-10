@@ -1155,6 +1155,13 @@ const App: React.FC = () => {
 
   const handleSubscriptionExpired = useCallback(() => {
     if (currentUser && !currentUser.isAdmin) {
+      // FIX: Check if the expiry date is the epoch (Jan 1, 1970).
+      // If so, this is a new freemium user, not an expired VIP. Do not show the modal.
+      const expiry = new Date(currentUser.subscriptionEndDate);
+      if (expiry.getTime() === 0) {
+        return; 
+      }
+
       const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
       
       if (vipModes.includes(appMode) || isBatchMode) {

@@ -4,7 +4,8 @@
 
 // FIX: Import Buffer from the 'buffer' module to resolve 'Cannot find name' errors.
 import { Buffer } from 'buffer';
-import { GoogleGenAI, Modality, Part } from '@google/genai';
+// FIX: Import 'Type' from '@google/genai' to resolve 'Cannot find name 'TYPE'' error.
+import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
@@ -317,7 +318,7 @@ async function checkVipStatus(uid: string): Promise<boolean> {
 }
 
 // --- NEW Watermark Logic using Sharp ---
-const WATERMARK_BASE64 = `iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAABfCSURBVHhe7d3/l11lncDx3/dM/p/MmblzzpyZOWdmtbXWWmtra2trbW2ttdZa/5mZmf8z/+85n/f74RzHOS7HkZkj5z/f5/f5fdZa6+yz1l77rL322mutvfbaa6+99vorf//73//WJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJEmSJg-`;
+const WATERMARK_BASE64 = `iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAhaSURBVHhe7d1/SFNlHMfxj83GDbcpTNxqcjEu1G3BlqALF060MCKIIOAPoijoo46go446gqAIOoLgI+gsoYx6CCoKghDSl4i2EMsS1DAlxhgXbVx2t3V3d3d3t6+3e4a9P+A/3Z/VfX5+3p+n5/Q8D0cSJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEwkaJIloEw-`;
 const WATERMARK_MIME_TYPE = "image/png";
 
 async function applyWatermark(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
@@ -789,6 +790,79 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let jsonStr = (response.text ?? '').trim().match(/(\[[\s\S]*\])/)?.[0];
                 if (!jsonStr) throw new Error("Không thể phân tích xu hướng từ phản hồi của AI.");
                 return res.status(200).json({ trends: JSON.parse(jsonStr) });
+            }
+            
+            case 'generateThumbnail': {
+                if (!payload || !payload.modelImage) return res.status(400).json({ error: 'Thiếu ảnh người mẫu.' });
+                
+                const { modelImage, refImage, inputs, ratio } = payload;
+                const { title, speaker, outfit, action, extra } = inputs;
+                
+                const prompt = `Phân tích ảnh người mẫu (ảnh 1) và ảnh tham khảo (ảnh 2, nếu có). Tạo một đối tượng JSON để thiết kế thumbnail YouTube ${ratio === '16:9' ? 'ngang' : 'dọc'} theo chủ đề "${title}". Yêu cầu:
+1.  **background_prompt**: Tạo một prompt DALL-E 3, bằng tiếng Anh, để tạo một background tuyệt đẹp, tương phản cao, phù hợp chủ đề. Bao gồm phong cách (trừu tượng, gradient, cảnh thực), màu sắc, bố cục. Background phải tôn người mẫu, không gây xao lãng.
+2.  **model_action**: Tạo một tư thế hoặc hành động mới cho người mẫu để trông năng động và thu hút hơn bản gốc. Mô tả tư thế, biểu cảm, hướng nhìn.
+3.  **text_elements**: Tạo một mảng các phần tử văn bản, thường gồm tiêu đề chính và phụ đề/tên diễn giả. Mỗi phần tử là một đối tượng có 'text', 'type' ('title', 'speaker', 'detail'), và 'font_size' ('large', 'medium', 'small').
+Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành động: ${action}, Ghi chú: ${extra}`;
+                
+                const parts: Part[] = [base64ToPart(modelImage)];
+                if (refImage) {
+                    parts.push(base64ToPart(refImage));
+                }
+                parts.push({text: prompt});
+                
+                const schema = {
+                    type: Type.OBJECT,
+                    properties: {
+                        background_prompt: {
+                            type: Type.STRING,
+                            description: 'A DALL-E 3 prompt, in English, to generate a visually stunning, high-contrast background that matches the theme. Include style (e.g., abstract, gradient, realistic scene), colors, and composition. The background should complement the model without being distracting.'
+                        },
+                        model_action: {
+                            type: Type.STRING,
+                            description: 'A new pose or action for the model to perform that is more dynamic and engaging than the original. Describe the pose, expression, and gaze direction.'
+                        },
+                        text_elements: {
+                            type: Type.ARRAY,
+                            description: "An array of text elements to be placed on the thumbnail. Typically includes a main title and a subtitle/speaker name.",
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    text: { type: Type.STRING },
+                                    type: { type: Type.STRING, 'enum': ['title', 'speaker', 'detail'] },
+                                    font_size: { type: Type.STRING, description: 'Relative size like "large", "medium", "small"' }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const response = await models.generateContent({
+                    model: 'gemini-2.5-pro',
+                    contents: { parts: parts },
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: schema,
+                    }
+                });
+
+                const jsonResponse = JSON.parse((response.text ?? '').trim());
+                
+                const { background_prompt } = jsonResponse;
+                
+                const dallEModel = 'imagen-4.0-generate-001';
+                const dallEResponse = await ai.models.generateImages({
+                    model: dallEModel,
+                    prompt: background_prompt,
+                    config: {
+                        numberOfImages: 1,
+                        outputMimeType: 'image/jpeg',
+                        aspectRatio: ratio
+                    }
+                });
+                
+                const data = dallEResponse.generatedImages[0].image.imageBytes;
+
+                return res.status(200).json({ image: `data:image/jpeg;base64,${data}` });
             }
 
             default:
