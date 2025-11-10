@@ -17,20 +17,26 @@ const SubscriptionCountdown: React.FC<SubscriptionCountdownProps> = ({ endDateSt
     seconds: 0,
     isExpired: false,
   });
+  const [isFreemium, setIsFreemium] = useState(false);
   const hasExpired = useRef(false);
-  const previousEndDate = useRef(endDateString); // Track the date itself
+  const previousEndDate = useRef(endDateString);
 
   useEffect(() => {
-    // Only reset the expiration flag if the subscription date itself changes (e.g., new user logs in).
-    // This prevents the flag from resetting on unrelated re-renders that change the onExpire callback.
     if (previousEndDate.current !== endDateString) {
         hasExpired.current = false;
         previousEndDate.current = endDateString;
     }
 
     const endDate = new Date(endDateString);
+    const isFreemiumUser = endDate.getTime() === 0;
 
-    // Initial calculation to prevent flicker on first render
+    if (isFreemiumUser) {
+        setIsFreemium(true);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+    }
+    setIsFreemium(false);
+
     const calculate = () => {
         const now = new Date();
         const diff = endDate.getTime() - now.getTime();
@@ -63,6 +69,10 @@ const SubscriptionCountdown: React.FC<SubscriptionCountdownProps> = ({ endDateSt
 
     return () => clearInterval(intervalId);
   }, [endDateString, onExpire]);
+
+  if (isFreemium) {
+    return <span className="font-medium text-[var(--text-secondary)]">{t('user.status.member')}</span>;
+  }
 
   if (timeLeft.isExpired) {
     return <span className="font-medium text-red-400">{t('countdown.expired')}</span>;

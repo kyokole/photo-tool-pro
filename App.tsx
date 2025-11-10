@@ -322,8 +322,18 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                handleModeChange(postLoginRedirect);
-                setPostLoginRedirect(null);
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
+                const targetIsVipTool = vipModes.includes(postLoginRedirect);
+                const userIsVip = appUser.isAdmin || (new Date(appUser.subscriptionEndDate) > new Date());
+
+                if (targetIsVipTool && !userIsVip) {
+                    // User tries to access a VIP tool but isn't VIP. Show modal, don't redirect.
+                    setIsSubscriptionModalVisible(true);
+                } else {
+                    // User is VIP or the tool is free, proceed with redirect.
+                    handleModeChange(postLoginRedirect);
+                }
+                setPostLoginRedirect(null); // Clear the redirect request regardless.
             }
 
         } catch (e: any) {
