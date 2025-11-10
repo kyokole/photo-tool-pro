@@ -239,11 +239,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             <h2 className="text-base font-semibold uppercase tracking-wider mb-4 animated-gradient-text">{t('sidebar.freeTools')}</h2>
             <nav className="space-y-1">
                  <button onClick={onHeadshotClick} className={getToolButtonClasses('headshot')}>
-                    <i className="fas fa-camera w-5 h-5"></i>
+                    <div className="w-5 h-5"><i className="fas fa-camera"></i></div>
                     <span>{t('tools.headshot')}</span>
                 </button>
                  <button onClick={onIdPhotoClick} className={getToolButtonClasses('id_photo')}>
-                    <IdPhotoIcon />
+                    <div className="w-5 h-5"><i className="fas fa-id-card"></i></div>
                     <span>{t('tools.idPhoto')}</span>
                 </button>
             </nav>
@@ -270,35 +270,35 @@ const Sidebar: React.FC<SidebarProps> = ({
             }`}
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
-              <nav className="grid grid-cols-2 gap-2 pb-2">
-                <button onClick={onRestorationClick} className={getVipToolButtonClasses('restoration')}>
-                    <i className="fas fa-wand-magic text-2xl mb-1"></i>
-                    <span className="text-xs leading-tight">{t('tools.restoration')}</span>
+              <nav className="space-y-1 pb-2">
+                <button onClick={onRestorationClick} className={getToolButtonClasses('restoration')}>
+                    <div className="w-5 h-5"><i className="fas fa-wand-magic"></i></div>
+                    <span>{t('tools.restoration')}</span>
                 </button>
-                <button onClick={onFashionStudioClick} className={getVipToolButtonClasses('fashion_studio')}>
-                    <i className="fas fa-tshirt text-2xl mb-1"></i>
-                    <span className="text-xs leading-tight">{t('tools.fashionStudio')}</span>
+                <button onClick={onFashionStudioClick} className={getToolButtonClasses('fashion_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-tshirt"></i></div>
+                    <span>{t('tools.fashionStudio')}</span>
                 </button>
-                 <button onClick={onFootballStudioClick} className={getVipToolButtonClasses('football_studio')}>
-                    <i className="fas fa-futbol text-2xl mb-1"></i>
-                    <span className="text-xs leading-tight">{t('tools.footballStudio')}</span>
+                 <button onClick={onFootballStudioClick} className={getToolButtonClasses('football_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-futbol"></i></div>
+                    <span>{t('tools.footballStudio')}</span>
                 </button>
-                <button onClick={onCreativeStudioClick} className={getVipToolButtonClasses('creative_studio')}>
-                    <i className="fas fa-wand-magic-sparkles text-2xl mb-1"></i>
-                    <span className="text-xs leading-tight">{t('tools.creativeStudio')}</span>
+                <button onClick={onCreativeStudioClick} className={getToolButtonClasses('creative_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-wand-magic-sparkles"></i></div>
+                    <span>{t('tools.creativeStudio')}</span>
                 </button>
-                <button onClick={onPromptAnalyzerClick} className={getVipToolButtonClasses('prompt_analyzer')}>
-                    <SparklesIcon className="w-6 h-6 mb-1" />
-                    <span className="text-xs leading-tight">{t('tools.promptAnalyzer')}</span>
+                <button onClick={onPromptAnalyzerClick} className={getToolButtonClasses('prompt_analyzer')}>
+                    <SparklesIcon />
+                    <span>{t('tools.promptAnalyzer')}</span>
                 </button>
-                <button onClick={onFourSeasonsClick} className={getVipToolButtonClasses('four_seasons_studio')}>
-                    <i className="fas fa-leaf text-2xl mb-1"></i>
-                    <span className="text-xs leading-tight">{t('tools.fourSeasons')}</span>
+                <button onClick={onFourSeasonsClick} className={getToolButtonClasses('four_seasons_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-leaf"></i></div>
+                    <span>{t('tools.fourSeasons')}</span>
                 </button>
                 {currentUser?.isAdmin && (
-                    <button onClick={onAdminPanelClick} className={getVipToolButtonClasses('admin')}>
-                        <i className="fas fa-users-cog text-2xl mb-1"></i>
-                        <span className="text-xs leading-tight">{t('tools.admin')}</span>
+                    <button onClick={onAdminPanelClick} className={getToolButtonClasses('admin')}>
+                        <div className="w-5 h-5"><i className="fas fa-users-cog"></i></div>
+                        <span>{t('tools.admin')}</span>
                     </button>
                 )}
               </nav>
