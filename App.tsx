@@ -698,19 +698,26 @@ const App: React.FC = () => {
       }
   }, [fashionStudioFile, fashionStudioSettings, t]);
 
+  const handleFashionSettingsChange = useCallback((updater: React.SetStateAction<FashionStudioSettings>) => {
+    setFashionStudioSettings(prevSettings => {
+        const newSettings = typeof updater === 'function' ? updater(prevSettings) : updater;
 
-  useEffect(() => {
-    const { category } = fashionStudioSettings;
-    let newStyle = '';
-    if (category === 'female') newStyle = FASHION_FEMALE_STYLES[0].promptValue;
-    else if (category === 'male') newStyle = FASHION_MALE_STYLES[0].promptValue;
-    else if (category === 'girl') newStyle = FASHION_GIRL_STYLES[0].promptValue;
-    else if (category === 'boy') newStyle = FASHION_BOY_STYLES[0].promptValue;
+        // If the category has changed, we need to reset the style to the first valid one.
+        if (newSettings.category !== prevSettings.category) {
+            let newStyle = '';
+            if (newSettings.category === 'female') newStyle = FASHION_FEMALE_STYLES[0].promptValue;
+            else if (newSettings.category === 'male') newStyle = FASHION_MALE_STYLES[0].promptValue;
+            else if (newSettings.category === 'girl') newStyle = FASHION_GIRL_STYLES[0].promptValue;
+            else if (newSettings.category === 'boy') newStyle = FASHION_BOY_STYLES[0].promptValue;
+            
+            // Return new state with both category and style updated atomically
+            return { ...newSettings, style: newStyle };
+        }
 
-    if (newStyle && fashionStudioSettings.style !== newStyle) {
-        setFashionStudioSettings(prev => ({ ...prev, style: newStyle }));
-    }
-}, [fashionStudioSettings.category, fashionStudioSettings.style]);
+        // If only other settings changed (like style itself), just apply the update.
+        return newSettings;
+    });
+  }, []);
 
   const runRestorationPipeline = useCallback(async (file: File) => {
     handleResetRestorationTool();
@@ -1342,7 +1349,7 @@ const App: React.FC = () => {
               <FashionStudio 
                 sourceFile={fashionStudioFile}
                 settings={fashionStudioSettings}
-                onSettingsChange={setFashionStudioSettings}
+                onSettingsChange={handleFashionSettingsChange}
                 result={fashionStudioResult}
                 isLoading={isFashionStudioLoading}
                 error={fashionStudioError}

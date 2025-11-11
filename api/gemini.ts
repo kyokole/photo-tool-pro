@@ -317,7 +317,7 @@ async function checkVipStatus(uid: string): Promise<boolean> {
     return false;
 }
 
-// --- NEW Professional Watermark Logic using Sharp ---
+// --- Professional Watermark Logic using User's Logo ---
 async function applyWatermark(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
     try {
         const mainImageBuffer = Buffer.from(generatedImageBase64, 'base64');
@@ -328,42 +328,44 @@ async function applyWatermark(generatedImageBase64: string, originalMimeType: st
             throw new Error('Could not read image metadata for watermarking.');
         }
 
-        // Define watermark text and style
-        const text = 'AI PHOTO SUITE';
-        const fontSize = Math.max(12, Math.floor(metadata.width / 50)); // Dynamic font size based on image width
-        const margin = Math.floor(fontSize * 0.75); // Margin based on font size
+        // Fetch watermark image from the user-provided URL
+        const watermarkUrl = 'https://i.postimg.cc/CxZpS7RD/logo.png';
+        const response = await fetch(watermarkUrl);
+        if (!response.ok) throw new Error(`Failed to fetch watermark image from ${watermarkUrl}`);
+        const watermarkBuffer = Buffer.from(await response.arrayBuffer());
 
-        // Create an SVG for the text watermark. This allows for better styling and positioning.
-        const svgText = `
-            <svg width="${metadata.width}" height="${metadata.height}">
-                <style>
-                    .title { 
-                        fill: rgba(255, 255, 255, 0.7); 
-                        font-size: ${fontSize}px; 
-                        font-family: Arial, sans-serif; 
-                        font-weight: bold; 
-                        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-                    }
-                </style>
-                <text x="${metadata.width - margin}" y="${metadata.height - margin}" text-anchor="end" class="title">${text}</text>
-            </svg>
-        `;
-        const textBuffer = Buffer.from(svgText);
+        // Resize watermark to be a fraction of the main image's width (e.g., 20%)
+        const watermarkWidth = Math.floor(metadata.width * 0.20);
+        
+        const resizedWatermarkBuffer = await sharp(watermarkBuffer)
+            .resize({ width: watermarkWidth }) // Resize based on width, maintaining aspect ratio
+            .toBuffer();
+        
+        const resizedWatermarkMetadata = await sharp(resizedWatermarkBuffer).metadata();
+        if (!resizedWatermarkMetadata.width || !resizedWatermarkMetadata.height) {
+            throw new Error('Could not get resized watermark metadata.');
+        }
 
-        // Composite the text SVG onto the main image
+        // Calculate position for bottom-right corner with a margin
+        const margin = Math.floor(metadata.width * 0.03);
+        const top = metadata.height - resizedWatermarkMetadata.height - margin;
+        const left = metadata.width - resizedWatermarkMetadata.width - margin;
+
+        // Composite the logo onto the main image
         const finalBuffer = await mainImage
             .composite([{
-                input: textBuffer,
-                top: 0,
-                left: 0,
+                input: resizedWatermarkBuffer,
+                top: top,
+                left: left,
             }])
-            .jpeg({ quality: 95 }) // Output as high-quality JPEG
+            .jpeg({ quality: 95 })
             .toBuffer();
             
         return { data: finalBuffer.toString('base64'), mimeType: 'image/jpeg' };
+
     } catch (error) {
         console.error("Watermarking failed, returning original image without watermark.", error);
-        // If even this robust text watermarking fails, return the original image as a last resort.
+        // Fallback to original image if watermarking fails
         return { data: generatedImageBase64, mimeType: originalMimeType };
     }
 }
@@ -626,6 +628,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let promptsToRun: { prompt: string, parts: Part[], isCouple?: boolean, gender1?: string, gender2?: string }[] = [];
 
                 switch(featureAction) {
+                    case FeatureAction.IMAGE_VARIATION_GENERATOR: {
+                        const { reference_image, aspectRatio, identityLock, variationStrength, themeAnchor, style } = formData;
+                        if (!reference_image) throw new Error('Thiếu ảnh tham chiếu.');
+                        
+                        const imagePart = base64ToPart(reference_image);
+                        
+                        for (let i = 0; i < 4; i++) {
+                            const prompt = buildImageVariationPrompt({ aspectRatio, identityLock, variationStrength, themeAnchor, style }, i);
+                            promptsToRun.push({ prompt, parts: [imagePart] });
+                        }
+                        break;
+                    }
+                     case FeatureAction.PRODUCT_PHOTO: {
+                        const { subject_image, product_image, prompt_detail, frame_style, aspect_ratio } = formData;
+                        if (!subject_image) throw new Error('Thiếu ảnh người mẫu.');
+                        
+                        const parts = [base64ToPart(subject_image)];
+                        let prompt = `Người mẫu (từ ảnh 1) đang quảng cáo một sản phẩm. ${prompt_detail || ''}. Khung hình: ${frame_style}. Tỷ lệ ảnh: ${aspect_ratio}.`;
+                        
+                        if (product_image) {
+                            parts.push(base64ToPart(product_image));
+                            prompt = `Người mẫu (từ ảnh 1) đang quảng cáo sản phẩm (từ ảnh 2). ${prompt_detail || ''}. Khung hình: ${frame_style}. Tỷ lệ ảnh: ${aspect_ratio}.`;
+                        }
+                        
+                        promptsToRun.push({ prompt, parts });
+                        break;
+                    }
+                    case FeatureAction.FASHION_STUDIO: {
+                        const { subject_image, style_level, wardrobe, pose_style, sexy_background, lighting, frame_style, aspect_ratio } = formData;
+                        if (!subject_image) throw new Error('Thiếu ảnh người mẫu.');
+                        
+                        const parts = [base64ToPart(subject_image)];
+                        let prompt = `Chụp ảnh thời trang chuyên nghiệp. Phong cách: ${style_level}. Trang phục/phụ kiện: ${wardrobe.join(', ')}. Tư thế: ${pose_style}. Bối cảnh: ${sexy_background}. Ánh sáng: ${lighting}. Khung hình: ${frame_style}. Tỷ lệ ảnh: ${aspect_ratio}.`;
+                        
+                        promptsToRun.push({ prompt, parts });
+                        break;
+                    }
                     case FeatureAction.KOREAN_STYLE_STUDIO: {
                         const { subject_image, k_concept, aspect_ratio, quality, face_consistency } = formData;
                         if (!subject_image || !k_concept) {
@@ -686,18 +725,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         break;
                     }
                     case FeatureAction.COUPLE_COMPOSE: {
-                        const { person_left_image, person_right_image, person_left_gender, person_right_gender } = formData;
+                        const { person_left_image, person_right_image, person_left_gender, person_right_gender, affection_action, aesthetic_style, couple_background, custom_background } = formData;
                         if (!person_left_image || !person_right_image) throw new Error('Thiếu ảnh của một hoặc cả hai người.');
+                        
                         const gender1 = person_left_gender?.replace('aiStudio.inputs.couple_compose.genders.', '');
                         const gender2 = person_right_gender?.replace('aiStudio.inputs.couple_compose.genders.', '');
-                        let prompt = `Hành động: ${formData.affection_action}. Phong cách: ${formData.aesthetic_style}.`;
+
+                        let prompt = `Ghép hai người lại với nhau. Hành động: ${affection_action}. Phong cách: ${aesthetic_style}.`;
                         const parts = [base64ToPart(person_left_image), base64ToPart(person_right_image)];
-                        if (formData.custom_background) {
-                            parts.push(base64ToPart(formData.custom_background));
+
+                        if (custom_background) {
+                            parts.push(base64ToPart(custom_background));
                             prompt += ` Bối cảnh: Sử dụng bối cảnh từ ảnh cuối cùng.`;
-                        } else if (formData.couple_background) {
-                            prompt += ` Bối cảnh: ${formData.couple_background}.`;
+                        } else if (couple_background) {
+                            prompt += ` Bối cảnh: ${couple_background}.`;
                         }
+
                         promptsToRun.push({ prompt, parts, isCouple: true, gender1, gender2 });
                         break;
                     }
@@ -812,9 +855,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 3.  **text_elements**: Tạo một mảng các phần tử văn bản, thường gồm tiêu đề chính và phụ đề/tên diễn giả. Mỗi phần tử là một đối tượng có 'text', 'type' ('title', 'speaker', 'detail'), và 'font_size' ('large', 'medium', 'small').
 Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành động: ${action}, Ghi chú: ${extra}`;
                 
-                const parts: Part[] = [base64ToPart(modelImage)];
+                const parts: Part[] = [{ inlineData: { data: modelImage, mimeType: 'image/jpeg' } }];
                 if (refImage) {
-                    parts.push(base64ToPart(refImage));
+                    parts.push({ inlineData: { data: refImage, mimeType: 'image/jpeg' } });
                 }
                 parts.push({text: prompt});
                 
