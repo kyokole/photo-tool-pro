@@ -8,7 +8,6 @@ import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, Ac
 import { generateIdPhoto, generateHeadshot, initialCleanImage, advancedRestoreImage, colorizeImage, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
 import { fileToGenerativePart } from './utils/fileUtils';
-import { smartCrop } from './utils/composition';
 import Sidebar from './components/Sidebar';
 import ImagePanes from './components/ImagePanes';
 import { ControlPanel } from './components/ControlPanel';
@@ -400,9 +399,10 @@ const App: React.FC = () => {
           }
       }
       
-      const paddedImage = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
-      const finalImage = await smartCrop(paddedImage, currentSettings.aspectRatio);
+      // The server now handles padding, smart-cropping, and watermarking.
+      const finalImage = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
       
+      // Since the server handles the crop, we can consider it AI-cropped immediately.
       setIsAiCropped(true);
 
       const newHistoryItem: HistoryItem = { image: finalImage, settings: { ...currentSettings } };
@@ -574,8 +574,7 @@ const App: React.FC = () => {
                     reader.readAsDataURL(job.file);
                 });
 
-                const paddedImage = await generateIdPhoto(originalImageBase64, settings);
-                const finalImage = await smartCrop(paddedImage, settings.aspectRatio);
+                const finalImage = await generateIdPhoto(originalImageBase64, settings);
 
                 job.processedUrl = finalImage;
                 job.status = 'done';
