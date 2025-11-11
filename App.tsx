@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, where } fro
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getAuthInstance, getDbInstance } from './services/firebase';
 import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, AccordionSection, HeadshotStyle, RestorationResult, FashionStudioSettings, FashionStudioResult, IdPhotoJob } from './types';
-import { generateIdPhoto, generateHeadshot, initialCleanImage, advancedRestoreImage, colorizeImage, generateFashionPhoto } from './services/geminiService';
+import { generateIdPhoto, generateHeadshot, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
 import { fileToGenerativePart } from './utils/fileUtils';
 import Sidebar from './components/Sidebar';
@@ -75,13 +75,6 @@ const App: React.FC = () => {
   const [headshotResults, setHeadshotResults] = useState<HeadshotResult[]>([]);
   const [isHeadshotLoading, setIsHeadshotLoading] = useState<boolean>(false);
   const [headshotError, setHeadshotError] = useState<string | null>(null);
-
-  // Restoration Tool State
-  const [restorationFile, setRestorationFile] = useState<File | null>(null);
-  const [restorationResults, setRestorationResults] = useState<RestorationResult[]>([]);
-  const [isRestoring, setIsRestoring] = useState<boolean>(false);
-  const [restorationError, setRestorationError] = useState<string | null>(null);
-  const [restorationStep, setRestorationStep] = useState<number>(0);
   
   // Fashion Studio State
   const [fashionStudioFile, setFashionStudioFile] = useState<File | null>(null);
@@ -197,12 +190,8 @@ const App: React.FC = () => {
   }, []);
 
   const handleResetRestorationTool = useCallback(() => {
-    console.log("Resetting Restoration tool state.");
-    setRestorationFile(null);
-    setRestorationResults([]);
-    setRestorationError(null);
-    setIsRestoring(false);
-    setRestorationStep(0);
+    console.log("Resetting Restoration tool state (handled by component).");
+    handleAbort();
   }, []);
   
   const handleResetFashionStudioTool = useCallback(() => {
@@ -448,7 +437,6 @@ const App: React.FC = () => {
         const errorMsg = t('errors.invalidImageFile');
         if (appMode === 'id_photo') setIdPhotoError(errorMsg);
         else if (appMode === 'headshot') setHeadshotError(errorMsg);
-        else if (appMode === 'restoration') setRestorationError(errorMsg);
         else if (appMode === 'fashion_studio') setFashionStudioError(errorMsg);
         return;
     }
@@ -481,8 +469,6 @@ const App: React.FC = () => {
     } else if (appMode === 'headshot') {
         handleResetHeadshotTool();
         setHeadshotSourceFile(file);
-    } else if (appMode === 'restoration') {
-        runRestorationPipeline(file);
     } else if (appMode === 'fashion_studio') {
         handleResetFashionStudioTool();
         setFashionStudioFile(file);
@@ -717,61 +703,6 @@ const App: React.FC = () => {
         return newSettings;
     });
   }, []);
-
-  const runRestorationPipeline = useCallback(async (file: File) => {
-    handleResetRestorationTool();
-    setRestorationFile(file);
-    setIsRestoring(true);
-
-    try {
-        const results: RestorationResult[] = [
-            { key: RESULT_STAGES_KEYS[0], imageUrl: URL.createObjectURL(file) }
-        ];
-        setRestorationResults(results);
-        
-        const initialPart = await fileToGenerativePart(file);
-        if (!initialPart) throw new Error(t('errors.fileProcessingError'));
-
-        setRestorationStep(0);
-        const cleanedData = await initialCleanImage(initialPart);
-        const cleanedPart = { inlineData: { data: cleanedData, mimeType: 'image/jpeg' } };
-        results.push({ key: RESULT_STAGES_KEYS[1], imageUrl: `data:image/jpeg;base64,${cleanedData}` });
-        setRestorationResults([...results]);
-
-        setRestorationStep(1);
-        const restoredData = await advancedRestoreImage(cleanedPart);
-        const restoredPart = { inlineData: { data: restoredData, mimeType: 'image/jpeg' } };
-        results.push({ key: RESULT_STAGES_KEYS[2], imageUrl: `data:image/jpeg;base64,${restoredData}` });
-        setRestorationResults([...results]);
-
-        setRestorationStep(2);
-        const colorizedData = await colorizeImage(restoredPart);
-        results.push({ key: RESULT_STAGES_KEYS[3], imageUrl: `data:image/jpeg;base64,${colorizedData}` });
-        setRestorationResults([...results]);
-        setRestorationStep(3);
-
-    } catch (err) {
-        let errorStringForSearch: string;
-        try {
-            errorStringForSearch = JSON.stringify(err);
-        } catch {
-            errorStringForSearch = String(err);
-        }
-
-        console.error("Restoration pipeline failed with error:", errorStringForSearch);
-
-        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
-            setRestorationError(t('errors.quotaExceeded'));
-        } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
-            setRestorationError(t('errors.apiKeyInvalid'));
-        } else {
-            const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
-            setRestorationError(t('errors.restorationPipelineFailed', { error: displayMessage }));
-        }
-    } finally {
-        setIsRestoring(false);
-    }
-}, [handleResetRestorationTool, t]);
 
     const handleLogin = (email: string, password: string): Promise<void> => {
         return new Promise(async (resolve, reject) => {
@@ -1044,7 +975,7 @@ const App: React.FC = () => {
   };
 
   const handleNewUploadRequest = () => {
-      const isBusy = isGenerating || isHeadshotLoading || isRestoring || isFashionStudioLoading;
+      const isBusy = isGenerating || isHeadshotLoading || isFashionStudioLoading;
       if (isBusy) {
           if(window.confirm(t('confirmations.cancelInProgress'))) {
               triggerUpload();
@@ -1198,7 +1129,7 @@ const App: React.FC = () => {
   }, [handleModeChange]);
 
 
-  const isLoading = isGenerating || isHeadshotLoading || isRestoring || isFashionStudioLoading || isBatchProcessing; 
+  const isLoading = isGenerating || isHeadshotLoading || isFashionStudioLoading || isBatchProcessing; 
 
   const renderContent = () => {
     switch (appMode) {
@@ -1332,13 +1263,6 @@ const App: React.FC = () => {
       case 'restoration':
           return (
               <RestorationTool
-                  originalFile={restorationFile}
-                  results={restorationResults}
-                  isLoading={isRestoring}
-                  error={restorationError}
-                  currentStep={restorationStep}
-                  onImageUpload={processSingleFile}
-                  onReset={handleResetRestorationTool}
                   theme={theme}
                   setTheme={setTheme}
               />

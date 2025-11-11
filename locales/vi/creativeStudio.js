@@ -583,7 +583,7 @@ export default {
     "statusError": "Lỗi: {{error}}",
     "errorNoModel": "Vui lòng tải lên 'Ảnh Mẫu' trước khi tạo."
   },
-  "imageVariation": {
+   "imageVariation": {
         "sections": {
             "upload": "1. Tải lên ảnh tham chiếu",
             "configure": "2. Cấu hình các biến thể"
@@ -674,6 +674,12 @@ export default {
         "hanokSerenity": "Bình Yên Hanok",
         "blokecoreChic": "Blokecore Sành Điệu",
         "idPhotoTrend": "Trend Ảnh Thẻ",
-        "transparentUmbrellaWinter": "Ô Trong Suốt Ngày Tuyết Rơi"
+        "transparentUmbrellaWinter": "Ô Trong Suốt Ngày Tuyết Rơi",
+        "sweetSnowWhite": "Ngọt Ngào Tuyết Trắng",
+        "snowyPeak": "Đỉnh Núi Tuyết Trắng",
+        "snowyForestDream": "Giấc Mộng Trong Rừng Tuyết",
+        "seagullSong": "Khúc Hát Hải Âu",
+        "iceWorld": "Thế Giới Băng Tuyết",
+        "winterSnowDance": "Vũ Điệu Tuyết Mùa Đông"
     }
 }

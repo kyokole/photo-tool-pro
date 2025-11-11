@@ -674,6 +674,12 @@ export default {
         "hanokSerenity": "Hanok Serenity",
         "blokecoreChic": "Blokecore Chic",
         "idPhotoTrend": "ID Photo Trend",
-        "transparentUmbrellaWinter": "Transparent Umbrella in Snow"
+        "transparentUmbrellaWinter": "Transparent Umbrella in Snow",
+        "sweetSnowWhite": "Sweet White Snow",
+        "snowyPeak": "Snowy Mountain Peak",
+        "snowyForestDream": "Snowy Forest Dream",
+        "seagullSong": "Seagull's Song",
+        "iceWorld": "Ice World",
+        "winterSnowDance": "Winter Snow Dance"
     }
 }

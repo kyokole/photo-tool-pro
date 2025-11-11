@@ -7,7 +7,45 @@ export default {
     "supportedFormats": "Supports: PNG, JPG, WEBP",
     "restoreAnother": "Restore Another Photo",
     "errorTitle": "An error occurred during restoration",
-    "dropPrompt": "Drop image to start restoring"
+    "dropPrompt": "Drop image to start restoring",
+    "restoreButton": "Start Restoration",
+    "originalAlt": "Original photo to be restored",
+    "resultAlt": "Restored photo result",
+    "changeImage": "Change Photo",
+     "presets": {
+      "title": "Quick Presets",
+      "quickRestore": "Quick Restore",
+      "fullRestore": "Full & Colorize"
+    },
+    "options": {
+        "auto": "Auto",
+        "core": {
+            "title": "Core Options",
+            "level": "Restoration Level",
+            "scratches": "Remove scratches & damage",
+            "colorize": "Colorize the photo"
+        },
+        "face": {
+            "title": "Facial Enhancement",
+            "enhance": "Enhance face clarity (Eyes, skin, hair)",
+            "gender": "Gender",
+            "age": "Age",
+            "genders": {
+                "male": "Male",
+                "female": "Female"
+            },
+            "ages": {
+                "child": "Child",
+                "young_adult": "Young Adult",
+                "adult": "Adult",
+                "elderly": "Elderly"
+            }
+        },
+        "context": {
+            "title": "Additional Context (Advanced)",
+            "placeholder": "e.g., Vietnamese wedding photo 1960s, old military uniform..."
+        }
+    }
   },
   "resultStages": {
     "original": {

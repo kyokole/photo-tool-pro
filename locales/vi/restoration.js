@@ -7,7 +7,45 @@ export default {
     "supportedFormats": "Hỗ trợ: PNG, JPG, WEBP",
     "restoreAnother": "Phục hồi ảnh khác",
     "errorTitle": "Đã xảy ra lỗi trong quá trình phục hồi",
-    "dropPrompt": "Thả ảnh để bắt đầu phục hồi"
+    "dropPrompt": "Thả ảnh để bắt đầu phục hồi",
+    "restoreButton": "Bắt đầu Phục chế",
+    "originalAlt": "Ảnh gốc cần phục hồi",
+    "resultAlt": "Kết quả ảnh đã phục hồi",
+    "changeImage": "Đổi ảnh",
+    "presets": {
+      "title": "Phục chế nhanh",
+      "quickRestore": "Phục chế Nhanh",
+      "fullRestore": "Toàn diện & Tô màu"
+    },
+    "options": {
+        "auto": "Tự động",
+        "core": {
+            "title": "Tùy chọn cốt lõi",
+            "level": "Mức độ phục hồi",
+            "scratches": "Xóa vết xước & hư hỏng",
+            "colorize": "Tô màu cho ảnh"
+        },
+        "face": {
+            "title": "Cải thiện gương mặt",
+            "enhance": "Làm rõ nét mặt (Mắt, da, tóc)",
+            "gender": "Giới tính",
+            "age": "Độ tuổi",
+            "genders": {
+                "male": "Nam",
+                "female": "Nữ"
+            },
+            "ages": {
+                "child": "Trẻ em",
+                "young_adult": "Thanh niên",
+                "adult": "Trung niên",
+                "elderly": "Lớn tuổi"
+            }
+        },
+        "context": {
+            "title": "Bối cảnh bổ sung (Nâng cao)",
+            "placeholder": "VD: ảnh cưới Việt Nam thập niên 60, quân phục thời xưa..."
+        }
+    }
   },
   "resultStages": {
     "original": {

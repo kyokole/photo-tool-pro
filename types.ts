@@ -62,9 +62,20 @@ export interface FilePart {
   };
 }
 
+export interface RestorationOptions {
+  restorationLevel: number; // 0-100 slider
+  removeScratches: boolean;
+  colorize: boolean;
+  faceEnhance: boolean;
+  gender: 'auto' | 'male' | 'female';
+  age: 'auto' | 'child' | 'young_adult' | 'adult' | 'elderly';
+  context: string;
+}
+
+
 export interface RestorationResult {
-  key: string; // Used to look up title and description from translation files
-  imageUrl: string;
+  originalUrl: string;
+  restoredUrl: string;
 }
 
 export interface User {

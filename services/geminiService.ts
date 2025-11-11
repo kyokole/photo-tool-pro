@@ -1,6 +1,6 @@
 // services/geminiService.ts
 import { getAuthInstance } from '../services/firebase';
-import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene } from '../types';
+import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions } from '../types';
 
 /**
  * A generic API client to communicate with our own Vercel Serverless Function backend.
@@ -65,21 +65,12 @@ export const generateHeadshot = async (imagePart: FilePart, prompt: string, sign
     return imageData;
 };
 
-// --- Restoration Tool ---
-export const initialCleanImage = async (imagePart: FilePart): Promise<string> => {
-  const { imageData } = await callBackendApi('initialCleanImage', { imagePart });
-  return imageData;
+// --- Restoration Tool (New Unified Function) ---
+export const performRestoration = async (imagePart: FilePart, options: RestorationOptions): Promise<string> => {
+    const { imageData } = await callBackendApi('performRestoration', { imagePart, options });
+    return imageData;
 };
 
-export const advancedRestoreImage = async (imagePart: FilePart): Promise<string> => {
-  const { imageData } = await callBackendApi('advancedRestoreImage', { imagePart });
-  return imageData;
-};
-
-export const colorizeImage = async (imagePart: FilePart): Promise<string> => {
-  const { imageData } = await callBackendApi('colorizeImage', { imagePart });
-  return imageData;
-};
 
 // --- Fashion Studio ---
 export const generateFashionPhoto = async (imagePart: FilePart, settings: FashionStudioSettings, signal?: AbortSignal): Promise<string> => {
