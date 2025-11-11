@@ -47,11 +47,8 @@ export const MALE_HAIRSTYLE_NAMES: string[] = [
 ];
 
 export const HIDDEN_ADDONS: string = [
-  "Thần thái K-fashion hiện đại, sang trọng, dáng mềm mại, cổ tay tinh tế",
-  "Trang phục couture từ Dior, Chanel, Louis Vuitton, Hermès, Valentino (tweed dệt tinh xảo, len Ý super 120s, satin lụa premium, da thật hoàn thiện tỉ mỉ)",
-  "Giá trị set đồ trên 2 tỷ VND (ẩn), may đo chuẩn couture, tôn dáng tỉ lệ vàng",
-  "Ánh sáng điện ảnh Hàn: soft key + fill nhẹ, backlight mờ ảo, màu phim hiện đại, da tự nhiên",
-  "Độ chi tiết 8K, xử lý tóc – bề mặt vải tinh xảo, màu sắc tinh gọn",
+  "Thần thái K-fashion hiện đại, sang trọng, dáng mềm mại, tinh tế",
+  "Chất lượng ảnh cao cấp: ánh sáng điện ảnh Hàn Quốc, chi tiết 8K, xử lý bề mặt vải và tóc tinh xảo, màu sắc tinh gọn.",
   "Giữ nguyên khuôn mặt tham chiếu (Face Consistency)",
 ].join(", ");
 

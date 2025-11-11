@@ -21,6 +21,15 @@ type HairStyle = 'auto' | 'down' | 'slicked_back' | 'keep_original';
 type BackgroundMode = 'white' | 'light_blue' | 'custom' | 'ai';
 type PrintLayout = 'none' | '10x15' | '13x18' | '20x30';
 type PaperBackground = 'white' | 'gray';
+interface RestorationOptions {
+  restorationLevel: number;
+  removeScratches: boolean;
+  colorize: boolean;
+  faceEnhance: boolean;
+  gender: 'auto' | 'male' | 'female';
+  age: 'auto' | 'child' | 'young_adult' | 'adult' | 'elderly';
+  context: string;
+}
 interface Settings {
   aspectRatio: AspectRatio;
   outfit: {
@@ -98,51 +107,6 @@ const ASPECT_RATIO_MAP: { [key: string]: number } = {
     '4x6': 4 / 6,
     '5x5': 1,
 };
-const INITIAL_CLEAN_PROMPT = `
-Thực hiện một bước phục chế sơ bộ trên hình ảnh này. Mục tiêu chính là làm rõ các đường viền và chi tiết khuôn mặt, cân bằng lại các mảng tối và giảm độ nhòe của nền. 
-QUAN TRỌNG: KHÔNG xóa hết các vết xước hoặc vết mốc. Chỉ thực hiện một lần làm sạch nhẹ nhàng để chuẩn bị cho các bước phục chế sâu hơn. Giữ lại phần lớn các khuyết điểm nhỏ để duy trì cảm giác chân thực.
-`;
-const ADVANCED_RESTORATION_PROMPT = `
-Bạn là một chuyên gia AI phục chế ảnh cũ. Hãy tuân thủ nghiêm ngặt quy trình (pipeline) sau đây để phục chế hình ảnh được cung cấp. Ưu tiên tuyệt đối là BẢO TOÀN DANH TÍNH của người trong ảnh.
-
-**A) QUY TRINI PHỤC CHẾ:**
-
-1.  **Tiền xử lý hư hỏng:**
-    *   **Cân bằng màu & tương phản:** Áp dụng cân bằng trắng (white balance) và điều chỉnh nhẹ tone curve.
-    *   **Khử nấm/mốc & ố vàng:** Sử dụng inpainting và texture synthesis dựa trên vùng bị hỏng.
-    *   **Giảm nhiễu & khối JPEG:** Dùng các thuật toán cao cấp để khử nhiễu và artifact nén JPEG.
-
-2.  **Phục hồi cấu trúc tổng thể:**
-    *   **Khử mờ (Deblur):** Áp dụng thuật toán deblur để khắc phục mờ do chuyển động hoặc lấy nét sai.
-    *   **Siêu phân giải (Super-Resolution):** Tăng cường chi tiết cho hậu cảnh và trang phục.
-
-3.  **Phục hồi gương mặt (Bảo toàn danh tính):**
-    *   **QUAN TRỌNG NHẤT:** Phát hiện và căn chỉnh khuôn mặt. Sử dụng các mô hình phục hồi khuôn mặt chất lượng cao với cường độ vừa phải để tránh hiệu ứng "mặt búp bê", mất tự nhiên.
-    *   **KHÓA DANH TÍNH:** Khuôn mặt sau khi phục chế PHẢI là của cùng một người. Không thay đổi cấu trúc khuôn mặt.
-
-4.  **Inpaint vết rách/xước:**
-    *   Sử dụng inpainting nhận biết ngữ cảnh (context-aware) để lấp các vết rách/xước còn lại.
-
-5.  **Tinh chỉnh cuối cùng:**
-    *   **Làm sắc nét có chọn lọc:** Chỉ làm sắc nét các chi tiết quan trọng: mắt, lông mi, viền môi.
-    *   **Tăng tương phản vi mô (Micro-contrast):** Tăng nhẹ tương phản ở các vùng cấu trúc mặt.
-    *   **Thêm nhiễu hạt (Grain):** Nếu ảnh trông quá "sạch" và giả, hãy thêm một lớp nhiễu hạt phim rất nhẹ để tạo cảm giác chân thực, cổ điển.
-
-**THỨ TỰ THỰC HIỆN:** Tuân thủ nghiêm ngặt thứ tự sau: Giảm nhiễu → Khử mờ → Siêu phân giải nền → Phục hồi mặt → Inpaint → Tinh chỉnh màu/độ nét. Giữ nguyên ảnh đen trắng gốc.
-
-Hãy áp dụng quy trình này để phục chế hình ảnh tôi đã cung cấp.
-`;
-const COLORIZATION_PROMPT = `
-Bạn là một chuyên gia AI tô màu ảnh. Hãy tô màu cho bức ảnh đen trắng đã được phục chế mà tôi cung cấp. Mục tiêu là tạo ra một bức ảnh chân dung chất lượng cao, trông như mới được chụp trong thời đại xưa, giữ được nét cổ điển nhưng với độ trong và ấm áp. Hãy tuân thủ nghiêm ngặt các yêu cầu sau:
-
-- **Chất lượng tổng thể:** Phục dựng ảnh gần như mới hoàn toàn, giống như một bức chân dung chụp mới từ thập niên xưa.
-- **Gương mặt:** Làm cho gương mặt hai nhân vật rõ nét, tự nhiên, mắt sáng, và da mịn màng nhưng vẫn giữ được kết cấu da thật. Tuyệt đối BẢO TOÀN DANH TÍNH.
-- **Màu sắc:** Áp dụng một tông màu ấm hơn (sepia tone) cho toàn bộ ảnh để tạo cảm giác cổ điển, hoài niệm.
-- **Hậu cảnh và chi tiết:** Đảm bảo nền ảnh nhẵn mịn không còn vết xước. Áo, tóc, và các phụ kiện (ví dụ: khăn ren, quân phục) phải đều sắc nét, khôi phục chi tiết gần như nguyên bản.
-- **Phong cách:** Kết hợp giữa nét cổ điển và sự rõ ràng, sắc nét của ảnh hiện đại.
-
-Hãy tiến hành tô màu cho bức ảnh.
-`;
 
 const HIDDEN_ADDONS: string = [
   "Thần thái K-fashion hiện đại, sang trọng, dáng mềm mại, cổ tay tinh tế",
@@ -281,10 +245,43 @@ const buildImageVariationPrompt = (
   return `Generate 1 image at ${aspectRatio} in ${style} style using the uploaded reference as the subject to preserve identity (strength = ${identityLock}/100). Variation policy: target ~${variationStrength}% visual change. ${themeAnchorInstruction} Produce ONE image with these micro-variations: ${variationDetails[variationIndex]}. General constraints: Keep hairstyle/clothing consistent. Avoid repetitive framing. Photorealistic detail. No logos/text. Return only the image.`;
 };
 
+const buildRestorationPrompt = (options: RestorationOptions): string => {
+    const { restorationLevel, removeScratches, colorize, faceEnhance, gender, age, context } = options;
+    
+    let prompt = `Bạn là một chuyên gia AI phục chế ảnh cũ. Hãy phục chế hình ảnh được cung cấp, tuân thủ nghiêm ngặt các yêu cầu sau. Ưu tiên tuyệt đối là BẢO TOÀN DANH TÍNH của người trong ảnh.
+    
+**YÊU CẦU PHỤC CHẾ:**
+`;
+
+    if (removeScratches) {
+        prompt += `- **Loại bỏ Hư hỏng:** Sửa chữa tất cả các vết xước, vết rách, nếp gấp, và các hư hỏng vật lý khác trên ảnh. Sử dụng kỹ thuật inpainting nhận biết ngữ cảnh để lấp đầy các vùng bị mất một cách liền mạch. Khử nhiễu (noise) và các khối nén (artifact) một cách cẩn thận.\n`;
+    }
+
+    if (faceEnhance) {
+        prompt += `- **Cải thiện Gương mặt:** Làm rõ nét các chi tiết trên khuôn mặt (mắt, lông mi, tóc) mà không làm thay đổi cấu trúc hoặc nhận dạng của người đó. Giảm nhẹ các nếp nhăn nhưng vẫn giữ lại kết cấu da tự nhiên. Giới tính: ${gender}, Tuổi: ${age}.\n`;
+    }
+    
+    prompt += `- **Mức độ Phục hồi Tổng thể:** Áp dụng mức độ phục hồi chi tiết và độ nét ở mức ${restorationLevel}/100. Cân bằng độ tương phản và dải tần nhạy sáng (dynamic range) để ảnh trông rõ ràng hơn.\n`;
+
+    if (colorize) {
+        prompt += `- **Tô màu:** Tô màu cho ảnh một cách chân thực, phù hợp với thời đại của bức ảnh. Chọn tông màu da, quần áo và bối cảnh một cách tự nhiên. Nếu ảnh đã có màu, hãy khôi phục lại màu sắc gốc rực rỡ và chính xác hơn.\n`;
+    } else {
+        prompt += `- **Giữ ảnh Đen trắng:** KHÔNG tô màu. Giữ nguyên ảnh ở định dạng đen trắng hoặc thang độ xám gốc của nó, chỉ cải thiện độ tương phản và chi tiết.\n`;
+    }
+
+    if (context) {
+        prompt += `- **Bối cảnh Bổ sung:** Dựa vào thông tin sau để phục chế chính xác hơn: "${context}".\n`;
+    }
+
+    prompt += `**QUAN TRỌNG NHẤT:** Khuôn mặt sau khi phục chế PHẢI là của cùng một người. Không thay đổi cấu trúc khuôn mặt. Chỉ làm cho nó rõ nét và chất lượng hơn.`
+
+    return prompt;
+};
+
 // --- END OF MERGED CODE ---
 
 // Base64 encoded watermark PNG. This avoids external network requests.
-const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
+const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
 
 // --- Firebase Admin Initialization ---
 try {
@@ -527,31 +524,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             
-            case 'initialCleanImage':
-            case 'advancedRestoreImage':
-            case 'colorizeImage': {
-                if (!payload || !payload.imagePart) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh.' });
-                const { imagePart } = payload;
+            case 'performRestoration': {
+                if (!payload || !payload.imagePart || !payload.options) return res.status(400).json({ error: 'Thiếu ảnh hoặc tùy chọn phục hồi.' });
+                const { imagePart, options } = payload;
 
-                let prompt = '';
-                if (action === 'initialCleanImage') prompt = INITIAL_CLEAN_PROMPT;
-                else if (action === 'advancedRestoreImage') prompt = ADVANCED_RESTORATION_PROMPT;
-                else if (action === 'colorizeImage') prompt = COLORIZATION_PROMPT;
-
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: prompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const requestPrompt = buildRestorationPrompt(options);
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
+                
+                const response = await models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [imagePart, { text: fullPrompt }] },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) {
+                    throw new Error("API không trả về hình ảnh.");
+                }
                 
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
                     const watermarked = await applyWatermark(data, mimeType);
                     data = watermarked.data;
+                    mimeType = watermarked.mimeType;
                 }
-                // The restoration tool on the client side expects raw base64, so we only send the data part.
-                return res.status(200).json({ imageData: data });
+                // The client side expects a full data URL for this tool
+                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
-            
+
             case 'generateFashionPhoto': {
                 if (!payload || !payload.imagePart || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh hoặc cài đặt.' });
                 const { imagePart, settings } = payload as { imagePart: Part, settings: FashionStudioSettings };
