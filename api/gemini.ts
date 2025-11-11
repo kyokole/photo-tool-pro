@@ -276,6 +276,10 @@ const buildImageVariationPrompt = (
 
 // --- END OF MERGED CODE ---
 
+// Base64 encoded watermark PNG. This avoids external network requests.
+const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAXNSR0IArs4c6QAAAIRlWElmTU0AKgAAAAgABQESAAMAAAABAAEAAAEaAAUAAAABAAAASgEbAAUAAAABAAAAUgEoAAMAAAABAAIAAIdpAAQAAAABAAAAWgAAAAAAAACQAAAAAQAAAJAAAAABAAKgAgAEAAAAAQAAAQAAAAMAgAEAAAAAQAAAQAAAAAAVMss8AAAEZklEQVR4Ae3QMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC4NI89AAGg1xnnAAAAAElFTkSuQmCC';
+
+
 // --- Firebase Admin Initialization ---
 try {
     if (!admin.apps.length) {
@@ -317,33 +321,29 @@ async function checkVipStatus(uid: string): Promise<boolean> {
     return false;
 }
 
-// --- Professional Watermark Logic using User's Logo ---
+// --- Professional Watermark Logic ---
 async function applyWatermark(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
     try {
         const mainImageBuffer = Buffer.from(generatedImageBase64, 'base64');
         const mainImage = sharp(mainImageBuffer);
         const metadata = await mainImage.metadata();
 
-        if (!metadata.width || !metadata.height) {
-            throw new Error('Could not read image metadata for watermarking.');
+        if (!metadata.width || !metadata.height || !metadata.format) {
+            throw new Error('Không thể đọc siêu dữ liệu hình ảnh để đóng dấu.');
         }
 
-        // Fetch watermark image from the user-provided URL
-        const watermarkUrl = 'https://i.postimg.cc/CxZpS7RD/logo.png';
-        const response = await fetch(watermarkUrl);
-        if (!response.ok) throw new Error(`Failed to fetch watermark image from ${watermarkUrl}`);
-        const watermarkBuffer = Buffer.from(await response.arrayBuffer());
+        const watermarkBuffer = Buffer.from(WATERMARK_BASE64, 'base64');
 
         // Resize watermark to be a fraction of the main image's width (e.g., 20%)
         const watermarkWidth = Math.floor(metadata.width * 0.20);
         
         const resizedWatermarkBuffer = await sharp(watermarkBuffer)
-            .resize({ width: watermarkWidth }) // Resize based on width, maintaining aspect ratio
+            .resize({ width: watermarkWidth })
             .toBuffer();
         
         const resizedWatermarkMetadata = await sharp(resizedWatermarkBuffer).metadata();
         if (!resizedWatermarkMetadata.width || !resizedWatermarkMetadata.height) {
-            throw new Error('Could not get resized watermark metadata.');
+            throw new Error('Không thể lấy siêu dữ liệu của logo đã thay đổi kích thước.');
         }
 
         // Calculate position for bottom-right corner with a margin
@@ -351,20 +351,29 @@ async function applyWatermark(generatedImageBase64: string, originalMimeType: st
         const top = metadata.height - resizedWatermarkMetadata.height - margin;
         const left = metadata.width - resizedWatermarkMetadata.width - margin;
 
-        // Composite the logo onto the main image
-        const finalBuffer = await mainImage
-            .composite([{
-                input: resizedWatermarkBuffer,
-                top: top,
-                left: left,
-            }])
-            .jpeg({ quality: 95 })
-            .toBuffer();
+        let finalBuffer: Buffer;
+        let finalMimeType: string;
+
+        // Composite the logo onto the main image and preserve format
+        const compositeImage = mainImage.composite([{
+            input: resizedWatermarkBuffer,
+            top: top,
+            left: left,
+        }]);
+
+        if (metadata.format === 'png') {
+            finalBuffer = await compositeImage.png().toBuffer();
+            finalMimeType = 'image/png';
+        } else {
+            // Default to JPEG for other formats like jpeg, webp, etc.
+            finalBuffer = await compositeImage.jpeg({ quality: 95 }).toBuffer();
+            finalMimeType = 'image/jpeg';
+        }
             
-        return { data: finalBuffer.toString('base64'), mimeType: 'image/jpeg' };
+        return { data: finalBuffer.toString('base64'), mimeType: finalMimeType };
 
     } catch (error) {
-        console.error("Watermarking failed, returning original image without watermark.", error);
+        console.error("Quá trình đóng dấu thất bại, trả về ảnh gốc không có dấu.", error);
         // Fallback to original image if watermarking fails
         return { data: generatedImageBase64, mimeType: originalMimeType };
     }
