@@ -47,8 +47,8 @@ export const MALE_HAIRSTYLE_NAMES: string[] = [
 ];
 
 export const HIDDEN_ADDONS: string = [
-  "Thần thái K-fashion hiện đại, sang trọng, dáng mềm mại, tinh tế",
-  "Chất lượng ảnh cao cấp: ánh sáng điện ảnh Hàn Quốc, chi tiết 8K, xử lý bề mặt vải và tóc tinh xảo, màu sắc tinh gọn.",
+  "Phong cách ảnh lookbook Hàn Quốc chuyên nghiệp, thần thái tinh tế",
+  "Chất lượng ảnh cao cấp: ánh sáng điện ảnh, chi tiết 8K, màu sắc tinh gọn, xử lý da và tóc hoàn hảo.",
   "Giữ nguyên khuôn mặt tham chiếu (Face Consistency)",
 ].join(", ");
 

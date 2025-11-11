@@ -36,22 +36,15 @@ export const PHOTO_SIZES_MM: Record<AspectRatio, {width:number, height:number}> 
 
 export const mm2px = (mm: number) => Math.round((mm / MM_PER_INCH) * DPI);
 
-const isMobile = (): boolean => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
 export const smartDownload = (imageUrl: string, fileName: string) => {
-    if (isMobile()) {
-        // On mobile, the best UX is to open the image in a new tab.
-        // This allows the user to long-press and use the native "Save to Photos" functionality.
-        window.open(imageUrl, '_blank');
-    } else {
-        // On desktop, we can force a direct download.
-        const link = document.createElement('a');
-        link.href = imageUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+    // This universal method works reliably on both modern desktop and mobile browsers
+    // by creating a temporary link and programmatically clicking it.
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
 
 // --- Layout Engine ---
