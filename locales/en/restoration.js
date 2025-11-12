@@ -12,39 +12,86 @@ export default {
     "originalAlt": "Original photo to be restored",
     "resultAlt": "Restored photo result",
     "changeImage": "Change Photo",
-     "presets": {
-      "title": "Quick Presets",
-      "quickRestore": "Quick Restore",
-      "fullRestore": "Full & Colorize"
+    "tabs": {
+      "photo": "Photo Restoration",
+      "document": "Document Restoration"
+    },
+    "modes": {
+      "title": "Restoration Mode",
+      "quick": {
+        "title": "Quick Fix",
+        "desc": "Basic cleanup, light noise reduction"
+      },
+      "hq": {
+        "title": "High Quality",
+        "desc": "Deblurring, overall detail recovery"
+      },
+      "portrait": {
+        "title": "Advanced Portrait",
+        "desc": "Maximum focus on face, skin, hair"
+      },
+      "reconstruct": {
+        "title": "Total Reconstruction",
+        "desc": "For heavily damaged photos"
+      }
+    },
+    "details": {
+      "title": "Detailed Options",
+      "removeScratches": "Remove Scratches & Damage",
+      "removeYellowing": "Remove Yellowing & Fading",
+      "sharpenFace": "Sharpen Facial Details",
+      "redrawHair": "Redraw Hair Details",
+      "naturalSkinSmoothing": "Natural Skin Smoothing",
+      "isVietnamese": "Vietnamese Person"
     },
     "options": {
-        "auto": "Auto",
-        "core": {
-            "title": "Core Options",
-            "level": "Restoration Level",
-            "scratches": "Remove scratches & damage",
-            "colorize": "Colorize the photo"
+      "auto": "Auto",
+      "core": {
+        "title": "Core Options",
+        "level": "Restoration Level",
+        "scratches": "Remove scratches & damage",
+        "colorize": "Colorize the photo"
+      },
+      "face": {
+        "title": "Facial Enhancement",
+        "enhance": "Enhance face clarity (Eyes, skin, hair)",
+        "gender": "Gender",
+        "age": "Age",
+        "genders": {
+          "male": "Male",
+          "female": "Female"
         },
-        "face": {
-            "title": "Facial Enhancement",
-            "enhance": "Enhance face clarity (Eyes, skin, hair)",
-            "gender": "Gender",
-            "age": "Age",
-            "genders": {
-                "male": "Male",
-                "female": "Female"
-            },
-            "ages": {
-                "child": "Child",
-                "young_adult": "Young Adult",
-                "adult": "Adult",
-                "elderly": "Elderly"
-            }
-        },
-        "context": {
-            "title": "Additional Context (Advanced)",
-            "placeholder": "e.g., Vietnamese wedding photo 1960s, old military uniform..."
+        "ages": {
+          "child": "Child",
+          "young_adult": "Young Adult",
+          "adult": "Adult",
+          "elderly": "Elderly"
         }
+      },
+      "context": {
+        "title": "Context & Notes",
+        "placeholder": "e.g., Vietnamese wedding photo 1960s, old military uniform..."
+      }
+    },
+    "docOptions": {
+      "docType": {
+        "label": "Document Type",
+        "types": {
+          "general": "General",
+          "id_card": "ID Card",
+          "license": "Driver's License",
+          "certificate": "Certificate / Diploma",
+          "handwritten": "Letter / Handwritten"
+        }
+      },
+      "options": {
+        "title": "Restoration Options",
+        "removeStains": "Remove folds & stains",
+        "deskew": "Straighten & de-skew",
+        "enhanceText": "Enhance text clarity",
+        "preserveSignatures": "Preserve signatures & stamps"
+      },
+      "customPromptPlaceholder": "e.g., restore the faded text in the right corner, keep the yellowed paper color..."
     }
   },
   "resultStages": {

@@ -1,6 +1,6 @@
 // services/geminiService.ts
 import { getAuthInstance } from '../services/firebase';
-import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions } from '../types';
+import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions } from '../types';
 
 /**
  * A generic API client to communicate with our own Vercel Serverless Function backend.
@@ -68,6 +68,11 @@ export const generateHeadshot = async (imagePart: FilePart, prompt: string, sign
 // --- Restoration Tool (New Unified Function) ---
 export const performRestoration = async (imagePart: FilePart, options: RestorationOptions): Promise<string> => {
     const { imageData } = await callBackendApi('performRestoration', { imagePart, options });
+    return imageData;
+};
+
+export const performDocumentRestoration = async (imagePart: FilePart, options: DocumentRestorationOptions): Promise<string> => {
+    const { imageData } = await callBackendApi('performDocumentRestoration', { imagePart, options });
     return imageData;
 };
 

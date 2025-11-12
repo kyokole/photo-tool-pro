@@ -63,13 +63,26 @@ export interface FilePart {
 }
 
 export interface RestorationOptions {
-  restorationLevel: number; // 0-100 slider
+  mode: 'quick' | 'hq' | 'portrait' | 'reconstruct';
   removeScratches: boolean;
+  removeYellowing: boolean;
+  sharpenFace: boolean;
+  redrawHair: boolean;
+  naturalSkinSmoothing: boolean;
   colorize: boolean;
-  faceEnhance: boolean;
+  isVietnamese: boolean;
   gender: 'auto' | 'male' | 'female';
   age: 'auto' | 'child' | 'young_adult' | 'adult' | 'elderly';
   context: string;
+}
+
+export interface DocumentRestorationOptions {
+  documentType: 'general' | 'id_card' | 'license' | 'certificate' | 'handwritten';
+  removeStains: boolean;
+  deskew: boolean;
+  enhanceText: boolean;
+  preserveSignatures: boolean;
+  customPrompt: string;
 }
 
 

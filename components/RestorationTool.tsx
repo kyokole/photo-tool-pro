@@ -1,62 +1,41 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+// components/RestorationTool.tsx
+
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { RestorationResult, RestorationOptions } from '../types';
-import { performRestoration } from '../services/geminiService';
+import type { RestorationResult, RestorationOptions, DocumentRestorationOptions } from '../types';
+import { performRestoration, performDocumentRestoration } from '../services/geminiService';
 import { fileToGenerativePart } from '../utils/fileUtils';
 import { ImageUploader } from './ImageUploader';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
-import { SliderInput } from './creativestudio/SliderInput';
+import { smartDownload } from '../utils/canvasUtils';
+import { BeforeAfterSlider } from './BeforeAfterSlider';
 
 interface RestorationToolProps {
     theme: string;
     setTheme: (theme: string) => void;
 }
 
-// A simple Before/After slider component
-const BeforeAfterSlider: React.FC<{ before: string, after: string }> = ({ before, after }) => {
-    const { t } = useTranslation();
-    const [sliderPos, setSliderPos] = useState(50);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const isDragging = useRef(false);
+const DEFAULT_PHOTO_OPTIONS: RestorationOptions = {
+    mode: 'hq',
+    removeScratches: true,
+    removeYellowing: true,
+    sharpenFace: true,
+    redrawHair: false,
+    naturalSkinSmoothing: false,
+    colorize: true,
+    isVietnamese: true,
+    gender: 'auto',
+    age: 'auto',
+    context: '',
+};
 
-    const handleMove = (clientX: number) => {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = clientX - rect.left;
-        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-        setSliderPos(percentage);
-    };
-
-    const onMouseDown = (e: React.MouseEvent) => { e.preventDefault(); isDragging.current = true; };
-    const onMouseUp = () => { isDragging.current = false; };
-    const onMouseMove = (e: React.MouseEvent) => { if (isDragging.current) handleMove(e.clientX); };
-    const onTouchStart = () => { isDragging.current = true; };
-    const onTouchEnd = () => { isDragging.current = false; };
-    const onTouchMove = (e: React.TouchEvent) => { if (isDragging.current) handleMove(e.touches[0].clientX); };
-
-    return (
-        <div 
-            ref={containerRef}
-            className="relative w-full aspect-[4/3] max-w-full max-h-full overflow-hidden select-none cursor-ew-resize rounded-lg bg-black/20"
-            onMouseDown={onMouseDown}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseUp}
-            onMouseMove={onMouseMove}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            onTouchMove={onTouchMove}
-        >
-            <img src={before} alt={t('restoration.originalAlt')} className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
-            <div className="absolute inset-0 w-full h-full pointer-events-none" style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
-                <img src={after} alt={t('restoration.resultAlt')} className="absolute inset-0 w-full h-full object-contain" />
-            </div>
-            <div className="absolute top-0 bottom-0 bg-white w-1 cursor-ew-resize pointer-events-none" style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}>
-                <div className="absolute top-1/2 -translate-y-1/2 -left-4 bg-white rounded-full h-9 w-9 flex items-center justify-center shadow-lg pointer-events-none">
-                    <i className="fas fa-arrows-alt-h text-gray-700"></i>
-                </div>
-            </div>
-        </div>
-    );
+const DEFAULT_DOC_OPTIONS: DocumentRestorationOptions = {
+    documentType: 'general',
+    removeStains: true,
+    deskew: true,
+    enhanceText: true,
+    preserveSignatures: true,
+    customPrompt: '',
 };
 
 const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) => {
@@ -65,16 +44,10 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
     const [result, setResult] = useState<RestorationResult | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const [options, setOptions] = useState<RestorationOptions>({
-        restorationLevel: 75,
-        removeScratches: true,
-        colorize: true,
-        faceEnhance: true,
-        gender: 'auto',
-        age: 'auto',
-        context: '',
-    });
+    
+    const [activeTool, setActiveTool] = useState<'photo' | 'document'>('photo');
+    const [photoOptions, setPhotoOptions] = useState<RestorationOptions>(DEFAULT_PHOTO_OPTIONS);
+    const [documentOptions, setDocumentOptions] = useState<DocumentRestorationOptions>(DEFAULT_DOC_OPTIONS);
 
     const originalImageUrl = useMemo(() => {
         if (!originalFile) return null;
@@ -82,20 +55,18 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
     }, [originalFile]);
 
     useEffect(() => {
-        // Cleanup object URL when component unmounts or file changes
         return () => {
-            if (originalImageUrl) {
-                URL.revokeObjectURL(originalImageUrl);
-            }
+            if (originalImageUrl) URL.revokeObjectURL(originalImageUrl);
         };
     }, [originalImageUrl]);
-
 
     const handleReset = useCallback(() => {
         setOriginalFile(null);
         setResult(null);
         setError(null);
         setIsLoading(false);
+        setPhotoOptions(DEFAULT_PHOTO_OPTIONS);
+        setDocumentOptions(DEFAULT_DOC_OPTIONS);
     }, []);
 
     const handleImageUpload = (file: File) => {
@@ -103,10 +74,8 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         setOriginalFile(file);
     };
 
-    const runRestorationPipeline = useCallback(async (presetOptions?: Partial<RestorationOptions>) => {
+    const handleGenerate = async () => {
         if (!originalFile) return;
-
-        const finalOptions = { ...options, ...presetOptions };
         
         setIsLoading(true);
         setError(null);
@@ -116,7 +85,13 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
             const imagePart = await fileToGenerativePart(originalFile);
             if (!imagePart) throw new Error(t('errors.fileProcessingError'));
             
-            const restoredDataUrl = await performRestoration(imagePart, finalOptions);
+            let restoredDataUrl: string;
+
+            if(activeTool === 'photo') {
+                restoredDataUrl = await performRestoration(imagePart, photoOptions);
+            } else { // document
+                restoredDataUrl = await performDocumentRestoration(imagePart, documentOptions);
+            }
 
             setResult({
                 originalUrl: URL.createObjectURL(originalFile),
@@ -129,7 +104,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         } finally {
             setIsLoading(false);
         }
-    }, [originalFile, options, t]);
+    };
     
     const renderContent = () => {
         if (isLoading) {
@@ -161,7 +136,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
             return (
                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 animate-fade-in p-4">
                     <BeforeAfterSlider before={result.originalUrl} after={result.restoredUrl} />
-                    <button onClick={() => window.open(result.restoredUrl, '_blank')} className="btn-gradient text-white font-bold py-2 px-6 rounded-lg shadow-lg">
+                    <button onClick={() => smartDownload(result.restoredUrl, `${activeTool}-restored-${Date.now()}.png`)} className="btn-gradient text-white font-bold py-2 px-6 rounded-lg shadow-lg">
                         <i className="fas fa-download mr-2"></i> {t('common.download')}
                     </button>
                 </div>
@@ -184,102 +159,124 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         return <ImageUploader onImageUpload={handleImageUpload} uploaderId="restoration-upload" />;
     };
 
+    const getTabClass = (isActive: boolean) => 
+        `flex-1 flex items-center justify-center gap-2 p-4 text-lg font-bold rounded-t-lg border-b-4 transition-all duration-300 ${
+            isActive ? 'bg-[var(--bg-component)] border-[var(--accent-cyan)] text-white' : 'bg-[var(--bg-interactive)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-component-light)] hover:text-white'
+        }`;
 
     return (
         <div className="flex-1 flex flex-col animate-fade-in h-full px-4 sm:px-6 lg:p-8">
             <header className="w-full max-w-6xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 pt-4 sm:pt-6 lg:pt-0 pb-2">
-                <div /> {/* Spacer */}
+                <div />
                 <div className="text-center">
                     <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text" style={{ fontFamily: "'Exo 2', sans-serif" }}>
-                        {t('restoration.title')}
+                        AI PHOTO SUITE
                     </h1>
-                    <p className="text-[var(--text-secondary)] mt-2 text-lg tracking-wide">{t('restoration.subtitle')}</p>
                 </div>
                  <div className="flex justify-end">
                     <ThemeSelector currentTheme={theme} onChangeTheme={setTheme} />
                 </div>
             </header>
 
-            <main className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 my-4 overflow-hidden">
-                {/* Image Display Area */}
+            <main className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-8 my-4 overflow-hidden">
+                {/* Control Panel */}
+                <aside className="bg-transparent flex flex-col overflow-hidden">
+                    <div className="flex">
+                        <button className={getTabClass(activeTool === 'photo')} onClick={() => setActiveTool('photo')}>
+                            <i className="fas fa-image"></i> {t('restoration.tabs.photo')}
+                        </button>
+                        <button className={getTabClass(activeTool === 'document')} onClick={() => setActiveTool('document')}>
+                            <i className="fas fa-file-alt"></i> {t('restoration.tabs.document')}
+                        </button>
+                    </div>
+                    
+                    <div className={`bg-[var(--bg-component)] rounded-b-2xl shadow-lg p-6 border border-t-0 border-[var(--border-color)] flex flex-col flex-grow overflow-y-auto scrollbar-thin transition-opacity duration-500 ${!originalFile ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                        {activeTool === 'photo' ? (
+                            <div className="space-y-5 animate-fade-in">
+                                <div className="space-y-3">
+                                    <h3 className="text-base font-bold text-center animated-gradient-text uppercase tracking-wider">{t('restoration.modes.title')}</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {(['quick', 'hq', 'portrait', 'reconstruct'] as RestorationOptions['mode'][]).map(mode => (
+                                             <button key={mode} onClick={() => setPhotoOptions(p => ({...p, mode}))} className={`p-3 rounded-lg text-sm transition-all text-center ${photoOptions.mode === mode ? 'bg-[var(--accent-blue)]/20 border-2 border-[var(--accent-blue)] text-white' : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] border-2 border-transparent'}`}>
+                                                <p className="font-semibold">{t(`restoration.modes.${mode}.title`)}</p>
+                                                <p className="text-xs text-[var(--text-secondary)] mt-1">{t(`restoration.modes.${mode}.desc`)}</p>
+                                             </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="border-t border-[var(--border-color)] pt-4 space-y-3">
+                                    <h3 className="text-base font-bold text-center animated-gradient-text uppercase tracking-wider">{t('restoration.details.title')}</h3>
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                        <div className="flex items-center space-x-2"><input id="removeScratches" type="checkbox" checked={photoOptions.removeScratches} onChange={e => setPhotoOptions(p => ({...p, removeScratches: e.target.checked}))} className="form-checkbox" /><label htmlFor="removeScratches" className="text-sm">{t('restoration.details.removeScratches')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="removeYellowing" type="checkbox" checked={photoOptions.removeYellowing} onChange={e => setPhotoOptions(p => ({...p, removeYellowing: e.target.checked}))} className="form-checkbox" /><label htmlFor="removeYellowing" className="text-sm">{t('restoration.details.removeYellowing')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="sharpenFace" type="checkbox" checked={photoOptions.sharpenFace} onChange={e => setPhotoOptions(p => ({...p, sharpenFace: e.target.checked}))} className="form-checkbox" /><label htmlFor="sharpenFace" className="text-sm">{t('restoration.details.sharpenFace')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="redrawHair" type="checkbox" checked={photoOptions.redrawHair} onChange={e => setPhotoOptions(p => ({...p, redrawHair: e.target.checked}))} className="form-checkbox" /><label htmlFor="redrawHair" className="text-sm">{t('restoration.details.redrawHair')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="naturalSkinSmoothing" type="checkbox" checked={photoOptions.naturalSkinSmoothing} onChange={e => setPhotoOptions(p => ({...p, naturalSkinSmoothing: e.target.checked}))} className="form-checkbox" /><label htmlFor="naturalSkinSmoothing" className="text-sm">{t('restoration.details.naturalSkinSmoothing')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="colorize" type="checkbox" checked={photoOptions.colorize} onChange={e => setPhotoOptions(p => ({...p, colorize: e.target.checked}))} className="form-checkbox" /><label htmlFor="colorize" className="text-sm">{t('restoration.options.core.colorize')}</label></div>
+                                    </div>
+                                </div>
+                                 <div className="border-t border-[var(--border-color)] pt-4 space-y-3">
+                                    <h3 className="text-base font-bold text-center animated-gradient-text uppercase tracking-wider">{t('restoration.options.context.title')}</h3>
+                                     <div className="flex items-center space-x-2"><input id="isVietnamese" type="checkbox" checked={photoOptions.isVietnamese} onChange={e => setPhotoOptions(p => ({...p, isVietnamese: e.target.checked}))} className="form-checkbox" /><label htmlFor="isVietnamese" className="text-sm">{t('restoration.details.isVietnamese')}</label></div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-semibold block mb-1">{t('restoration.options.face.gender')}</label>
+                                            <select value={photoOptions.gender} onChange={e => setPhotoOptions(p => ({...p, gender: e.target.value as RestorationOptions['gender']}))} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-2 py-1.5 text-sm"><option value="auto">{t('restoration.options.auto')}</option><option value="male">{t('restoration.options.face.genders.male')}</option><option value="female">{t('restoration.options.face.genders.female')}</option></select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold block mb-1">{t('restoration.options.face.age')}</label>
+                                            <select value={photoOptions.age} onChange={e => setPhotoOptions(p => ({...p, age: e.target.value as RestorationOptions['age']}))} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-2 py-1.5 text-sm"><option value="auto">{t('restoration.options.auto')}</option><option value="child">{t('restoration.options.face.ages.child')}</option><option value="young_adult">{t('restoration.options.face.ages.young_adult')}</option><option value="adult">{t('restoration.options.face.ages.adult')}</option><option value="elderly">{t('restoration.options.face.ages.elderly')}</option></select>
+                                        </div>
+                                    </div>
+                                     <textarea value={photoOptions.context} onChange={e => setPhotoOptions(p => ({...p, context: e.target.value}))} placeholder={t('restoration.options.context.placeholder')} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={2}></textarea>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-6 animate-fade-in">
+                                <div>
+                                    <label className="text-sm font-semibold block mb-2">{t('restoration.docOptions.docType.label')}</label>
+                                    <select value={documentOptions.documentType} onChange={e => setDocumentOptions(p => ({...p, documentType: e.target.value as DocumentRestorationOptions['documentType']}))} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
+                                        <option value="general">{t('restoration.docOptions.docType.types.general')}</option>
+                                        <option value="id_card">{t('restoration.docOptions.docType.types.id_card')}</option>
+                                        <option value="license">{t('restoration.docOptions.docType.types.license')}</option>
+                                        <option value="certificate">{t('restoration.docOptions.docType.types.certificate')}</option>
+                                        <option value="handwritten">{t('restoration.docOptions.docType.types.handwritten')}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-center my-3 animated-gradient-text uppercase tracking-wider">{t('restoration.docOptions.options.title')}</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center space-x-2"><input id="removeStains" type="checkbox" checked={documentOptions.removeStains} onChange={e => setDocumentOptions(p => ({...p, removeStains: e.target.checked}))} className="form-checkbox" /><label htmlFor="removeStains" className="text-sm">{t('restoration.docOptions.options.removeStains')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="deskew" type="checkbox" checked={documentOptions.deskew} onChange={e => setDocumentOptions(p => ({...p, deskew: e.target.checked}))} className="form-checkbox" /><label htmlFor="deskew" className="text-sm">{t('restoration.docOptions.options.deskew')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="enhanceText" type="checkbox" checked={documentOptions.enhanceText} onChange={e => setDocumentOptions(p => ({...p, enhanceText: e.target.checked}))} className="form-checkbox" /><label htmlFor="enhanceText" className="text-sm">{t('restoration.docOptions.options.enhanceText')}</label></div>
+                                        <div className="flex items-center space-x-2"><input id="preserveSignatures" type="checkbox" checked={documentOptions.preserveSignatures} onChange={e => setDocumentOptions(p => ({...p, preserveSignatures: e.target.checked}))} className="form-checkbox" /><label htmlFor="preserveSignatures" className="text-sm">{t('restoration.docOptions.options.preserveSignatures')}</label></div>
+                                    </div>
+                                </div>
+                                <div className="border-t border-[var(--border-color)] pt-4">
+                                    <h3 className="text-base font-bold text-center mb-3 animated-gradient-text uppercase tracking-wider">{t('restoration.options.context.title')}</h3>
+                                    <textarea value={documentOptions.customPrompt} onChange={e => setDocumentOptions(p => ({...p, customPrompt: e.target.value}))} placeholder={t('restoration.docOptions.customPromptPlaceholder')} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={3}></textarea>
+                                </div>
+                            </div>
+                        )}
+                        <div className="mt-auto pt-6">
+                            {(originalFile && !result) && (
+                                <button onClick={() => handleGenerate()} disabled={isLoading} className="w-full btn-gradient text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50">
+                                    {isLoading ? <>{t('common.processing')}</> : <><i className="fas fa-wand-magic-sparkles mr-2"></i> {t('restoration.restoreButton')}</>}
+                                </button>
+                            )}
+                            {result && (
+                                <button onClick={handleReset} className="w-full btn-secondary text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 text-lg">
+                                    {t('restoration.restoreAnother')}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </aside>
+
+                 {/* Image Display Area */}
                  <div className="bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
                     {renderContent()}
                  </div>
-
-                {/* Control Panel */}
-                <aside className={`bg-[var(--bg-component)] rounded-2xl shadow-lg p-6 border border-[var(--border-color)] flex flex-col overflow-y-auto scrollbar-thin transition-opacity duration-500 ${!originalFile ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                    <div className="space-y-6">
-                        <div>
-                            <h3 className="text-base font-bold text-center mb-3 animated-gradient-text uppercase tracking-wider">{t('restoration.presets.title')}</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => runRestorationPipeline({ colorize: false })} className="btn-secondary py-2">{t('restoration.presets.quickRestore')}</button>
-                                <button onClick={() => runRestorationPipeline({ restorationLevel: 90, colorize: true, faceEnhance: true })} className="btn-secondary py-2">{t('restoration.presets.fullRestore')}</button>
-                            </div>
-                        </div>
-
-                        <div className="border-t border-[var(--border-color)] pt-4">
-                            <h3 className="text-base font-bold text-center mb-4 animated-gradient-text uppercase tracking-wider">{t('restoration.options.core.title')}</h3>
-                            <div className="space-y-4">
-                               <SliderInput label={t('restoration.options.core.level')} value={options.restorationLevel} onChange={val => setOptions(p => ({...p, restorationLevel: val}))} />
-                                <div className="flex items-center space-x-2">
-                                    <input id="removeScratches" type="checkbox" checked={options.removeScratches} onChange={e => setOptions(p => ({...p, removeScratches: e.target.checked}))} className="form-checkbox" />
-                                    <label htmlFor="removeScratches" className="text-sm">{t('restoration.options.core.scratches')}</label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <input id="colorize" type="checkbox" checked={options.colorize} onChange={e => setOptions(p => ({...p, colorize: e.target.checked}))} className="form-checkbox" />
-                                    <label htmlFor="colorize" className="text-sm">{t('restoration.options.core.colorize')}</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="border-t border-[var(--border-color)] pt-4">
-                             <h3 className="text-base font-bold text-center mb-4 animated-gradient-text uppercase tracking-wider">{t('restoration.options.face.title')}</h3>
-                             <div className="space-y-4">
-                                <div className="flex items-center space-x-2">
-                                    <input id="faceEnhance" type="checkbox" checked={options.faceEnhance} onChange={e => setOptions(p => ({...p, faceEnhance: e.target.checked}))} className="form-checkbox" />
-                                    <label htmlFor="faceEnhance" className="text-sm">{t('restoration.options.face.enhance')}</label>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-semibold block mb-1">{t('restoration.options.face.gender')}</label>
-                                        <select value={options.gender} onChange={e => setOptions(p => ({...p, gender: e.target.value as RestorationOptions['gender']}))} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-2 py-1.5 text-sm">
-                                            <option value="auto">{t('restoration.options.auto')}</option>
-                                            <option value="male">{t('restoration.options.face.genders.male')}</option>
-                                            <option value="female">{t('restoration.options.face.genders.female')}</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold block mb-1">{t('restoration.options.face.age')}</label>
-                                        <select value={options.age} onChange={e => setOptions(p => ({...p, age: e.target.value as RestorationOptions['age']}))} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-2 py-1.5 text-sm">
-                                            <option value="auto">{t('restoration.options.auto')}</option>
-                                            <option value="child">{t('restoration.options.face.ages.child')}</option>
-                                            <option value="young_adult">{t('restoration.options.face.ages.young_adult')}</option>
-                                            <option value="adult">{t('restoration.options.face.ages.adult')}</option>
-                                            <option value="elderly">{t('restoration.options.face.ages.elderly')}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                             </div>
-                        </div>
-
-                         <div className="border-t border-[var(--border-color)] pt-4">
-                            <h3 className="text-base font-bold text-center mb-3 animated-gradient-text uppercase tracking-wider">{t('restoration.options.context.title')}</h3>
-                             <textarea value={options.context} onChange={e => setOptions(p => ({...p, context: e.target.value}))} placeholder={t('restoration.options.context.placeholder')} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={2}></textarea>
-                        </div>
-                    </div>
-                    <div className="mt-auto pt-6">
-                        {originalFile && !result && (
-                            <button onClick={() => runRestorationPipeline()} disabled={isLoading} className="w-full btn-gradient text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50">
-                                {isLoading ? <>{t('common.processing')}</> : <><i className="fas fa-wand-magic-sparkles mr-2"></i> {t('restoration.restoreButton')}</>}
-                            </button>
-                        )}
-                        {result && (
-                            <button onClick={handleReset} className="w-full btn-secondary text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 text-lg">
-                                {t('restoration.restoreAnother')}
-                            </button>
-                        )}
-                    </div>
-                </aside>
             </main>
         </div>
     );

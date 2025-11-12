@@ -12,39 +12,86 @@ export default {
     "originalAlt": "Ảnh gốc cần phục hồi",
     "resultAlt": "Kết quả ảnh đã phục hồi",
     "changeImage": "Đổi ảnh",
-    "presets": {
-      "title": "Phục chế nhanh",
-      "quickRestore": "Phục chế Nhanh",
-      "fullRestore": "Toàn diện & Tô màu"
+    "tabs": {
+      "photo": "Phục hồi Ảnh",
+      "document": "Phục hồi Giấy tờ"
+    },
+    "modes": {
+      "title": "Chế độ Phục hồi",
+      "quick": {
+        "title": "Phục chế Nhanh",
+        "desc": "Làm sạch cơ bản, khử nhiễu nhẹ"
+      },
+      "hq": {
+        "title": "Chất lượng cao",
+        "desc": "Khử mờ, phục hồi chi tiết tổng thể"
+      },
+      "portrait": {
+        "title": "Chân dung Nâng cao",
+        "desc": "Tập trung tối đa vào mặt, da, tóc"
+      },
+      "reconstruct": {
+        "title": "Tái tạo Toàn diện",
+        "desc": "Dành cho ảnh hư hỏng rất nặng"
+      }
+    },
+    "details": {
+      "title": "Tùy chọn Chi tiết",
+      "removeScratches": "Xóa vết xước & hư hỏng",
+      "removeYellowing": "Khử ố vàng & Phai màu",
+      "sharpenFace": "Làm nét chi tiết khuôn mặt",
+      "redrawHair": "Vẽ lại tóc chi tiết",
+      "naturalSkinSmoothing": "Làm mịn da tự nhiên",
+      "isVietnamese": "Người Việt Nam"
     },
     "options": {
-        "auto": "Tự động",
-        "core": {
-            "title": "Tùy chọn cốt lõi",
-            "level": "Mức độ phục hồi",
-            "scratches": "Xóa vết xước & hư hỏng",
-            "colorize": "Tô màu cho ảnh"
+      "auto": "Tự động",
+      "core": {
+        "title": "Tùy chọn cốt lõi",
+        "level": "Mức độ phục hồi",
+        "scratches": "Xóa vết xước & hư hỏng",
+        "colorize": "Tô màu cho ảnh"
+      },
+      "face": {
+        "title": "Cải thiện gương mặt",
+        "enhance": "Làm rõ nét mặt (Mắt, da, tóc)",
+        "gender": "Giới tính",
+        "age": "Độ tuổi",
+        "genders": {
+          "male": "Nam",
+          "female": "Nữ"
         },
-        "face": {
-            "title": "Cải thiện gương mặt",
-            "enhance": "Làm rõ nét mặt (Mắt, da, tóc)",
-            "gender": "Giới tính",
-            "age": "Độ tuổi",
-            "genders": {
-                "male": "Nam",
-                "female": "Nữ"
-            },
-            "ages": {
-                "child": "Trẻ em",
-                "young_adult": "Thanh niên",
-                "adult": "Trung niên",
-                "elderly": "Lớn tuổi"
-            }
-        },
-        "context": {
-            "title": "Bối cảnh bổ sung (Nâng cao)",
-            "placeholder": "VD: ảnh cưới Việt Nam thập niên 60, quân phục thời xưa..."
+        "ages": {
+          "child": "Trẻ em",
+          "young_adult": "Thanh niên",
+          "adult": "Trung niên",
+          "elderly": "Lớn tuổi"
         }
+      },
+      "context": {
+        "title": "Bối cảnh & Ghi chú",
+        "placeholder": "VD: ảnh cưới Việt Nam thập niên 60, quân phục thời xưa..."
+      }
+    },
+    "docOptions": {
+      "docType": {
+        "label": "Loại tài liệu",
+        "types": {
+          "general": "Chung",
+          "id_card": "CMND / CCCD",
+          "license": "Bằng lái xe",
+          "certificate": "Văn bằng / Chứng chỉ",
+          "handwritten": "Thư / Tài liệu viết tay"
+        }
+      },
+      "options": {
+        "title": "Tùy chọn phục hồi",
+        "removeStains": "Xóa nếp gấp & vết ố",
+        "deskew": "Làm thẳng & căn góc",
+        "enhanceText": "Tăng cường độ nét chữ",
+        "preserveSignatures": "Giữ lại chữ ký & con dấu"
+      },
+      "customPromptPlaceholder": "Vd: phục hồi phần chữ bị mờ ở góc phải, giữ lại màu giấy ngả vàng..."
     }
   },
   "resultStages": {
