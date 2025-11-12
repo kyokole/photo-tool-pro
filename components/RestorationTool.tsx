@@ -211,14 +211,14 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
                 </div>
             </header>
 
-            <main className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-8 my-4 overflow-hidden">
-                 {/* Image Display Area - First in DOM for mobile-first layout */}
-                 <div className="bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
+            <main className="w-full max-w-7xl mx-auto flex-1 flex flex-col lg:flex-row gap-8 my-4 overflow-hidden">
+                 {/* Image Display Area - takes remaining space on desktop */}
+                 <div className="flex-1 bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
                     {renderContent()}
                  </div>
 
-                {/* Control Panel - Second in DOM, but ordered first on large screens */}
-                <aside className="bg-transparent flex flex-col overflow-hidden lg:order-first">
+                {/* Control Panel - first on desktop, fixed width */}
+                <aside className="lg:w-[450px] lg:flex-shrink-0 bg-transparent flex flex-col overflow-hidden lg:order-first">
                     <div className="flex">
                         <button className={getTabClass(activeTool === 'photo')} onClick={() => setActiveTool('photo')}>
                             <i className="fas fa-image"></i> {t('restoration.tabs.photo')}
