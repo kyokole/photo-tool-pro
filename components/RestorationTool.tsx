@@ -110,8 +110,8 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
     };
     
     const getResultTabClass = (isActive: boolean) => 
-        `px-6 py-2 text-sm font-semibold rounded-md transition-colors ${
-            isActive ? 'bg-[var(--bg-component-light)] text-white shadow-sm' : 'text-transparent text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-component-light)]/50'
+        `px-4 sm:px-6 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap ${
+            isActive ? 'bg-[var(--bg-component-light)] text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-component-light)]/50'
         }`;
 
     const renderContent = () => {
@@ -167,10 +167,12 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
                         </div>
                     </div>
                     
-                    <div className="flex-shrink-0">
-                        <button onClick={() => smartDownload(result.restoredUrl, `${activeTool}-restored-${Date.now()}.png`)} className="btn-gradient text-white font-bold py-2 px-6 rounded-lg shadow-lg">
-                            <i className="fas fa-download mr-2"></i> {t('common.download')}
-                        </button>
+                    <div className="flex-shrink-0" style={{ minHeight: '44px' }}> {/* Reserve space to prevent layout shift */}
+                        {resultViewMode === 'result' && (
+                            <button onClick={() => smartDownload(result.restoredUrl, `${activeTool}-restored-${Date.now()}.png`)} className="btn-gradient text-white font-bold py-2 px-6 rounded-lg shadow-lg animate-fade-in">
+                                <i className="fas fa-download mr-2"></i> {t('common.download')}
+                            </button>
+                        )}
                     </div>
                 </div>
             );
@@ -212,13 +214,13 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
             </header>
 
             <main className="w-full max-w-7xl mx-auto flex-1 flex flex-col lg:flex-row gap-8 my-4 overflow-hidden">
-                 {/* Image Display Area - takes remaining space on desktop */}
-                 <div className="flex-1 bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
-                    {renderContent()}
-                 </div>
-
-                {/* Control Panel - first on desktop, fixed width */}
-                <aside className="lg:w-[450px] lg:flex-shrink-0 bg-transparent flex flex-col overflow-hidden lg:order-first">
+                <div className="flex-1 flex flex-col lg:order-last min-h-0">
+                     <div className="flex-1 bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
+                        {renderContent()}
+                     </div>
+                </div>
+                
+                <aside className="w-full lg:w-[450px] lg:flex-shrink-0 bg-transparent flex flex-col overflow-hidden">
                     <div className="flex">
                         <button className={getTabClass(activeTool === 'photo')} onClick={() => setActiveTool('photo')}>
                             <i className="fas fa-image"></i> {t('restoration.tabs.photo')}
