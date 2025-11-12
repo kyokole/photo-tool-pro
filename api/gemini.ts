@@ -277,9 +277,6 @@ const buildRestorationPrompt = (options: RestorationOptions): string => {
 
 // --- END OF MERGED CODE ---
 
-// Base64 encoded watermark PNG. This avoids external network requests.
-const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
-
 // --- Firebase Admin Initialization ---
 try {
     if (!admin.apps.length) {
@@ -357,52 +354,6 @@ const smartCropServer = async (imageBase64: string, aspectRatio: AspectRatio): P
     return croppedBuffer.toString('base64');
 };
 
-
-// --- NEW: Robust Watermark Logic using Gemini AI ---
-async function applyWatermarkWithGemini(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
-    try {
-        const ai = getAi();
-        const models = ai.models;
-
-        const mainImagePart: Part = {
-            inlineData: { data: generatedImageBase64, mimeType: originalMimeType }
-        };
-
-        const watermarkPart: Part = {
-            inlineData: { data: WATERMARK_BASE64, mimeType: 'image/png' }
-        };
-
-        const prompt = `You are an expert image editor. Your only task is to overlay the second image (a watermark) onto the first image (the main content).
-        - Place the watermark in the bottom-right corner.
-        - The watermark should be semi-transparent (around 70% opacity).
-        - Scale the watermark to be approximately 20% of the main image's width.
-        - Do not alter the main content, colors, or aspect ratio in any other way.
-        - Output the final composite image.`;
-        
-        const textPart: Part = { text: prompt };
-
-        const response = await models.generateContent({
-            model: 'gemini-2.5-flash-image',
-            contents: { parts: [mainImagePart, watermarkPart, textPart] },
-            config: { responseModalities: [Modality.IMAGE] }
-        });
-        
-        const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-
-        if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) {
-            throw new Error("Gemini did not return an image for watermarking.");
-        }
-
-        return { data: resultPart.inlineData.data, mimeType: resultPart.inlineData.mimeType };
-
-    } catch (error) {
-        console.error("Gemini watermarking process failed, returning original image without watermark.", error);
-        // Fallback: return the original image if the AI-based watermarking fails for any reason.
-        return { data: generatedImageBase64, mimeType: originalMimeType };
-    }
-}
-
-
 // Helper to convert base64 from client to a format the SDK understands
 const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => ({
     inlineData: {
@@ -478,14 +429,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // 4. Server-side smart crop
                 const croppedImageB64 = await smartCropServer(paddedImageB64, settings.aspectRatio);
 
-                // 5. Apply watermark if not VIP
-                let finalImageData = { data: croppedImageB64, mimeType: 'image/png' }; // smartCropServer always returns png
-                if (!isVip) {
-                    finalImageData = await applyWatermarkWithGemini(finalImageData.data, finalImageData.mimeType);
-                }
-                
-                // 6. Send final image to client
-                return res.status(200).json({ imageData: `data:${finalImageData.mimeType};base64,${finalImageData.data}` });
+                // 5. Send final image to client (Watermarking is now done on client-side)
+                const finalMimeType = 'image/png'; // smartCropServer always returns png
+                return res.status(200).json({ imageData: `data:${finalMimeType};base64,${croppedImageB64}` });
             }
 
             case 'generateHeadshot': {
@@ -497,13 +443,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
                 
-                let { data, mimeType } = resultPart.inlineData;
-
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
-                    data = watermarked.data;
-                    mimeType = watermarked.mimeType;
-                }
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             
@@ -524,14 +464,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     throw new Error("API không trả về hình ảnh.");
                 }
                 
-                let { data, mimeType } = resultPart.inlineData;
-
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
-                    data = watermarked.data;
-                    mimeType = watermarked.mimeType;
-                }
-                // The client side expects a full data URL for this tool
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
 
@@ -557,13 +490,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
                 
-                let { data, mimeType } = resultPart.inlineData;
-
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
-                    data = watermarked.data;
-                    mimeType = watermarked.mimeType;
-                }
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
 
@@ -577,13 +504,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
-                let { data, mimeType } = resultPart.inlineData;
-
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
-                    data = watermarked.data;
-                    mimeType = watermarked.mimeType;
-                }
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             
@@ -622,13 +543,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
-                let { data, mimeType } = resultPart.inlineData;
-
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
-                    data = watermarked.data;
-                    mimeType = watermarked.mimeType;
-                }
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
 
@@ -654,13 +569,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
-                let { data, mimeType } = resultPart.inlineData;
-
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
-                    data = watermarked.data;
-                    mimeType = watermarked.mimeType;
-                }
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
 
@@ -854,25 +763,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
                 
                 const results = await Promise.allSettled(promises);
-                let successfulImages: { data: string, mimeType: string }[] = [];
+                let successfulImages: string[] = [];
                 results.forEach(r => {
                     if (r.status === 'fulfilled') {
                         const part = r.value.candidates?.[0]?.content?.parts?.[0];
-                        if (part?.inlineData?.data && part?.inlineData?.mimeType) {
-                            successfulImages.push({ data: part.inlineData.data, mimeType: part.inlineData.mimeType });
+                        if (part?.inlineData?.data) {
+                            successfulImages.push(part.inlineData.data);
                         }
                     }
                 });
 
-                let finalImageB64s: string[];
-                if (!isVip) {
-                    const watermarkedResults = await Promise.all(successfulImages.map(img => applyWatermarkWithGemini(img.data, img.mimeType)));
-                    finalImageB64s = watermarkedResults.map(res => res.data); // Only return base64 string
-                } else {
-                    finalImageB64s = successfulImages.map(img => img.data); // Only return base64 string
-                }
-
-                return res.status(200).json({ images: finalImageB64s, successCount: finalImageB64s.length });
+                return res.status(200).json({ images: successfulImages, successCount: successfulImages.length });
             }
 
             case 'getHotTrends': {
@@ -960,13 +861,7 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
                     throw new Error("Không thể tạo ảnh nền thumbnail từ AI. Phản hồi không hợp lệ.");
                 }
 
-                let finalMimeType = 'image/jpeg';
-                if (!isVip) {
-                    const watermarked = await applyWatermarkWithGemini(data, finalMimeType);
-                    data = watermarked.data;
-                    finalMimeType = watermarked.mimeType;
-                }
-
+                const finalMimeType = 'image/jpeg';
                 return res.status(200).json({ image: `data:${finalMimeType};base64,${data}` });
             }
 

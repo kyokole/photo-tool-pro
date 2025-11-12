@@ -32,6 +32,8 @@ export const PHOTO_SIZES_MM: Record<AspectRatio, {width:number, height:number}> 
     '5x5': { width: 50, height: 50 },
 };
 
+export const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
+
 // --- Core Utility Functions ---
 
 export const mm2px = (mm: number) => Math.round((mm / MM_PER_INCH) * DPI);
@@ -46,6 +48,71 @@ export const smartDownload = (imageUrl: string, fileName: string) => {
     link.click();
     document.body.removeChild(link);
 };
+
+// --- NEW CLIENT-SIDE WATERMARKING FUNCTION ---
+export const applyWatermark = (baseImageSrc: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const watermark = new Image();
+        const baseImage = new Image();
+        baseImage.crossOrigin = "anonymous";
+
+        let loadedCount = 0;
+        const onLoaded = () => {
+            loadedCount++;
+            if (loadedCount < 2) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.error('Failed to get canvas context, returning original image.');
+                return resolve(baseImageSrc); // Fallback to original image
+            }
+
+            canvas.width = baseImage.naturalWidth;
+            canvas.height = baseImage.naturalHeight;
+
+            // Draw the base image
+            ctx.drawImage(baseImage, 0, 0);
+
+            // Calculate watermark size and position
+            const watermarkAspectRatio = watermark.width / watermark.height;
+            let watermarkWidth = canvas.width * 0.25; // Watermark is 25% of the image width
+            let watermarkHeight = watermarkWidth / watermarkAspectRatio;
+            
+            if (watermarkHeight > canvas.height * 0.25) {
+                watermarkHeight = canvas.height * 0.25;
+                watermarkWidth = watermarkHeight * watermarkAspectRatio;
+            }
+
+            const margin = canvas.width * 0.02; // 2% margin from edges
+            const x = canvas.width - watermarkWidth - margin;
+            const y = canvas.height - watermarkHeight - margin;
+
+            // Draw the watermark with opacity
+            ctx.globalAlpha = 0.7;
+            ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
+            ctx.globalAlpha = 1.0; // Reset alpha
+
+            resolve(canvas.toDataURL('image/png'));
+        };
+
+        watermark.onload = onLoaded;
+        baseImage.onload = onLoaded;
+        
+        watermark.onerror = () => {
+            console.error('Failed to load watermark image, returning original image.');
+            resolve(baseImageSrc); // Fallback
+        };
+        baseImage.onerror = () => {
+            console.error('Failed to load base image for watermarking, returning original image.');
+            resolve(baseImageSrc); // Fallback
+        };
+
+        watermark.src = `data:image/png;base64,${WATERMARK_BASE64}`;
+        baseImage.src = baseImageSrc;
+    });
+};
+
 
 // --- Layout Engine ---
 

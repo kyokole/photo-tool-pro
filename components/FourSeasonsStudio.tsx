@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { generateFourSeasonsPhoto, detectOutfit, editOutfitOnImage } from '../services/geminiService';
 import { fileToGenerativePart } from '../utils/fileUtils';
+import { applyWatermark } from '../utils/canvasUtils';
 import type { Scene, FilePart } from '../types';
 
 type Season = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -11,6 +12,7 @@ type AspectRatio = '1:1' | '4:3' | '9:16' | '16:9' | '3:4';
 interface FourSeasonsStudioProps {
     theme: string;
     setTheme: (theme: string) => void;
+    isVip: boolean;
 }
 
 const Spinner: React.FC<{ size?: string }> = ({ size = 'h-10 w-10' }) => (
@@ -29,7 +31,7 @@ const Particles: React.FC = () => (
 );
 
 
-const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme }) => {
+const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, isVip }) => {
     const { t } = useTranslation();
     const [activeSeason, setActiveSeason] = useState<Season>('spring');
     const [sourceFile, setSourceFile] = useState<File | null>(null);
@@ -139,7 +141,12 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme }
             const imagePart = await fileToGenerativePart(sourceFile);
             if (!imagePart) throw new Error(t('errors.fileProcessingError'));
             
-            const generatedImage = await generateFourSeasonsPhoto(imagePart, selectedScene, activeSeason, aspectRatio, customDescription);
+            let generatedImage = await generateFourSeasonsPhoto(imagePart, selectedScene, activeSeason, aspectRatio, customDescription);
+            
+            if (!isVip) {
+                generatedImage = await applyWatermark(generatedImage);
+            }
+
             setResultImage(generatedImage);
 
         } catch (err) {
@@ -147,7 +154,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme }
         } finally {
             setIsLoading(false);
         }
-    }, [sourceFile, selectedScene, activeSeason, aspectRatio, customDescription, t]);
+    }, [sourceFile, selectedScene, activeSeason, aspectRatio, customDescription, t, isVip]);
 
      const handleEditOutfit = useCallback(async () => {
         if (!resultImage || !outfitEditPrompt.trim()) return;
@@ -158,7 +165,12 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme }
         try {
             const base64Data = resultImage.split(',')[1];
             const mimeType = resultImage.match(/data:([^;]+);/)?.[1] || 'image/png';
-            const newImage = await editOutfitOnImage(base64Data, mimeType, outfitEditPrompt);
+            let newImage = await editOutfitOnImage(base64Data, mimeType, outfitEditPrompt);
+
+            if (!isVip) {
+                newImage = await applyWatermark(newImage);
+            }
+
             setResultImage(newImage); 
             setOutfitEditPrompt(''); 
         } catch (err) {
@@ -166,7 +178,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme }
         } finally {
             setIsEditingOutfit(false);
         }
-    }, [resultImage, outfitEditPrompt, t]);
+    }, [resultImage, outfitEditPrompt, t, isVip]);
     
     const currentSeasonTheme = seasonsConfig[activeSeason];
     

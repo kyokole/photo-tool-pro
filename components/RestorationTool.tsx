@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { RestorationResult, RestorationOptions, DocumentRestorationOptions } from '../types';
 import { performRestoration, performDocumentRestoration } from '../services/geminiService';
 import { fileToGenerativePart } from '../utils/fileUtils';
+import { applyWatermark } from '../utils/canvasUtils';
 import { ImageUploader } from './ImageUploader';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { smartDownload } from '../utils/canvasUtils';
@@ -13,6 +14,7 @@ import { BeforeAfterSlider } from './BeforeAfterSlider';
 interface RestorationToolProps {
     theme: string;
     setTheme: (theme: string) => void;
+    isVip: boolean;
 }
 
 const DEFAULT_PHOTO_OPTIONS: RestorationOptions = {
@@ -38,7 +40,7 @@ const DEFAULT_DOC_OPTIONS: DocumentRestorationOptions = {
     customPrompt: '',
 };
 
-const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) => {
+const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVip }) => {
     const { t } = useTranslation();
     const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [result, setResult] = useState<RestorationResult | null>(null);
@@ -94,6 +96,10 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
                 restoredDataUrl = await performRestoration(imagePart, photoOptions);
             } else { // document
                 restoredDataUrl = await performDocumentRestoration(imagePart, documentOptions);
+            }
+
+            if (!isVip) {
+                restoredDataUrl = await applyWatermark(restoredDataUrl);
             }
 
             setResult({

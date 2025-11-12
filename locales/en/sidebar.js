@@ -7,7 +7,7 @@ export default {
     "tools": "Tools",
     "vipTools": "VIP Tools",
     "utilities": "Utilities",
-    "generateButton": "Generate Photo"
+    "generateButton": "Generate ID Photo"
   },
   "presets": {
     "passport": "Passport Photo",

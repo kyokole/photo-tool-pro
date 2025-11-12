@@ -8,6 +8,7 @@ import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, Ac
 import { generateIdPhoto, generateHeadshot, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
 import { fileToGenerativePart } from './utils/fileUtils';
+import { applyWatermark } from './utils/canvasUtils';
 import Sidebar from './components/Sidebar';
 import ImagePanes from './components/ImagePanes';
 import { ControlPanel } from './components/ControlPanel';
@@ -388,11 +389,12 @@ const App: React.FC = () => {
           }
       }
       
-      // The server now handles padding, smart-cropping, and watermarking.
-      const finalImage = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
+      const finalImageFromServer = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
       
-      // Since the server handles the crop, we can consider it AI-cropped immediately.
-      setIsAiCropped(true);
+      // Client-side watermarking for non-VIPs
+      const finalImage = !isVip ? await applyWatermark(finalImageFromServer) : finalImageFromServer;
+
+      setIsAiCropped(true); // Since the server handles the crop, we can consider it AI-cropped immediately.
 
       const newHistoryItem: HistoryItem = { image: finalImage, settings: { ...currentSettings } };
       setHistory(prev => [...prev, newHistoryItem]);
@@ -560,6 +562,7 @@ const App: React.FC = () => {
                     reader.readAsDataURL(job.file);
                 });
 
+                // Watermarking is not applied in batch mode as it's a VIP feature
                 const finalImage = await generateIdPhoto(originalImageBase64, settings);
 
                 job.processedUrl = finalImage;
@@ -596,9 +599,14 @@ const App: React.FC = () => {
             generateHeadshot(imagePart, style.prompt, abortControllerRef.current?.signal)
         );
         
-        const generatedImages = await Promise.all(generationPromises);
+        const generatedImagesFromServer = await Promise.all(generationPromises);
 
-        setHeadshotResults(generatedImages.map((url, index) => ({
+        // Client-side watermarking for non-VIPs
+        const finalImages = !isVip 
+            ? await Promise.all(generatedImagesFromServer.map(img => applyWatermark(img))) 
+            : generatedImagesFromServer;
+
+        setHeadshotResults(finalImages.map((url, index) => ({
             id: `${style.id}-${index}-${Date.now()}`,
             imageUrl: url
         })));
@@ -630,7 +638,7 @@ const App: React.FC = () => {
         setIsHeadshotLoading(false);
         abortControllerRef.current = null;
     }
-  }, [handleResetHeadshotTool, t]);
+  }, [handleResetHeadshotTool, t, isVip]);
 
   const handleGenerateFashionPhoto = useCallback(async () => {
       if (!fashionStudioFile) {
@@ -647,6 +655,7 @@ const App: React.FC = () => {
         const imagePart = await fileToGenerativePart(fashionStudioFile);
         if (!imagePart) throw new Error(t('errors.fileProcessingError'));
 
+        // Since Fashion Studio is a VIP feature, no watermarking is needed here.
         const imageUrl = await generateFashionPhoto(imagePart, fashionStudioSettings, abortControllerRef.current.signal);
         
         setFashionStudioResult({
@@ -1265,6 +1274,7 @@ const App: React.FC = () => {
               <RestorationTool
                   theme={theme}
                   setTheme={setTheme}
+                  isVip={isVip}
               />
           );
       case 'fashion_studio':
@@ -1300,7 +1310,7 @@ const App: React.FC = () => {
                     onInitialStateConsumed={handleCreativeStudioStateConsumed}
                 />;
       case 'four_seasons_studio':
-          return <FourSeasonsStudio theme={theme} setTheme={setTheme} />;
+          return <FourSeasonsStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {

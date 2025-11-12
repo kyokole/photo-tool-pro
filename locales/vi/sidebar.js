@@ -7,7 +7,7 @@ export default {
     "tools": "Công cụ",
     "vipTools": "Công cụ VIP",
     "utilities": "Tiện ích",
-    "generateButton": "Tạo ảnh"
+    "generateButton": "Tạo ảnh thẻ"
   },
   "presets": {
     "passport": "Ảnh Hộ chiếu",
