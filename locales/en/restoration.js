@@ -92,6 +92,10 @@ export default {
         "preserveSignatures": "Preserve signatures & stamps"
       },
       "customPromptPlaceholder": "e.g., restore the faded text in the right corner, keep the yellowed paper color..."
+    },
+    "viewModes": {
+      "compare": "Compare",
+      "result": "Result"
     }
   },
   "resultStages": {

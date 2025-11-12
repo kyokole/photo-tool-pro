@@ -48,6 +48,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
     const [activeTool, setActiveTool] = useState<'photo' | 'document'>('photo');
     const [photoOptions, setPhotoOptions] = useState<RestorationOptions>(DEFAULT_PHOTO_OPTIONS);
     const [documentOptions, setDocumentOptions] = useState<DocumentRestorationOptions>(DEFAULT_DOC_OPTIONS);
+    const [resultViewMode, setResultViewMode] = useState<'compare' | 'result'>('compare');
 
     const originalImageUrl = useMemo(() => {
         if (!originalFile) return null;
@@ -67,6 +68,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         setIsLoading(false);
         setPhotoOptions(DEFAULT_PHOTO_OPTIONS);
         setDocumentOptions(DEFAULT_DOC_OPTIONS);
+        setResultViewMode('compare');
     }, []);
 
     const handleImageUpload = (file: File) => {
@@ -80,6 +82,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         setIsLoading(true);
         setError(null);
         setResult(null);
+        setResultViewMode('compare');
 
         try {
             const imagePart = await fileToGenerativePart(originalFile);
@@ -106,6 +109,11 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         }
     };
     
+    const getResultTabClass = (isActive: boolean) => 
+        `px-6 py-2 text-sm font-semibold rounded-md transition-colors ${
+            isActive ? 'bg-[var(--bg-component-light)] text-white shadow-sm' : 'text-transparent text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-component-light)]/50'
+        }`;
+
     const renderContent = () => {
         if (isLoading) {
              return (
@@ -135,10 +143,35 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
         if(result) {
             return (
                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 animate-fade-in p-4">
-                    <BeforeAfterSlider before={result.originalUrl} after={result.restoredUrl} />
-                    <button onClick={() => smartDownload(result.restoredUrl, `${activeTool}-restored-${Date.now()}.png`)} className="btn-gradient text-white font-bold py-2 px-6 rounded-lg shadow-lg">
-                        <i className="fas fa-download mr-2"></i> {t('common.download')}
-                    </button>
+                    <div className="flex-shrink-0 flex bg-[var(--bg-interactive)] p-1 rounded-lg">
+                        <button onClick={() => setResultViewMode('compare')} className={getResultTabClass(resultViewMode === 'compare')}>
+                            <i className="fas fa-sliders-h mr-2"></i> {t('restoration.viewModes.compare')}
+                        </button>
+                        <button onClick={() => setResultViewMode('result')} className={getResultTabClass(resultViewMode === 'result')}>
+                           <i className="fas fa-image mr-2"></i> {t('restoration.viewModes.result')}
+                        </button>
+                    </div>
+
+                    <div className="w-full flex-grow relative min-h-0">
+                        <div className="w-full h-full flex items-center justify-center">
+                            {resultViewMode === 'compare' ? (
+                                <BeforeAfterSlider before={result.originalUrl} after={result.restoredUrl} />
+                            ) : (
+                                <img 
+                                    src={result.restoredUrl} 
+                                    alt={t('restoration.resultAlt')} 
+                                    className="w-full h-full object-contain rounded-lg"
+                                    style={{ WebkitTouchCallout: 'default' }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="flex-shrink-0">
+                        <button onClick={() => smartDownload(result.restoredUrl, `${activeTool}-restored-${Date.now()}.png`)} className="btn-gradient text-white font-bold py-2 px-6 rounded-lg shadow-lg">
+                            <i className="fas fa-download mr-2"></i> {t('common.download')}
+                        </button>
+                    </div>
                 </div>
             );
         }
@@ -179,8 +212,13 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
             </header>
 
             <main className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-8 my-4 overflow-hidden">
-                {/* Control Panel */}
-                <aside className="bg-transparent flex flex-col overflow-hidden">
+                 {/* Image Display Area - First in DOM for mobile-first layout */}
+                 <div className="bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
+                    {renderContent()}
+                 </div>
+
+                {/* Control Panel - Second in DOM, but ordered first on large screens */}
+                <aside className="bg-transparent flex flex-col overflow-hidden lg:order-first">
                     <div className="flex">
                         <button className={getTabClass(activeTool === 'photo')} onClick={() => setActiveTool('photo')}>
                             <i className="fas fa-image"></i> {t('restoration.tabs.photo')}
@@ -272,11 +310,6 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
                         </div>
                     </div>
                 </aside>
-
-                 {/* Image Display Area */}
-                 <div className="bg-[var(--bg-component)] rounded-2xl shadow-lg border border-[var(--border-color)] flex items-center justify-center min-h-[400px]">
-                    {renderContent()}
-                 </div>
             </main>
         </div>
     );

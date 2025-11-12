@@ -92,6 +92,10 @@ export default {
         "preserveSignatures": "Giữ lại chữ ký & con dấu"
       },
       "customPromptPlaceholder": "Vd: phục hồi phần chữ bị mờ ở góc phải, giữ lại màu giấy ngả vàng..."
+    },
+    "viewModes": {
+      "compare": "So sánh",
+      "result": "Kết quả"
     }
   },
   "resultStages": {

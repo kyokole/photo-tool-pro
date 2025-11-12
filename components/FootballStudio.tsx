@@ -140,60 +140,8 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                 <div className="flex justify-end"><ThemeSelector currentTheme={theme} onChangeTheme={setTheme} /></div>
             </header>
 
-            <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
-                {/* Control Panel */}
-                <aside className="w-full lg:w-[420px] bg-[var(--bg-component)] p-4 rounded-xl flex flex-col flex-shrink-0 border border-[var(--border-color)] overflow-y-auto scrollbar-thin">
-                    <h2 className="text-lg font-bold text-center mb-4">{t('footballStudio.settings')}</h2>
-                    <div className="space-y-4">
-                        {renderSetting(t('footballStudio.mode'), (
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => updateSettings({ mode: 'idol' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.mode === 'idol' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.idolMode')}</button>
-                                <button onClick={() => updateSettings({ mode: 'outfit' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.mode === 'outfit' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.outfitMode')}</button>
-                            </div>
-                        ))}
-                        
-                        {renderSetting(t('footballStudio.category'), (
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => updateSettings({ category: 'contemporary' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.category === 'contemporary' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.categories.contemporary')}</button>
-                                <button onClick={() => updateSettings({ category: 'legendary' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.category === 'legendary' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.categories.legendary')}</button>
-                            </div>
-                        ))}
-                        
-                        {renderSetting(t('footballStudio.team'), <select value={settings.team} onChange={e => updateSettings({ team: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">{teamOptions.map(teamKey => <option key={teamKey} value={teamKey}>{t(`footballStudio.teams.${teamKey}`)}</option>)}</select>)}
-                        {renderSetting(t('footballStudio.player'), 
-                            <select value={settings.player} onChange={e => updateSettings({ player: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
-                                <option value="">{t('footballStudio.placeholders.player')}</option>
-                                {playerOptions.map(p => <option key={p.vi} value={p.vi}>{p[currentLang] || p.vi}</option>)}
-                            </select>
-                        )}
-                        {renderSetting(t('footballStudio.scene'), 
-                            <select value={settings.scene} onChange={e => updateSettings({ scene: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
-                                <option value="">{t('footballStudio.placeholders.scene')}</option>
-                                {sceneOptions.map(sKey => <option key={sKey} value={sKey}>{t(sKey)}</option>)}
-                            </select>
-                        )}
-                        {renderSetting(t('footballStudio.aspectRatio'), 
-                            <select value={settings.aspectRatio} onChange={e => updateSettings({ aspectRatio: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
-                                 <option value="">{t('footballStudio.placeholders.aspectRatio')}</option>
-                                {FOOTBALL_ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                        )}
-                        {renderSetting(t('footballStudio.style'), 
-                            <select value={settings.style} onChange={e => updateSettings({ style: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
-                                <option value="">{t('footballStudio.placeholders.style')}</option>
-                                {FOOTBALL_STYLES.map(sKey => <option key={sKey} value={sKey}>{t(sKey)}</option>)}
-                            </select>
-                        )}
-                        {renderSetting(t('footballStudio.customPrompt'), <input type="text" value={settings.customPrompt} onChange={e => updateSettings({ customPrompt: e.target.value })} placeholder={t('footballStudio.customPromptPlaceholder')} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm" />)}
-                    </div>
-                    <div className="mt-auto pt-4">
-                         <button onClick={handleGenerate} disabled={!canGenerate} className={`w-full btn-gradient text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${canGenerate ? 'animate-pulse-glow' : ''}`}>
-                            {isLoading ? <><Spinner /> <span className="ml-2">{t('footballStudio.generating')}</span></> : <><i className="fas fa-futbol mr-2"></i> {t('footballStudio.generateButton')}</>}
-                        </button>
-                    </div>
-                </aside>
-
-                 {/* Main Content */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 min-h-0 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
+                {/* Main Content Area */}
                 <main className="flex-1 flex flex-col gap-6 min-h-0">
                     <div className="bg-[var(--bg-component)] rounded-xl p-3 flex flex-col min-h-0 flex-1 border border-[var(--border-color)] shadow-lg">
                         <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase text-center tracking-wider">
@@ -249,6 +197,58 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                         </div>
                     </div>
                 </main>
+
+                 {/* Control Panel */}
+                <aside className="w-full lg:w-[420px] bg-[var(--bg-component)] p-4 rounded-xl flex flex-col flex-shrink-0 border border-[var(--border-color)] overflow-y-auto scrollbar-thin lg:order-first">
+                    <h2 className="text-lg font-bold text-center mb-4">{t('footballStudio.settings')}</h2>
+                    <div className="space-y-4">
+                        {renderSetting(t('footballStudio.mode'), (
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => updateSettings({ mode: 'idol' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.mode === 'idol' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.idolMode')}</button>
+                                <button onClick={() => updateSettings({ mode: 'outfit' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.mode === 'outfit' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.outfitMode')}</button>
+                            </div>
+                        ))}
+                        
+                        {renderSetting(t('footballStudio.category'), (
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => updateSettings({ category: 'contemporary' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.category === 'contemporary' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.categories.contemporary')}</button>
+                                <button onClick={() => updateSettings({ category: 'legendary' })} className={`py-2 px-3 rounded-md text-sm transition-all duration-200 w-full font-semibold ${settings.category === 'legendary' ? 'btn-gradient text-white shadow-md' : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'}`}>{t('footballStudio.categories.legendary')}</button>
+                            </div>
+                        ))}
+                        
+                        {renderSetting(t('footballStudio.team'), <select value={settings.team} onChange={e => updateSettings({ team: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">{teamOptions.map(teamKey => <option key={teamKey} value={teamKey}>{t(`footballStudio.teams.${teamKey}`)}</option>)}</select>)}
+                        {renderSetting(t('footballStudio.player'), 
+                            <select value={settings.player} onChange={e => updateSettings({ player: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
+                                <option value="">{t('footballStudio.placeholders.player')}</option>
+                                {playerOptions.map(p => <option key={p.vi} value={p.vi}>{p[currentLang] || p.vi}</option>)}
+                            </select>
+                        )}
+                        {renderSetting(t('footballStudio.scene'), 
+                            <select value={settings.scene} onChange={e => updateSettings({ scene: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
+                                <option value="">{t('footballStudio.placeholders.scene')}</option>
+                                {sceneOptions.map(sKey => <option key={sKey} value={sKey}>{t(sKey)}</option>)}
+                            </select>
+                        )}
+                        {renderSetting(t('footballStudio.aspectRatio'), 
+                            <select value={settings.aspectRatio} onChange={e => updateSettings({ aspectRatio: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
+                                 <option value="">{t('footballStudio.placeholders.aspectRatio')}</option>
+                                {FOOTBALL_ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        )}
+                        {renderSetting(t('footballStudio.style'), 
+                            <select value={settings.style} onChange={e => updateSettings({ style: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
+                                <option value="">{t('footballStudio.placeholders.style')}</option>
+                                {FOOTBALL_STYLES.map(sKey => <option key={sKey} value={sKey}>{t(sKey)}</option>)}
+                            </select>
+                        )}
+                        {renderSetting(t('footballStudio.customPrompt'), <input type="text" value={settings.customPrompt} onChange={e => updateSettings({ customPrompt: e.target.value })} placeholder={t('footballStudio.customPromptPlaceholder')} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm" />)}
+                    </div>
+                    <div className="mt-auto pt-4">
+                         <button onClick={handleGenerate} disabled={!canGenerate} className={`w-full btn-gradient text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${canGenerate ? 'animate-pulse-glow' : ''}`}>
+                            {isLoading ? <><Spinner /> <span className="ml-2">{t('footballStudio.generating')}</span></> : <><i className="fas fa-futbol mr-2"></i> {t('footballStudio.generateButton')}</>}
+                        </button>
+                    </div>
+                </aside>
             </div>
         </div>
     );
