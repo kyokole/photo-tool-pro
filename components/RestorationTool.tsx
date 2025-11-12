@@ -298,7 +298,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme }) =>
                                 </div>
                             </div>
                         )}
-                        <div className="mt-auto pt-6">
+                        <div className="pt-6">
                             {(originalFile && !result) && (
                                 <button onClick={() => handleGenerate()} disabled={isLoading} className="w-full btn-gradient text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50">
                                     {isLoading ? <>{t('common.processing')}</> : <><i className="fas fa-wand-magic-sparkles mr-2"></i> {t('restoration.restoreButton')}</>}

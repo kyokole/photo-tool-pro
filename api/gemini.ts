@@ -278,7 +278,7 @@ const buildRestorationPrompt = (options: RestorationOptions): string => {
 // --- END OF MERGED CODE ---
 
 // Base64 encoded watermark PNG. This avoids external network requests.
-const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
+const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
 
 // --- Firebase Admin Initialization ---
 try {
@@ -358,61 +358,46 @@ const smartCropServer = async (imageBase64: string, aspectRatio: AspectRatio): P
 };
 
 
-// --- Professional Watermark Logic (Refactored for Robustness) ---
-async function applyWatermark(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
+// --- NEW: Robust Watermark Logic using Gemini AI ---
+async function applyWatermarkWithGemini(generatedImageBase64: string, originalMimeType: string): Promise<{ data: string, mimeType: string }> {
     try {
-        const mainImageBuffer = Buffer.from(generatedImageBase64, 'base64');
-        const mainImage = sharp(mainImageBuffer);
-        const metadata = await mainImage.metadata();
-        if (!metadata.width || !metadata.height || !metadata.format) {
-            throw new Error('Không thể đọc siêu dữ liệu hình ảnh để đóng dấu.');
+        const ai = getAi();
+        const models = ai.models;
+
+        const mainImagePart: Part = {
+            inlineData: { data: generatedImageBase64, mimeType: originalMimeType }
+        };
+
+        const watermarkPart: Part = {
+            inlineData: { data: WATERMARK_BASE64, mimeType: 'image/png' }
+        };
+
+        const prompt = `You are an expert image editor. Your only task is to overlay the second image (a watermark) onto the first image (the main content).
+        - Place the watermark in the bottom-right corner.
+        - The watermark should be semi-transparent (around 70% opacity).
+        - Scale the watermark to be approximately 20% of the main image's width.
+        - Do not alter the main content, colors, or aspect ratio in any other way.
+        - Output the final composite image.`;
+        
+        const textPart: Part = { text: prompt };
+
+        const response = await models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [mainImagePart, watermarkPart, textPart] },
+            config: { responseModalities: [Modality.IMAGE] }
+        });
+        
+        const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+
+        if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) {
+            throw new Error("Gemini did not return an image for watermarking.");
         }
 
-        const watermarkBuffer = Buffer.from(WATERMARK_BASE64, 'base64');
-        
-        // 1. Resize watermark to be a fraction of the main image's width
-        const watermarkWidth = Math.floor(metadata.width * 0.20);
-        
-        // 2. Create a semi-transparent version of the watermark
-        const resizedWatermarkBuffer = await sharp(watermarkBuffer)
-            .resize({ width: watermarkWidth })
-            .png() // Ensure it's a PNG to handle transparency
-            .ensureAlpha() // Ensure an alpha channel exists before compositing.
-            .composite([{
-                input: Buffer.from([255, 255, 255, Math.round(255 * 0.7)]),
-                raw: { width: 1, height: 1, channels: 4 },
-                tile: true,
-                blend: 'dest-in'
-            }])
-            .toBuffer();
-            
-        // 3. Calculate position for the watermark
-        const resizedWatermarkMeta = await sharp(resizedWatermarkBuffer).metadata();
-        const margin = Math.floor(metadata.width * 0.02);
-        const top = metadata.height - resizedWatermarkMeta.height! - margin;
-        const left = metadata.width - resizedWatermarkMeta.width! - margin;
-
-        // 4. Perform a single, simple composite operation
-        const compositeImage = mainImage.composite([
-            { input: resizedWatermarkBuffer, top: top, left: left }
-        ]);
-        
-        // 5. Convert to final format
-        let finalBuffer: Buffer;
-        let finalMimeType: string;
-
-        if (metadata.format === 'png') {
-            finalBuffer = await compositeImage.png().toBuffer();
-            finalMimeType = 'image/png';
-        } else {
-            finalBuffer = await compositeImage.jpeg({ quality: 95 }).toBuffer();
-            finalMimeType = 'image/jpeg';
-        }
-            
-        return { data: finalBuffer.toString('base64'), mimeType: finalMimeType };
+        return { data: resultPart.inlineData.data, mimeType: resultPart.inlineData.mimeType };
 
     } catch (error) {
-        console.error("Quá trình đóng dấu thất bại, trả về ảnh gốc không có dấu.", error);
+        console.error("Gemini watermarking process failed, returning original image without watermark.", error);
+        // Fallback: return the original image if the AI-based watermarking fails for any reason.
         return { data: generatedImageBase64, mimeType: originalMimeType };
     }
 }
@@ -496,7 +481,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // 5. Apply watermark if not VIP
                 let finalImageData = { data: croppedImageB64, mimeType: 'image/png' }; // smartCropServer always returns png
                 if (!isVip) {
-                    finalImageData = await applyWatermark(finalImageData.data, finalImageData.mimeType);
+                    finalImageData = await applyWatermarkWithGemini(finalImageData.data, finalImageData.mimeType);
                 }
                 
                 // 6. Send final image to client
@@ -515,7 +500,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, mimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
                     data = watermarked.data;
                     mimeType = watermarked.mimeType;
                 }
@@ -542,7 +527,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, mimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
                     data = watermarked.data;
                     mimeType = watermarked.mimeType;
                 }
@@ -575,7 +560,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, mimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
                     data = watermarked.data;
                     mimeType = watermarked.mimeType;
                 }
@@ -595,7 +580,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, mimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
                     data = watermarked.data;
                     mimeType = watermarked.mimeType;
                 }
@@ -640,7 +625,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, mimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
                     data = watermarked.data;
                     mimeType = watermarked.mimeType;
                 }
@@ -672,7 +657,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let { data, mimeType } = resultPart.inlineData;
 
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, mimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, mimeType);
                     data = watermarked.data;
                     mimeType = watermarked.mimeType;
                 }
@@ -881,7 +866,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 let finalImageB64s: string[];
                 if (!isVip) {
-                    const watermarkedResults = await Promise.all(successfulImages.map(img => applyWatermark(img.data, img.mimeType)));
+                    const watermarkedResults = await Promise.all(successfulImages.map(img => applyWatermarkWithGemini(img.data, img.mimeType)));
                     finalImageB64s = watermarkedResults.map(res => res.data); // Only return base64 string
                 } else {
                     finalImageB64s = successfulImages.map(img => img.data); // Only return base64 string
@@ -977,7 +962,7 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
 
                 let finalMimeType = 'image/jpeg';
                 if (!isVip) {
-                    const watermarked = await applyWatermark(data, finalMimeType);
+                    const watermarked = await applyWatermarkWithGemini(data, finalMimeType);
                     data = watermarked.data;
                     finalMimeType = watermarked.mimeType;
                 }
