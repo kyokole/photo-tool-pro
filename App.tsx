@@ -1,11 +1,9 @@
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-// FIX: Use Firebase v8 compat imports to match the environment, which seems to be using an older API.
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import 'firebase/compat/firestore';
-import { getAuthInstance, getDbInstance, initializeFirebase } from './services/firebase';
+import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuthInstance, getDbInstance } from './services/firebase';
 import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, AccordionSection, HeadshotStyle, RestorationResult, FashionStudioSettings, FashionStudioResult, IdPhotoJob } from './types';
 import { generateIdPhoto, generateHeadshot, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
@@ -61,8 +59,9 @@ const loadSettingsFromSession = (): Settings => {
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
   
-  // State for Firebase Initialization
-  const [isFirebaseInitialized, setIsFirebaseInitialized] = useState(false);
+  // Lấy các instance đã được khởi tạo của Firebase
+  const auth = getAuthInstance();
+  const db = getDbInstance();
 
   // ID Photo State
   const [settings, setSettings] = useState<Settings>(loadSettingsFromSession());
@@ -127,21 +126,28 @@ const App: React.FC = () => {
     return currentUser.isAdmin || (new Date(currentUser.subscriptionEndDate) > new Date());
   }, [currentUser]);
 
-  // Effect to initialize Firebase on component mount
   useEffect(() => {
-    const initFirebase = async () => {
-      const success = await initializeFirebase();
-      setIsFirebaseInitialized(success);
-      if (!success) {
-        // Handle initialization failure if necessary, e.g., show an error banner
-        console.error("Firebase initialization failed in App component.");
-        alert("Failed to connect to backend services. Some features may be unavailable.");
-      }
-    };
-    initFirebase();
-  }, []); // Empty dependency array ensures this runs only once
+    document.documentElement.lang = i18n.language;
+    auth.languageCode = i18n.language;
+  }, [i18n.language, auth]);
   
-  // FIX: Hoisted handleModeChange and its dependencies above the useEffect that uses it to resolve the "used before its declaration" error.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+  
+  const loadAllUsers = useCallback(async () => {
+    if (!currentUser?.isAdmin) return;
+    try {
+        const usersCol = collection(db, "users");
+        const userSnapshot = await getDocs(usersCol);
+        const userList = userSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
+        setAllUsers(userList);
+    } catch (e) {
+        console.error("Failed to load all users from Firestore", e);
+        setAllUsers([]);
+    }
+  }, [currentUser?.isAdmin, db]);
+  
   const handleAbort = () => {
     if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -244,19 +250,9 @@ const App: React.FC = () => {
     resetAllTools();
     setAppMode(newMode);
   }, [resetAllTools]);
-
+  
   useEffect(() => {
-    // This effect now depends on Firebase initialization
-    if (!isFirebaseInitialized) {
-      return; // Do nothing until Firebase is ready
-    }
-
-    const auth = getAuthInstance();
-    const db = getDbInstance();
-    auth.languageCode = i18n.language;
-    document.documentElement.lang = i18n.language;
-
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
         setIsAuthLoading(true);
 
         if (!user) {
@@ -267,33 +263,44 @@ const App: React.FC = () => {
         }
 
         try {
-            const userDocRef = db.collection('users').doc(user.uid);
-            const userDoc = await userDocRef.get();
+            // Luôn cố gắng đọc hồ sơ người dùng từ Firestore trước.
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
             
-            let userData = userDoc.exists ? userDoc.data() : null;
+            let userData = userDoc.exists() ? userDoc.data() : null;
             const isDbAdmin = userData?.isAdmin === true;
 
-            await user.reload();
+            // Bây giờ, kiểm tra email đã xác thực hay chưa *trừ khi* người dùng là admin.
+            await user.reload(); // Tải lại để lấy trạng thái emailVerified mới nhất
             if (!user.emailVerified && !isDbAdmin) {
                 if (isNewRegistration.current) {
-                    await user.sendEmailVerification();
-                    isNewRegistration.current = false;
+                    await sendEmailVerification(user);
+                    isNewRegistration.current = false; // Đặt lại cờ sau khi gửi
                 }
                 setIsVerificationModalVisible(true);
                 setIsAuthLoading(false);
-                return;
+                return; // Dừng ở đây và hiển thị modal xác thực cho người dùng không phải admin
             }
             
+            // Nếu đến được đây, người dùng là admin HOẶC là người dùng thường đã xác thực.
             setIsVerificationModalVisible(false);
 
-            if (!userData) {
-                const expiryDate = new Date(0);
+            if (!userData) { // Tương ứng với !userDoc.exists() trước đó
+                // Logic mô hình Freemium: Người dùng mới không có thời gian dùng thử.
+                // Ngày hết hạn được đặt thành một ngày trong quá khứ.
+                const expiryDate = new Date(0); // 1970-01-01
+
                 userData = {
                     username: user.email!,
                     subscriptionEndDate: expiryDate.toISOString(),
-                    isAdmin: false,
+                    isAdmin: false, // Người dùng mới không bao giờ là admin
                 };
-                await userDocRef.set(userData);
+                await setDoc(userDocRef, userData);
+
+            } else {
+                 if (!userData) {
+                    throw new Error(`Tài liệu hồ sơ người dùng bị rỗng (UID: ${user.uid}). Vui lòng liên hệ hỗ trợ.`);
+                }
             }
 
             const appUser: User = {
@@ -313,51 +320,50 @@ const App: React.FC = () => {
                 const userIsVip = appUser.isAdmin || (new Date(appUser.subscriptionEndDate) > new Date());
 
                 if (targetIsVipTool && !userIsVip) {
+                    // User tries to access a VIP tool but isn't VIP. Show modal, don't redirect.
                     setIsSubscriptionModalVisible(true);
                 } else {
+                    // User is VIP or the tool is free, proceed with redirect.
                     handleModeChange(postLoginRedirect);
                 }
-                setPostLoginRedirect(null);
+                setPostLoginRedirect(null); // Clear the redirect request regardless.
             }
 
         } catch (e: any) {
             console.error("Lỗi xác thực nghiêm trọng (Firestore):", e);
+            
             let userMessage = t('errors.authError');
             if (e.code === 'permission-denied' || (e.message && (e.message.toLowerCase().includes('permission-denied') || e.message.toLowerCase().includes('insufficient permissions')))) {
                 userMessage = t('errors.firestorePermissionDenied'); 
             } else if (e.message) {
                 userMessage = e.message;
             }
+
             alert(`${t('errors.loginFailedServer')}: ${userMessage}\n\n${t('errors.loginFailedHelp')}`);
-            await auth.signOut();
+            
+            await signOut(auth);
+            
         } finally {
             setIsAuthLoading(false);
         }
     });
 
     return () => unsubscribe();
-  }, [isFirebaseInitialized, i18n.language, handleModeChange, postLoginRedirect, t]);
+  }, [auth, db, handleModeChange, postLoginRedirect, t]);
 
 
-  
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-  
-  const loadAllUsers = useCallback(async () => {
-    if (!currentUser?.isAdmin || !isFirebaseInitialized) return;
-    try {
-        const db = getDbInstance();
-        const usersCol = db.collection("users");
-        const userSnapshot = await usersCol.get();
-        const userList = userSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
-        setAllUsers(userList);
-    } catch (e) {
-        console.error("Failed to load all users from Firestore", e);
-        setAllUsers([]);
+    if (currentUser?.isAdmin) {
+        loadAllUsers();
     }
-  }, [currentUser?.isAdmin, isFirebaseInitialized]);
-  
+  }, [currentUser, loadAllUsers]);
+
+  useEffect(() => {
+    if (appMode === 'admin' && !currentUser?.isAdmin) {
+      setAppMode('headshot');
+    }
+  }, [appMode, currentUser]);
+
   const handleGenerate = useCallback(async (settingsOverride?: Partial<Settings>) => {
     if (!originalImage) {
       setIdPhotoError(t('errors.uploadRequired'));
@@ -389,9 +395,10 @@ const App: React.FC = () => {
       
       const finalImageFromServer = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
       
+      // Client-side watermarking for non-VIPs
       const finalImage = !isVip ? await applyWatermark(finalImageFromServer) : finalImageFromServer;
 
-      setIsAiCropped(true);
+      setIsAiCropped(true); // Since the server handles the crop, we can consider it AI-cropped immediately.
 
       const newHistoryItem: HistoryItem = { image: finalImage, settings: { ...currentSettings } };
       setHistory(prev => [...prev, newHistoryItem]);
@@ -559,6 +566,7 @@ const App: React.FC = () => {
                     reader.readAsDataURL(job.file);
                 });
 
+                // Watermarking is not applied in batch mode as it's a VIP feature
                 const finalImage = await generateIdPhoto(originalImageBase64, settings);
 
                 job.processedUrl = finalImage;
@@ -596,7 +604,8 @@ const App: React.FC = () => {
         );
         
         const generatedImagesFromServer = await Promise.all(generationPromises);
-        
+
+        // Client-side watermarking for non-VIPs
         const finalImages = !isVip 
             ? await Promise.all(generatedImagesFromServer.map(img => applyWatermark(img))) 
             : generatedImagesFromServer;
@@ -649,7 +658,8 @@ const App: React.FC = () => {
       try {
         const imagePart = await fileToGenerativePart(fashionStudioFile);
         if (!imagePart) throw new Error(t('errors.fileProcessingError'));
-        
+
+        // Since Fashion Studio is a VIP feature, no watermarking is needed here.
         const imageUrl = await generateFashionPhoto(imagePart, fashionStudioSettings, abortControllerRef.current.signal);
         
         setFashionStudioResult({
@@ -690,6 +700,7 @@ const App: React.FC = () => {
     setFashionStudioSettings(prevSettings => {
         const newSettings = typeof updater === 'function' ? updater(prevSettings) : updater;
 
+        // If the category has changed, we need to reset the style to the first valid one.
         if (newSettings.category !== prevSettings.category) {
             let newStyle = '';
             if (newSettings.category === 'female') newStyle = FASHION_FEMALE_STYLES[0].promptValue;
@@ -697,28 +708,34 @@ const App: React.FC = () => {
             else if (newSettings.category === 'girl') newStyle = FASHION_GIRL_STYLES[0].promptValue;
             else if (newSettings.category === 'boy') newStyle = FASHION_BOY_STYLES[0].promptValue;
             
+            // Return new state with both category and style updated atomically
             return { ...newSettings, style: newStyle };
         }
-        
+
+        // If only other settings changed (like style itself), just apply the update.
         return newSettings;
     });
   }, []);
 
     const handleLogin = (email: string, password: string): Promise<void> => {
         return new Promise(async (resolve, reject) => {
-            if (!isFirebaseInitialized) return reject(new Error("Authentication service not ready."));
             try {
-                const auth = getAuthInstance();
-                await auth.signInWithEmailAndPassword(email, password);
+                await signInWithEmailAndPassword(auth, email, password);
                 resolve();
             } catch (error: any) {
                 let errorMessage;
                 switch (error.code) {
-                    case 'auth/user-disabled': errorMessage = t('errors.userDisabled'); break;
+                    case 'auth/user-disabled':
+                        errorMessage = t('errors.userDisabled');
+                        break;
                     case 'auth/wrong-password':
                     case 'auth/invalid-credential':
-                    case 'auth/user-not-found': errorMessage = t('errors.invalidCredential'); break;
-                    default: errorMessage = error.message || t('errors.unknownError'); break;
+                    case 'auth/user-not-found':
+                        errorMessage = t('errors.invalidCredential');
+                        break;
+                    default:
+                        errorMessage = error.message || t('errors.unknownError');
+                        break;
                 }
                 reject(new Error(errorMessage));
             }
@@ -727,19 +744,23 @@ const App: React.FC = () => {
     
     const handleRegister = (email: string, password: string): Promise<void> => {
         return new Promise(async (resolve, reject) => {
-            if (!isFirebaseInitialized) return reject(new Error("Authentication service not ready."));
              try {
-                const auth = getAuthInstance();
                 isNewRegistration.current = true;
-                await auth.createUserWithEmailAndPassword(email, password);
+                await createUserWithEmailAndPassword(auth, email, password);
                 resolve();
             } catch (error: any) {
                  isNewRegistration.current = false;
                  let errorMessage;
                 switch (error.code) {
-                    case 'auth/email-already-in-use': errorMessage = t('auth.emailAlreadyInUse'); break;
-                    case 'auth/weak-password': errorMessage = t('errors.passwordTooShort'); break;
-                    default: errorMessage = error.message || t('errors.unknownError'); break;
+                    case 'auth/email-already-in-use':
+                        errorMessage = t('auth.emailAlreadyInUse');
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = t('errors.passwordTooShort');
+                        break;
+                    default:
+                        errorMessage = error.message || t('errors.unknownError');
+                        break;
                 }
                 reject(new Error(errorMessage));
             }
@@ -747,40 +768,32 @@ const App: React.FC = () => {
     };
 
   const handleGoogleSignIn = async (): Promise<void> => {
-    if (!isFirebaseInitialized) throw new Error("Authentication service not ready.");
-    const auth = getAuthInstance();
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
   };
   
   const handleResendVerification = async (): Promise<void> => {
-    if (!isFirebaseInitialized) return;
-    const auth = getAuthInstance();
     const user = auth.currentUser;
     if(user) {
-        await user.sendEmailVerification();
+        await sendEmailVerification(user);
     }
   };
 
   const handleForgotPassword = (email: string): Promise<void> => {
-    if (!isFirebaseInitialized) return Promise.reject(new Error("Authentication service not ready."));
-    const auth = getAuthInstance();
-    return auth.sendPasswordResetEmail(email);
+    return sendPasswordResetEmail(auth, email);
   };
 
   const handleChangePassword = (oldPassword: string, newPassword: string): Promise<void> => {
     return new Promise(async (resolve, reject) => {
-        if (!isFirebaseInitialized) return reject(new Error("Authentication service not ready."));
-        const auth = getAuthInstance();
         const user = auth.currentUser;
         if (!user || !user.email) {
             return reject(new Error(t('errors.mustBeLoggedIn')));
         }
     
         try {
-            const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPassword);
-            await user.reauthenticateWithCredential(credential);
-            await user.updatePassword(newPassword);
+            const credential = EmailAuthProvider.credential(user.email, oldPassword);
+            await reauthenticateWithCredential(user, credential);
+            await updatePassword(user, newPassword);
             resolve();
         } catch (error: any) {
             console.error("Failed to change password:", error);
@@ -795,10 +808,8 @@ const App: React.FC = () => {
 
 
   const handleLogout = async () => {
-    if (!isFirebaseInitialized) return;
     try {
-        const auth = getAuthInstance();
-        await auth.signOut();
+        await signOut(auth);
         setAppMode('headshot');
         resetAllTools();
     } catch (error) {
@@ -807,12 +818,11 @@ const App: React.FC = () => {
   };
 
   const handleGrantSubscription = useCallback(async (uid: string, daysToAdd: number) => {
-    if (!currentUser?.isAdmin || !isFirebaseInitialized) return;
+    if (!currentUser?.isAdmin) return;
     try {
-        const db = getDbInstance();
-        const userDocRef = db.collection("users").doc(uid);
-        const userDoc = await userDocRef.get();
-        if (!userDoc.exists) throw new Error("User not found");
+        const userDocRef = doc(db, "users", uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) throw new Error("User not found");
         
         const userData = userDoc.data()!;
         const currentEndDate = new Date(userData.subscriptionEndDate);
@@ -821,33 +831,32 @@ const App: React.FC = () => {
         const newExpiryDate = new Date(startDate);
         newExpiryDate.setDate(newExpiryDate.getDate() + daysToAdd);
 
-        await userDocRef.update({
+        await updateDoc(userDocRef, {
             subscriptionEndDate: newExpiryDate.toISOString()
         });
-        loadAllUsers();
+        loadAllUsers(); // Refresh the user list
     } catch (e) {
         console.error("Failed to grant subscription:", e);
         alert(t('errors.saveUserError'));
     }
-  }, [currentUser, isFirebaseInitialized, loadAllUsers, t]);
+  }, [currentUser, loadAllUsers, t, db]);
 
   const handleToggleAdmin = useCallback(async (uid: string) => {
-    if (!currentUser?.isAdmin || currentUser.uid === uid || !isFirebaseInitialized) {
+    if (!currentUser?.isAdmin || currentUser.uid === uid) {
         alert(t('errors.cannotChangeOwnAdmin'));
         return;
     }
     try {
-        const db = getDbInstance();
-        const userDocRef = db.collection("users").doc(uid);
-        const userDoc = await userDocRef.get();
-        if (!userDoc.exists) throw new Error("User not found");
+        const userDocRef = doc(db, "users", uid);
+        const userDoc = await getDoc(userDocRef);
+        if (!userDoc.exists()) throw new Error("User not found");
 
         const isNowAdmin = !userDoc.data()!.isAdmin;
         const newSubscriptionDate = isNowAdmin
             ? new Date(8640000000000000).toISOString()
             : new Date().toISOString();
 
-        await userDocRef.update({
+        await updateDoc(userDocRef, {
             isAdmin: isNowAdmin,
             subscriptionEndDate: newSubscriptionDate
         });
@@ -856,16 +865,15 @@ const App: React.FC = () => {
         console.error("Failed to toggle admin status:", e);
         alert(t('errors.saveUserError'));
     }
-  }, [currentUser, isFirebaseInitialized, loadAllUsers, t]);
+  }, [currentUser, loadAllUsers, t, db]);
 
 
   const handleResetUserPassword = useCallback(async (email: string): Promise<void> => {
-    if (!currentUser?.isAdmin || !isFirebaseInitialized) {
+    if (!currentUser?.isAdmin) {
         throw new Error(t('errors.noAdminRights'));
     }
     try {
-        const auth = getAuthInstance();
-        await auth.sendPasswordResetEmail(email);
+        await sendPasswordResetEmail(auth, email);
     } catch (error: any) {
         console.error("Failed to send password reset email by admin:", error);
         if (error.code === 'auth/user-not-found') {
@@ -873,7 +881,7 @@ const App: React.FC = () => {
         }
         throw new Error(t('errors.passwordResetError'));
     }
-  }, [currentUser, isFirebaseInitialized, t]);
+  }, [currentUser, t, auth]);
 
   const handleIdPhotoSelect = () => {
     if (appMode !== 'id_photo') handleModeChange('id_photo');
@@ -1120,6 +1128,8 @@ const App: React.FC = () => {
 
   const handleSubscriptionExpired = useCallback(() => {
     if (currentUser && !currentUser.isAdmin) {
+      // FIX: Check if the expiry date is the epoch (Jan 1, 1970).
+      // If so, this is a new freemium user, not an expired VIP. Do not show the modal.
       const expiry = new Date(currentUser.subscriptionEndDate);
       if (expiry.getTime() === 0) {
         return; 
@@ -1144,17 +1154,6 @@ const App: React.FC = () => {
     handleModeChange('creative_studio');
   }, [handleModeChange]);
 
-  useEffect(() => {
-    if (currentUser?.isAdmin) {
-        loadAllUsers();
-    }
-  }, [currentUser, loadAllUsers]);
-
-  useEffect(() => {
-    if (appMode === 'admin' && !currentUser?.isAdmin) {
-      setAppMode('headshot');
-    }
-  }, [appMode, currentUser]);
   const VIPSuspenseFallback = () => (
     <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
         <svg className="animate-spin h-16 w-16 text-[var(--accent-blue)] mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1166,18 +1165,10 @@ const App: React.FC = () => {
     </div>
   );
 
-  const renderContent = () => {
-    if (isAuthLoading && !currentUser) {
-        return (
-            <div className="w-full h-full flex items-center justify-center">
-                <svg className="animate-spin h-8 w-8 text-[var(--accent-blue)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
-        );
-    }
 
+  const isLoading = isGenerating || isHeadshotLoading || isFashionStudioLoading || isBatchProcessing; 
+
+  const renderContent = () => {
     switch (appMode) {
       case 'id_photo':
         return isBatchMode ? (
@@ -1378,7 +1369,11 @@ const App: React.FC = () => {
     }
   };
 
-  const isLoading = isGenerating || isHeadshotLoading || isFashionStudioLoading || isBatchProcessing; 
+  if (isAuthLoading && !currentUser) {
+    // While checking auth for the first time, show nothing to avoid UI flicker
+    // The preloader from index.html will cover this empty state.
+    return null; 
+  }
 
   return (
     <div className="text-[var(--text-primary)] min-h-screen font-sans flex flex-col md:flex-row overflow-hidden bg-[var(--bg-primary)] transition-colors duration-300">
@@ -1410,12 +1405,12 @@ const App: React.FC = () => {
             onClose={() => setIsChangePasswordModalVisible(false)}
         />
       )}
-       {isVerificationModalVisible && isFirebaseInitialized && (
+       {isVerificationModalVisible && (
         <VerificationModal
             isOpen={isVerificationModalVisible}
             onClose={handleLogout}
             onResend={handleResendVerification}
-            email={getAuthInstance().currentUser?.email || ''}
+            email={auth.currentUser?.email || ''}
         />
        )}
       <input type="file" ref={fileUploadRef} onChange={handleImageUpload} accept="image/*" className="hidden" multiple />

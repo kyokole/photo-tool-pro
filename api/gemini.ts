@@ -830,7 +830,6 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
                 parts.push({text: prompt});
                 
                 const schema = {
-                    // FIX: Changed uppercase TYPE to lowercase Type to match the import.
                     type: Type.OBJECT,
                     properties: {
                         background_prompt: {
