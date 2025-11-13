@@ -596,6 +596,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
+            
+            case 'generateVideoPrompt': {
+                if (!payload || !payload.userIdea || !payload.base64Image) {
+                    return res.status(400).json({ error: "Thiếu ý tưởng người dùng hoặc ảnh." });
+                }
+                const { userIdea, base64Image } = payload;
+                const imagePart = { inlineData: { data: base64Image, mimeType: 'image/png' } };
+                const prompt = `Based on the user's idea: "${userIdea}" and the provided image, create two detailed, cinematic prompts for a text-to-video AI model (like Google Veo). One prompt must be in professional English, and the other in professional Vietnamese. The prompts should be rich in visual detail, describing action, camera movement, and lighting. Return ONLY a valid JSON object with the keys "englishPrompt" and "vietnamesePrompt".`;
+                const schema = {
+                    type: Type.OBJECT,
+                    properties: {
+                        englishPrompt: { type: Type.STRING },
+                        vietnamesePrompt: { type: Type.STRING }
+                    }
+                };
+                const response = await models.generateContent({
+                    model: 'gemini-2.5-pro',
+                    contents: { parts: [imagePart, { text: prompt }] },
+                    config: { responseMimeType: "application/json", responseSchema: schema }
+                });
+                const jsonResponse = JSON.parse((response.text ?? '').trim());
+                return res.status(200).json({ prompts: jsonResponse });
+            }
 
             case 'generateImagesFromFeature': {
                 const { featureAction, formData, numImages } = payload;

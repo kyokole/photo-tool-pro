@@ -17,7 +17,7 @@ import LoadingOverlay from './components/LoadingOverlay';
 import UserGuideModal from './components/UserGuideModal';
 import AboutModal from './components/AboutModal';
 import DonateModal from './components/DonateModal';
-import HeadshotGenerator from './components/HeadshotGenerator';
+// import HeadshotGenerator from './components/HeadshotGenerator';
 // import RestorationTool from './components/RestorationTool';
 // import FashionStudio from './components/FashionStudio';
 // import FootballStudio from './components/FootballStudio';
@@ -28,13 +28,15 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 // import PromptAnalyzer from './components/PromptAnalyzer';
 import { ThemeSelector } from './components/creativestudio/ThemeSelector';
 import UpgradeVipModal from './components/SubscriptionExpiredModal';
-import BatchProcessor from './components/BatchProcessor';
+// import BatchProcessor from './components/BatchProcessor';
 // import FourSeasonsStudio from './components/FourSeasonsStudio';
 import LegalModal from './components/LegalModal';
 import VerificationModal from './components/VerificationModal';
 // import BeautyStudio from './components/BeautyStudio';
 
-// --- LAZY LOADING FOR VIP COMPONENTS ---
+// --- LAZY LOADING FOR ALL MAJOR TOOL COMPONENTS ---
+const HeadshotGenerator = React.lazy(() => import('./components/HeadshotGenerator'));
+const BatchProcessor = React.lazy(() => import('./components/BatchProcessor'));
 const RestorationTool = React.lazy(() => import('./components/RestorationTool'));
 const FashionStudio = React.lazy(() => import('./components/FashionStudio'));
 const FootballStudio = React.lazy(() => import('./components/FootballStudio'));
@@ -1172,24 +1174,26 @@ const App: React.FC = () => {
     switch (appMode) {
       case 'id_photo':
         return isBatchMode ? (
-          <BatchProcessor
-            jobs={idPhotoJobs}
-            settings={settings}
-            onDestructiveSettingChange={handleDestructiveSettingChange}
-            onPrintSettingChange={handlePrintSettingChange}
-            isProcessing={isBatchProcessing}
-            onGenerate={handleGenerateBatch}
-            onAddPhotos={triggerUpload}
-            onClear={handleResetIdPhotoTool}
-            onRemoveJob={handleRemoveIdPhotoJob}
-            isVip={isVip}
-            onContactClick={() => setIsAboutModalVisible(true)}
-            activeSection={activeWizardSection}
-            setActiveSection={handleSetActiveWizardSection}
-            enabledSections={enabledWizardSections}
-            onOutfitUpload={triggerOutfitUpload}
-            onClearOutfit={handleClearOutfitFile}
-          />
+          <Suspense fallback={<VIPSuspenseFallback />}>
+            <BatchProcessor
+              jobs={idPhotoJobs}
+              settings={settings}
+              onDestructiveSettingChange={handleDestructiveSettingChange}
+              onPrintSettingChange={handlePrintSettingChange}
+              isProcessing={isBatchProcessing}
+              onGenerate={handleGenerateBatch}
+              onAddPhotos={triggerUpload}
+              onClear={handleResetIdPhotoTool}
+              onRemoveJob={handleRemoveIdPhotoJob}
+              isVip={isVip}
+              onContactClick={() => setIsAboutModalVisible(true)}
+              activeSection={activeWizardSection}
+              setActiveSection={handleSetActiveWizardSection}
+              enabledSections={enabledWizardSections}
+              onOutfitUpload={triggerOutfitUpload}
+              onClearOutfit={handleClearOutfitFile}
+            />
+          </Suspense>
         ) : (
           <>
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -1285,17 +1289,19 @@ const App: React.FC = () => {
         );
       case 'headshot':
         return (
-          <HeadshotGenerator
-            sourceFile={headshotSourceFile}
-            results={headshotResults}
-            isLoading={isHeadshotLoading}
-            error={headshotError}
-            onImageUpload={processSingleFile}
-            onGenerate={handleGenerateHeadshots}
-            onReset={handleResetHeadshotTool}
-            theme={theme}
-            setTheme={setTheme}
-          />
+          <Suspense fallback={<VIPSuspenseFallback />}>
+            <HeadshotGenerator
+              sourceFile={headshotSourceFile}
+              results={headshotResults}
+              isLoading={isHeadshotLoading}
+              error={headshotError}
+              onImageUpload={processSingleFile}
+              onGenerate={handleGenerateHeadshots}
+              onReset={handleResetHeadshotTool}
+              theme={theme}
+              setTheme={setTheme}
+            />
+          </Suspense>
         );
       case 'restoration':
           return (
