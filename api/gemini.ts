@@ -404,6 +404,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // --- End of VIP Status Check ---
 
         switch (action) {
+            case 'generateVideoPrompt': {
+                if (!payload || !payload.userIdea || !payload.base64Image) {
+                    return res.status(400).json({ error: 'Thiếu ý tưởng người dùng hoặc ảnh.' });
+                }
+                const { userIdea, base64Image } = payload;
+
+                const imagePart = {
+                    inlineData: {
+                        data: base64Image,
+                        mimeType: 'image/png' // Assuming PNG from client, could be improved
+                    }
+                };
+                
+                const prompt = `Act as a professional video prompt creator. Analyze the user's idea and the provided image.
+User Idea: "${userIdea}"
+Based on this, create a detailed, cinematic, and highly descriptive video generation prompt in English.
+Then, provide a professional translation of that English prompt into Vietnamese.
+Your final output must be ONLY a valid JSON object with two keys: "englishPrompt" and "vietnamesePrompt". Do not include any other text, explanations, or markdown backticks.
+Example response format:
+{
+  "englishPrompt": "An ultra-realistic 4K video of a person standing on a windy cliff, their hair flowing, cinematic lighting during golden hour, epic ocean waves crashing below.",
+  "vietnamesePrompt": "Một video 4K siêu thực về một người đứng trên vách đá lộng gió, mái tóc bay trong gió, ánh sáng điện ảnh vào giờ vàng, những con sóng đại dương hùng vĩ vỗ vào bên dưới."
+}`;
+
+                const response = await models.generateContent({
+                    model: 'gemini-2.5-pro',
+                    contents: { parts: [imagePart, { text: prompt }] },
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: Type.OBJECT,
+                            properties: {
+                                englishPrompt: { type: Type.STRING },
+                                vietnamesePrompt: { type: Type.STRING }
+                            }
+                        }
+                    }
+                });
+                
+                const jsonStr = (response.text ?? '{}').trim();
+                const prompts = JSON.parse(jsonStr);
+                
+                if (!prompts.englishPrompt || !prompts.vietnamesePrompt) {
+                    throw new Error("AI đã không tạo ra được prompt hợp lệ.");
+                }
+
+                return res.status(200).json({ prompts });
+            }
             case 'generateIdPhoto': {
                 if (!payload || !payload.originalImage || !payload.settings) return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc cài đặt.' });
                 const { originalImage, settings, outfitImagePart } = payload;

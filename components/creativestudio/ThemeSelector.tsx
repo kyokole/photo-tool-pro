@@ -40,7 +40,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onCh
         <div ref={wrapperRef} className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] rounded-lg px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2 transition-colors"
+                className="bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] rounded-lg p-2 sm:px-4 sm:py-2 text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2 transition-colors"
                 title={t('themes.change')}
             >
                 <i className="fas fa-palette w-5 text-center"></i>

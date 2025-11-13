@@ -7,7 +7,7 @@ import { getAuthInstance, getDbInstance } from './services/firebase';
 import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, AccordionSection, HeadshotStyle, RestorationResult, FashionStudioSettings, FashionStudioResult, IdPhotoJob } from './types';
 import { generateIdPhoto, generateHeadshot, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
-import { fileToGenerativePart } from './utils/fileUtils';
+import { fileToGenerativePart, fileToResizedDataURL } from './utils/fileUtils';
 import { applyWatermark } from './utils/canvasUtils';
 import Sidebar from './components/Sidebar';
 import ImagePanes from './components/ImagePanes';
@@ -434,7 +434,7 @@ const App: React.FC = () => {
     }
   }, [originalImage, settings, t, isVip]);
 
-  const processSingleFile = (file: File) => {
+  const processSingleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
         const errorMsg = t('errors.invalidImageFile');
         if (appMode === 'id_photo') setIdPhotoError(errorMsg);
@@ -444,8 +444,8 @@ const App: React.FC = () => {
     }
     
     if (appMode === 'id_photo') {
-        const reader = new FileReader();
-        reader.onloadend = () => {
+        try {
+            const resizedDataUrl = await fileToResizedDataURL(file);
             handleAbort();
             setProcessedImage(null);
             setHistory([]);
@@ -458,16 +458,16 @@ const App: React.FC = () => {
             setEnabledWizardSections(['layout']);
             setIsAiCropped(false);
             setIsBatchMode(false);
-            
-            const result = reader.result as string;
-            setOriginalImage(result);
-            setIsFreeTierLocked(false); 
+            setOriginalImage(resizedDataUrl);
+            setIsFreeTierLocked(false);
 
             if (!isVip) {
                 setIsPanelVisible(false);
             }
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            console.error("Failed to resize image for ID Photo tool", error);
+            setIdPhotoError(t('errors.fileProcessingError'));
+        }
     } else if (appMode === 'headshot') {
         handleResetHeadshotTool();
         setHeadshotSourceFile(file);
