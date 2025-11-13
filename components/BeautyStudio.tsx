@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { applyBeautyEffect } from '../services/geminiService';
-// FIX: The BEAUTY_FEATURES constant is defined in its own file. Updated the import path to correctly reference it and resolve the module not found error.
-import { BEAUTY_FEATURES } from '../constants/beautyConstants';
+import { BEAUTY_FEATURES } from '../constants';
 import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
 
 import { ImageProcessor } from './beautystudio/ImageProcessor';
@@ -12,7 +11,6 @@ import { HistoryPanel } from './beautystudio/HistoryPanel';
 import { ImageToolbar } from './beautystudio/ImageToolbar';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { CameraView } from './beautystudio/CameraView';
-import { dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
 
 interface BeautyStudioProps {
     theme: string;
@@ -40,11 +38,11 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
     const imageToModify = baseImageOverride || originalImage;
 
     if (!imageToModify) {
-      setError(t('beautyStudio.error.uploadRequired'));
+      setError("Please upload an image first.");
       return;
     }
     if (!currentTool) {
-      setError(t('beautyStudio.error.toolRequired'));
+      setError("Please select a tool.");
       return;
     }
 
@@ -92,7 +90,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : "An unknown error occurred during image generation.";
-      setError(t('beautyStudio.error.generationFailed', { errorMessage }));
+      setError(`Failed to generate image. ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -145,32 +143,15 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
     setGeneratedImage(null);
   }, []);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     const imageToSave = generatedImage || originalImage;
-    if (!imageToSave) return;
-
-    try {
-        const blob = dataUrlToBlob(imageToSave);
-        const file = new File([blob], 'beauty-plus-result.png', { type: blob.type });
-
-        // Use Web Share API if available (modern mobile browsers)
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: 'AI Beauty Image',
-                text: 'Created with AI PHOTO SUITE.',
-            });
-        } else {
-            // Fallback for desktops or older browsers
-            smartDownload(imageToSave, 'beauty-plus-result.png');
-        }
-    } catch (error) {
-        // Handle user cancellation of share sheet gracefully
-        if (error instanceof Error && error.name !== 'AbortError') {
-            console.error('Save/Share failed:', error);
-            // Fallback to simple download on any other error
-            smartDownload(imageToSave, 'beauty-plus-result.png');
-        }
+    if (imageToSave) {
+      const link = document.createElement('a');
+      link.href = imageToSave;
+      link.download = 'beauty-plus-result.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }, [originalImage, generatedImage]);
 
@@ -212,7 +193,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
           <div>
             <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text title-beauty-plus">Beauty Plus</h1>
             <p className="text-[var(--text-secondary)] mt-2 max-w-md mx-auto">
-                {t('beautyStudio.magicMirror')}
+                Biết trước gương mặt bạn thay đổi sau 30 giây với gương thần AI.
             </p>
           </div>
           <ThemeSelector currentTheme={theme} onChangeTheme={setTheme} />
@@ -221,18 +202,18 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
         <main className="space-y-6">
             {!originalImage ? (
                 <div className="bg-[var(--bg-component)] rounded-2xl shadow-inner p-8 flex flex-col items-center justify-center min-h-[400px] border border-[var(--border-color)]">
-                    <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">{t('beautyStudio.start.title')}</h2>
-                    <p className="text-[var(--text-secondary)] mb-8">{t('beautyStudio.start.subtitle')}</p>
+                    <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Bắt đầu Sáng tạo</h2>
+                    <p className="text-[var(--text-secondary)] mb-8">Chọn nguồn ảnh của bạn để bắt đầu chỉnh sửa.</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-md">
                         <button onClick={handleChangeImageClick} className="flex flex-col items-center justify-center p-6 bg-[var(--bg-tertiary)] rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-[var(--border-color)] hover:border-[var(--accent-cyan)]">
                              <div className="text-4xl mb-3 animated-gradient-text"><i className="fas fa-upload"></i></div>
-                             <span className="font-bold text-[var(--text-primary)]">{t('beautyStudio.start.uploadButton')}</span>
-                             <span className="text-xs text-[var(--text-secondary)] mt-1">{t('beautyStudio.start.uploadSubtitle')}</span>
+                             <span className="font-bold text-[var(--text-primary)]">Tải ảnh lên</span>
+                             <span className="text-xs text-[var(--text-secondary)] mt-1">Từ thiết bị của bạn</span>
                         </button>
                         <button onClick={() => setIsCameraOpen(true)} className="flex flex-col items-center justify-center p-6 bg-[var(--bg-tertiary)] rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-[var(--border-color)] hover:border-[var(--accent-cyan)]">
                             <div className="text-4xl mb-3 animated-gradient-text"><i className="fas fa-camera-retro"></i></div>
-                            <span className="font-bold text-[var(--text-primary)]">{t('beautyStudio.start.cameraButton')}</span>
-                            <span className="text-xs text-[var(--text-secondary)] mt-1">{t('beautyStudio.start.cameraSubtitle')}</span>
+                            <span className="font-bold text-[var(--text-primary)]">Sử dụng Camera</span>
+                            <span className="text-xs text-[var(--text-secondary)] mt-1">Chụp ảnh trực tiếp</span>
                         </button>
                     </div>
                 </div>
@@ -262,6 +243,14 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
                         currentImage={generatedImage}
                         onClear={handleClearHistory}
                     />
+                    
+                    <div className="pt-2">
+                        <div
+                        className={`w-full text-white font-bold text-lg py-4 px-6 rounded-xl shadow-lg flex items-center justify-center btn-gradient`}
+                        >
+                        Trải nghiệm gương thần AI
+                        </div>
+                    </div>
                     
                     {activeTool ? (
                         <DetailedEditor

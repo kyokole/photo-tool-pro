@@ -273,6 +273,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
               <nav className="space-y-1 pb-2">
+                <button onClick={onBeautyStudioClick} className={getToolButtonClasses('beauty_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-magic"></i></div>
+                    <span>{t('tools.beautyStudio')}</span>
+                </button>
                 <button onClick={onRestorationClick} className={getToolButtonClasses('restoration')}>
                     <div className="w-5 h-5"><i className="fas fa-wand-magic"></i></div>
                     <span>{t('tools.restoration')}</span>
@@ -296,10 +300,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <button onClick={onFourSeasonsClick} className={getToolButtonClasses('four_seasons_studio')}>
                     <div className="w-5 h-5"><i className="fas fa-leaf"></i></div>
                     <span>{t('tools.fourSeasons')}</span>
-                </button>
-                <button onClick={onBeautyStudioClick} className={getToolButtonClasses('beauty_studio')}>
-                    <div className="w-5 h-5"><i className="fas fa-magic"></i></div>
-                    <span>{t('tools.beautyStudio')}</span>
                 </button>
                 {currentUser?.isAdmin && (
                     <button onClick={onAdminPanelClick} className={getToolButtonClasses('admin')}>

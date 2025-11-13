@@ -1,5 +1,7 @@
 {
-  "name": "AI PHOTO SUITE | No.1 AI Photo Creation & Editing Platform",
-  "description": "AI PHOTO SUITE: The all-in-one AI toolkit. Create professional passport photos, headshots, fashion photos, restore old photos, and unleash unlimited creativity.",
-  "requestFramePermissions": []
+  "name": "AI PHOTO SUITE | Nền Tảng Sáng Tạo & Chỉnh Sửa Ảnh AI No1",
+  "description": "AI PHOTO SUITE: Bộ công cụ AI tất-cả-trong-một. Tạo ảnh thẻ chuyên nghiệp, ảnh headshot, ảnh thời trang, phục hồi ảnh cũ, và sáng tạo không giới hạn",
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

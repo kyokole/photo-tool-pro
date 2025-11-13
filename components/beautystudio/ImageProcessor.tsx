@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
-import { useTranslation } from 'react-i18next';
 
 
 interface ImageProcessorProps {
@@ -60,16 +59,13 @@ const ChangeImageIcon = () => (
 
 
 // --- Loader Component ---
-const Loader: React.FC = () => {
-    const { t } = useTranslation();
-    return (
-        <div className="absolute inset-0 bg-[var(--bg-component)]/90 flex flex-col items-center justify-center z-20 rounded-xl p-4 backdrop-blur-sm">
-            <div className="w-16 h-16 border-4 border-t-4 border-[var(--accent-cyan)] border-[var(--bg-tertiary)] rounded-full animate-spin"></div>
-            <p className="mt-4 text-[var(--text-primary)] font-semibold text-center">{t('beautyStudio.imageProcessor.loaderText1')}</p>
-            <p className="mt-2 text-[var(--text-secondary)] text-sm text-center">{t('beautyStudio.imageProcessor.loaderText2')}</p>
-        </div>
-    );
-};
+const Loader: React.FC = () => (
+  <div className="absolute inset-0 bg-[var(--bg-component)]/90 flex flex-col items-center justify-center z-20 rounded-xl p-4 backdrop-blur-sm">
+    <div className="w-16 h-16 border-4 border-t-4 border-[var(--accent-cyan)] border-[var(--bg-tertiary)] rounded-full animate-spin"></div>
+    <p className="mt-4 text-[var(--text-primary)] font-semibold text-center">AI đang phân tích gương mặt bạn...</p>
+    <p className="mt-2 text-[var(--text-secondary)] text-sm text-center">Quá trình này có thể mất khoảng 30 giây.</p>
+  </div>
+);
 
 
 // --- Action Controls Component ---
@@ -80,31 +76,27 @@ const ActionControls: React.FC<{
   onSave: () => void;
   canSave: boolean;
   onUploadClick: () => void;
-}> = ({ onZoomIn, onZoomOut, onReset, onSave, canSave, onUploadClick }) => {
-    const { t } = useTranslation();
-    return (
-        <div className="absolute top-3 right-3 z-20 flex flex-col items-end space-y-2">
-            {/* Zoom Controls */}
-            <div className="bg-[var(--bg-component-light)]/80 backdrop-blur-sm p-1 rounded-lg shadow-md flex items-center space-x-1 border border-[var(--border-color)]">
-                <button onClick={onZoomOut} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors" aria-label={t('beautyStudio.imageProcessor.zoomOutAria')}><MinusIcon /></button>
-                <button onClick={onReset} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors" aria-label={t('beautyStudio.imageProcessor.resetZoomAria')}><FitToScreenIcon /></button>
-                <button onClick={onZoomIn} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors" aria-label={t('beautyStudio.imageProcessor.zoomInAria')}><PlusIcon /></button>
-            </div>
-            {/* Other action buttons */}
-            <div className="flex items-center space-x-2">
-                <button onClick={onSave} disabled={!canSave} title={t('beautyStudio.imageProcessor.saveTitle')} className="p-2 rounded-full bg-[var(--bg-interactive)] text-white disabled:opacity-50 hover:bg-[var(--bg-interactive-hover)] transition-all border border-[var(--border-color)]"><SaveIcon /></button>
-                <button onClick={onUploadClick} title={t('beautyStudio.imageProcessor.changeImageTitle')} className="p-2 rounded-full bg-[var(--bg-interactive)] text-white hover:bg-[var(--bg-interactive-hover)] transition-all border border-[var(--border-color)]"><ChangeImageIcon /></button>
-            </div>
-        </div>
-    );
-};
+}> = ({ onZoomIn, onZoomOut, onReset, onSave, canSave, onUploadClick }) => (
+  <div className="absolute top-3 right-3 z-20 flex flex-col items-end space-y-2">
+    {/* Zoom Controls */}
+    <div className="bg-[var(--bg-component-light)]/80 backdrop-blur-sm p-1 rounded-lg shadow-md flex items-center space-x-1 border border-[var(--border-color)]">
+      <button onClick={onZoomOut} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors" aria-label="Zoom out"><MinusIcon /></button>
+      <button onClick={onReset} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors" aria-label="Reset zoom"><FitToScreenIcon /></button>
+      <button onClick={onZoomIn} className="p-1.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors" aria-label="Zoom in"><PlusIcon /></button>
+    </div>
+    {/* Other action buttons */}
+    <div className="flex items-center space-x-2">
+      <button onClick={onSave} disabled={!canSave} title="Lưu ảnh" className="p-2 rounded-full bg-[var(--bg-interactive)] text-white disabled:opacity-50 hover:bg-[var(--bg-interactive-hover)] transition-all border border-[var(--border-color)]"><SaveIcon /></button>
+      <button onClick={onUploadClick} title="Nhập ảnh khác" className="p-2 rounded-full bg-[var(--bg-interactive)] text-white hover:bg-[var(--bg-interactive-hover)] transition-all border border-[var(--border-color)]"><ChangeImageIcon /></button>
+    </div>
+  </div>
+);
 
 
 
 
 // --- Main Image Processor Component ---
 export const ImageProcessor: React.FC<ImageProcessorProps> = ({ originalImage, generatedImage, onUploadClick, isLoading, error, onSave, canSave }) => {
-  const { t } = useTranslation();
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(3/4);
  
@@ -182,8 +174,8 @@ export const ImageProcessor: React.FC<ImageProcessorProps> = ({ originalImage, g
             className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-[var(--border-color)] rounded-lg h-full w-full cursor-pointer hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-interactive)] transition-colors"
         >
           <UploadIcon />
-          <h3 className="font-bold text-[var(--text-primary)]">{t('beautyStudio.start.uploadButton')}</h3>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">{t('headshot.uploadTip')}</p>
+          <h3 className="font-bold text-[var(--text-primary)]">Tải ảnh của bạn lên</h3>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">Chọn một bức ảnh chân dung rõ nét</p>
         </div>
       )}
      
@@ -205,12 +197,12 @@ export const ImageProcessor: React.FC<ImageProcessorProps> = ({ originalImage, g
                 }}
             >
                 {!hasResult ? (
-                    <img src={originalImage} alt={t('beautyStudio.imageProcessor.altOriginal')} className="object-cover w-full h-full" />
+                    <img src={originalImage} alt="Original" className="object-cover w-full h-full" />
                 ) : (
                     <ReactCompareSlider
                         className="w-full h-full"
-                        itemOne={<ReactCompareSliderImage style={{objectFit: 'cover'}} src={originalImage} alt={t('beautyStudio.imageProcessor.altOriginal')} />}
-                        itemTwo={<ReactCompareSliderImage style={{objectFit: 'cover'}} src={generatedImage} alt={t('beautyStudio.imageProcessor.altGenerated')} />}
+                        itemOne={<ReactCompareSliderImage style={{objectFit: 'cover'}} src={originalImage} alt="Original" />}
+                        itemTwo={<ReactCompareSliderImage style={{objectFit: 'cover'}} src={generatedImage} alt="Generated" />}
                     />
                 )}
             </div>

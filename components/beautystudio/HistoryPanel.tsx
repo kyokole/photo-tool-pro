@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import type { BeautyHistoryItem } from '../../types';
 
 
@@ -19,8 +18,6 @@ const TrashIcon: React.FC = () => (
 
 
 export const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onSelect, currentImage, onClear }) => {
-  const { t } = useTranslation();
-
   if (history.length === 0) {
     return null;
   }
@@ -29,14 +26,14 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onSelect, c
   return (
     <div className="bg-[var(--bg-component)] rounded-2xl shadow-inner p-2 border border-[var(--border-color)]">
        <div className="flex items-center justify-between mb-2 px-3 pt-1">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">{t('beautyStudio.history.title')}</h2>
+        <h2 className="text-lg font-bold text-[var(--text-primary)]">Lịch sử tạo ảnh</h2>
         <button
           onClick={onClear}
           className="flex items-center space-x-1 text-xs font-semibold text-[var(--text-secondary)] hover:text-red-400 transition-colors"
-          title={t('beautyStudio.history.clearTitle')}
+          title="Xóa lịch sử"
         >
           <TrashIcon />
-          <span>{t('beautyStudio.history.clearButton')}</span>
+          <span>Xóa</span>
         </button>
       </div>
       <div className="overflow-x-auto overflow-y-hidden pb-2 no-scrollbar">

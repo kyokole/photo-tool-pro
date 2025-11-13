@@ -2,51 +2,6 @@ export default {
     "beautyStudio": {
         "title": "Beauty Tools",
         "magicMirror": "Experience AI Magic Mirror",
-        "start": {
-            "title": "Start Creating",
-            "subtitle": "Choose your image source to start editing.",
-            "uploadButton": "Upload Image",
-            "uploadSubtitle": "From your device",
-            "cameraButton": "Use Camera",
-            "cameraSubtitle": "Take a live photo"
-        },
-        "experienceMirror": "Experience AI Magic Mirror",
-        "error": {
-            "uploadRequired": "Please upload an image first.",
-            "toolRequired": "Please select a tool.",
-            "generationFailed": "Failed to generate image. {{errorMessage}}"
-        },
-        "mainToolbar": {
-            "scrollLeft": "Scroll left",
-            "scrollRight": "Scroll right"
-        },
-        "detailedEditor": {
-            "closeAria": "Close editor",
-            "confirmAria": "Confirm changes"
-        },
-        "history": {
-            "title": "Generation History",
-            "clearTitle": "Clear History",
-            "clearButton": "Clear"
-        },
-        "imageProcessor": {
-            "loaderText1": "AI is analyzing your face...",
-            "loaderText2": "This process may take about 30 seconds.",
-            "altOriginal": "Original",
-            "altGenerated": "Generated",
-            "zoomOutAria": "Zoom out",
-            "resetZoomAria": "Reset zoom",
-            "zoomInAria": "Zoom in",
-            "saveTitle": "Save image",
-            "changeImageTitle": "Import another image"
-        },
-        "imageToolbar": {
-            "backTitle": "Back",
-            "undoTitle": "Undo"
-        },
-        "styleSelector": {
-            "comingSoon": "Coming soon!"
-        },
         "camera": {
             "initializing": "Initializing camera...",
             "permissionDenied": "You have denied camera access. Please grant permission in your browser settings to use this feature.",
@@ -238,46 +193,7 @@ export default {
             "bright_eyes": "Bright Eyes",
             "black_pupil": "Black Pupil",
             "cat_eye": "Cat Eye",
-            "heterochromia": "Heterochromia",
-            "rd01": "RD01 Red",
-            "pk04": "PK04 Pink",
-            "pk01": "PK01 Light Pink",
-            "pk03": "PK03 Deep Pink",
-            "or01": "OR01 Orange",
-            "cr01": "CR01 Coral",
-            "rd03": "RD03 Deep Red",
-            "vl04": "VL04 Violet",
-            "br01": "BR01 Brown",
-            "pk05": "PK05 Fuchsia",
-            "nude_beige": "Nude Beige",
-            "dusty_rose": "Dusty Rose",
-            "berry_plum": "Berry Plum",
-            "rd01_blush": "RD01 Red",
-            "br01_blush": "BR01 Brown",
-            "pk01_blush": "PK01 Pink",
-            "vl01_blush": "VL01 Violet",
-            "nd01_blush": "ND01 Nude",
-            "or01_blush": "OR01 Orange",
-            "peach_puff": "Peach Puff",
-            "rose_pink": "Rose Pink",
-            "porcelainCool": "Porcelain Cool",
-            "fairNeutral": "Fair Neutral",
-            "lightWarm": "Light Warm",
-            "mediumNeutral": "Medium Neutral",
-            "oliveNeutral": "Olive Neutral",
-            "tanGolden": "Tan Golden",
-            "deepWarm": "Deep Warm",
-            "richNeutral": "Rich Neutral",
-            "espressoCool": "Espresso Cool",
-            "rosyLight": "Rosy Light",
-            "goldenMedium": "Golden Medium",
-            "coolTan": "Cool Tan",
-            "warmRich": "Warm Rich",
-            "neutralDeep": "Neutral Deep",
-            "peach": "Peach",
-            "caramel": "Caramel",
-            "almond": "Almond",
-            "mahogany": "Mahogany"
+            "heterochromia": "Heterochromia"
         }
     }
 }

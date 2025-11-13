@@ -2,51 +2,6 @@ export default {
     "beautyStudio": {
         "title": "Công cụ làm đẹp",
         "magicMirror": "Trải nghiệm gương thần AI",
-        "start": {
-            "title": "Bắt đầu Sáng tạo",
-            "subtitle": "Chọn nguồn ảnh của bạn để bắt đầu chỉnh sửa.",
-            "uploadButton": "Tải ảnh lên",
-            "uploadSubtitle": "Từ thiết bị của bạn",
-            "cameraButton": "Sử dụng Camera",
-            "cameraSubtitle": "Chụp ảnh trực tiếp"
-        },
-        "experienceMirror": "Trải nghiệm gương thần AI",
-        "error": {
-            "uploadRequired": "Vui lòng tải ảnh lên trước.",
-            "toolRequired": "Vui lòng chọn một công cụ.",
-            "generationFailed": "Tạo ảnh thất bại. {{errorMessage}}"
-        },
-        "mainToolbar": {
-            "scrollLeft": "Cuộn sang trái",
-            "scrollRight": "Cuộn sang phải"
-        },
-        "detailedEditor": {
-            "closeAria": "Đóng trình chỉnh sửa",
-            "confirmAria": "Xác nhận thay đổi"
-        },
-        "history": {
-            "title": "Lịch sử tạo ảnh",
-            "clearTitle": "Xóa lịch sử",
-            "clearButton": "Xóa"
-        },
-        "imageProcessor": {
-            "loaderText1": "AI đang phân tích gương mặt bạn...",
-            "loaderText2": "Quá trình này có thể mất khoảng 30 giây.",
-            "altOriginal": "Ảnh gốc",
-            "altGenerated": "Ảnh đã tạo",
-            "zoomOutAria": "Thu nhỏ",
-            "resetZoomAria": "Đặt lại thu phóng",
-            "zoomInAria": "Phóng to",
-            "saveTitle": "Lưu ảnh",
-            "changeImageTitle": "Nhập ảnh khác"
-        },
-        "imageToolbar": {
-            "backTitle": "Quay lại",
-            "undoTitle": "Hoàn tác"
-        },
-        "styleSelector": {
-            "comingSoon": "Sắp ra mắt!"
-        },
         "camera": {
             "initializing": "Đang khởi tạo camera...",
             "permissionDenied": "Bạn đã từ chối quyền truy cập camera. Vui lòng cấp quyền trong cài đặt trình duyệt để sử dụng tính năng này.",
@@ -238,46 +193,7 @@ export default {
             "bright_eyes": "Mắt sáng",
             "black_pupil": "Tròng Đen",
             "cat_eye": "Mắt mèo",
-            "heterochromia": "Dị sắc",
-            "rd01": "RD01",
-            "pk04": "PK04",
-            "pk01": "PK01",
-            "pk03": "PK03",
-            "or01": "OR01",
-            "cr01": "CR01",
-            "rd03": "RD03",
-            "vl04": "VL04",
-            "br01": "BR01",
-            "pk05": "PK05",
-            "nude_beige": "Nude Be",
-            "dusty_rose": "Hồng Đất",
-            "berry_plum": "Mận Chín",
-            "rd01_blush": "RD01",
-            "br01_blush": "BR01",
-            "pk01_blush": "PK01",
-            "vl01_blush": "VL01",
-            "nd01_blush": "ND01",
-            "or01_blush": "OR01",
-            "peach_puff": "Hồng Đào",
-            "rose_pink": "Hồng Phấn",
-            "porcelainCool": "Sứ Lạnh",
-            "fairNeutral": "Sáng Trung tính",
-            "lightWarm": "Sáng Ấm",
-            "mediumNeutral": "Trung bình T.tính",
-            "oliveNeutral": "Olive T.tính",
-            "tanGolden": "Nâu Vàng",
-            "deepWarm": "Nâu Ấm",
-            "richNeutral": "Nâu Đậm T.tính",
-            "espressoCool": "Espresso Lạnh",
-            "rosyLight": "Hồng Sáng",
-            "goldenMedium": "Vàng Trung bình",
-            "coolTan": "Nâu Lạnh",
-            "warmRich": "Nâu Đậm Ấm",
-            "neutralDeep": "Nâu Sẫm T.tính",
-            "peach": "Đào",
-            "caramel": "Caramel",
-            "almond": "Hạnh nhân",
-            "mahogany": "Gụ"
+            "heterochromia": "Dị sắc"
         }
     }
 }
