@@ -117,18 +117,6 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!isAuthLoading) {
-        const preloader = document.getElementById('preloader');
-        if (preloader) {
-            preloader.classList.add('loaded');
-            setTimeout(() => {
-                preloader.remove();
-            }, 500);
-        }
-    }
-  }, [isAuthLoading]);
-
-  useEffect(() => {
     document.documentElement.lang = i18n.language;
     auth.languageCode = i18n.language;
   }, [i18n.language, auth]);
@@ -1356,8 +1344,10 @@ const App: React.FC = () => {
     }
   };
 
-  if (isAuthLoading) {
-    return null;
+  if (isAuthLoading && !currentUser) {
+    // While checking auth for the first time, show nothing to avoid UI flicker
+    // The preloader from index.html will cover this empty state.
+    return null; 
   }
 
   return (

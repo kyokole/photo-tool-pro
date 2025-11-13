@@ -29,6 +29,16 @@ async function main() {
         </I18nextProvider>
       </React.StrictMode>
     );
+
+    // The app has been successfully mounted. Now, we can safely remove the preloader.
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        preloader.classList.add('loaded');
+        setTimeout(() => {
+            preloader.remove();
+        }, 500); // Wait for the fade-out animation to complete
+    }
+
   } catch (error) {
     console.error("Fatal error during application startup:", error);
     const preloader = document.getElementById('preloader');
