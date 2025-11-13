@@ -4,7 +4,6 @@
 
 // FIX: Import Buffer from the 'buffer' module to resolve 'Cannot find name' errors.
 import { Buffer } from 'buffer';
-// FIX: Import 'Type' from '@google/genai' to resolve 'Cannot find name 'TYPE'' error.
 import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
