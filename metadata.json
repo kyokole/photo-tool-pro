@@ -1,7 +1,5 @@
 {
   "name": "AI PHOTO SUITE | Nền Tảng Sáng Tạo & Chỉnh Sửa Ảnh AI No1",
   "description": "AI PHOTO SUITE: Bộ công cụ AI tất-cả-trong-một. Tạo ảnh thẻ chuyên nghiệp, ảnh headshot, ảnh thời trang, phục hồi ảnh cũ, và sáng tạo không giới hạn",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "requestFramePermissions": []
 }

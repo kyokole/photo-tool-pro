@@ -32,12 +32,12 @@ export const initializeFirebase = async () => {
         // 2. Nếu thất bại (lỗi 404 trong AI Studio), sử dụng DUMMY config
         console.warn("Could not fetch /api/config. AI Studio environment detected. Initializing Firebase with a DUMMY config to allow the app to run. Auth features will be disabled.");
         firebaseConfig = {
-            apiKey: "AIzaSyAXjFpzO4v9ESWsi_2Zdb5wxXudiMz0E2c",
-            authDomain: "photo-tool-pro.firebaseapp.com",
-            projectId: "photo-tool-pro",
-            storageBucket: "photo-tool-pro.appspot.com",
-            messagingSenderId: "407393374385",
-            appId: "1:407393374385:web:fc7fa01812492ed7a51290",
+            apiKey: "AIzaSy...",
+            authDomain: "dummy-project.firebaseapp.com",
+            projectId: "dummy-project",
+            storageBucket: "dummy-project.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:dummy",
         };
     }
 
