@@ -2,18 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
-import { initializeFirebase } from './services/firebase';
+// initializeFirebase is no longer awaited here, it's moved to App.tsx
 
 // Wrap the startup in an async function to allow for dynamic imports inside the try/catch block.
-// This is critical for catching module-level errors (e.g., from Firebase initialization).
+// This is critical for catching module-level errors.
 async function main() {
   try {
-    // **BƯỚC QUAN TRỌNG:** Đợi cho Firebase khởi tạo xong trước khi làm bất cứ điều gì khác.
-    // Hàm này sẽ lấy cấu hình từ /api/config và thiết lập kết nối.
-    await initializeFirebase();
+    // **CRITICAL CHANGE:** Firebase is no longer initialized here.
+    // The App component is imported and rendered immediately.
 
     // Dynamically import the App component. This ensures that any errors during its module evaluation
-    // (including its dependencies like firebase.ts) are caught by this try...catch block.
+    // are caught by this try...catch block.
     const App = (await import('./App')).default;
 
     const rootElement = document.getElementById('root');
@@ -29,6 +28,17 @@ async function main() {
         </I18nextProvider>
       </React.StrictMode>
     );
+
+    // The app has been successfully mounted. Now, we can safely remove the preloader.
+    // This happens right away, without waiting for network requests like Firebase auth.
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+        preloader.classList.add('loaded');
+        setTimeout(() => {
+            preloader.remove();
+        }, 500); // Wait for the fade-out animation to complete
+    }
+
   } catch (error) {
     console.error("Fatal error during application startup:", error);
     const preloader = document.getElementById('preloader');
@@ -42,8 +52,8 @@ async function main() {
       // Display an informative error message
       preloader.innerHTML = `
         <div style="padding: 20px; text-align: center; color: #ff8a8a; font-family: sans-serif; max-width: 600px; margin: auto;">
-            <h1 style="font-size: 24px; margin-bottom: 10px;">Lỗi Khởi Động Ứng Dụng</h1>
-            <p style="font-size: 16px; margin-bottom: 20px;">Không thể tải ứng dụng. Nguyên nhân phổ biến nhất là do cấu hình sai <strong>biến môi trường (Environment Variables)</strong>. Vui lòng kiểm tra lại các key Firebase trong cài đặt dự án của bạn và deploy lại.</p>
+            <h1 style="font-size: 24px; margin-bottom: 10px;">Application Startup Error</h1>
+            <p style="font-size: 16px; margin-bottom: 20px;">Could not load the application. This might be due to a module loading error or a critical script failure.</p>
             <pre style="background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 5px; text-align: left; white-space: pre-wrap; word-wrap: break-word; font-size: 12px; max-height: 200px; overflow-y: auto;">${(error as Error).stack || (error as Error).message}</pre>
         </div>
       `;

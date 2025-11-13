@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
 // Vietnamese imports
 import viActionBar from './locales/vi/actionBar.js';
@@ -20,6 +21,7 @@ import viSidebar from './locales/vi/sidebar.js';
 import viFourSeasons from './locales/vi/fourSeasons.js';
 import viLegal from './locales/vi/legal.js';
 import viImageVariation from './locales/vi/imageVariation.js';
+import viBeautyStudio from './locales/vi/beautyStudio.js';
 
 // English imports
 import enActionBar from './locales/en/actionBar.js';
@@ -40,6 +42,7 @@ import enSidebar from './locales/en/sidebar.js';
 import enFourSeasons from './locales/en/fourSeasons.js';
 import enLegal from './locales/en/legal.js';
 import enImageVariation from './locales/en/imageVariation.js';
+import enBeautyStudio from './locales/en/beautyStudio.js';
 
 
 const resources = {
@@ -62,7 +65,8 @@ const resources = {
       ...enSidebar,
       ...enFourSeasons,
       ...enLegal,
-      ...enImageVariation
+      ...enImageVariation,
+      ...enBeautyStudio
     }
   },
   vi: {
@@ -84,19 +88,26 @@ const resources = {
       ...viSidebar,
       ...viFourSeasons,
       ...viLegal,
-      ...viImageVariation
+      ...viImageVariation,
+      ...viBeautyStudio
     }
   }
 };
 
 i18n
+  .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'vi', // default language
-    fallbackLng: 'vi',
+    fallbackLng: 'en', // Ngôn ngữ dự phòng nếu không phát hiện được
     interpolation: {
       escapeValue: false // react already safes from xss
+    },
+    detection: {
+      // thứ tự phát hiện ngôn ngữ
+      order: ['navigator', 'htmlTag', 'path', 'subdomain'],
+      // không lưu vào cookie hoặc localStorage
+      caches: []
     }
   });
 

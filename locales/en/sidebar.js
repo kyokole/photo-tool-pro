@@ -24,7 +24,8 @@ export default {
     "footballStudio": "Football Studio",
     "creativeStudio": "AI Studio",
     "promptAnalyzer": "Image Analyzer",
-    "fourSeasons": "Four Seasons Photo"
+    "fourSeasons": "Four Seasons Photo",
+    "beautyStudio": "Beauty Studio"
   },
   "utilities": {
     "guide": "User Guide",

@@ -51,6 +51,7 @@ interface SidebarProps {
   onPromptAnalyzerClick: () => void;
   onFootballStudioClick: () => void;
   onFourSeasonsClick: () => void;
+  onBeautyStudioClick: () => void;
   onAdminPanelClick: () => void;
   onPresetSelect: (settings: Partial<Settings>) => void;
   onUndo: () => void;
@@ -75,6 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onPromptAnalyzerClick,
     onFootballStudioClick,
     onFourSeasonsClick,
+    onBeautyStudioClick,
     onAdminPanelClick,
     onPresetSelect, 
     onUndo, 
@@ -271,6 +273,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
               <nav className="space-y-1 pb-2">
+                <button onClick={onBeautyStudioClick} className={getToolButtonClasses('beauty_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-magic"></i></div>
+                    <span>{t('tools.beautyStudio')}</span>
+                </button>
                 <button onClick={onRestorationClick} className={getToolButtonClasses('restoration')}>
                     <div className="w-5 h-5"><i className="fas fa-wand-magic"></i></div>
                     <span>{t('tools.restoration')}</span>

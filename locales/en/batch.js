@@ -65,6 +65,7 @@ export default {
             "title": "VIP Batch Processing Feature",
             "description": "Processing multiple photos at once is a premium feature. Please upgrade to use it.",
             "button": "Contact & Upgrade"
-        }
+        },
+        "vipFeatureAlert": "Batch processing is a VIP feature."
     }
 }
