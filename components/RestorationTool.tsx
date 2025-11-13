@@ -211,8 +211,9 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
                 <div />
                 <div className="text-center">
                     <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text" style={{ fontFamily: "'Exo 2', sans-serif" }}>
-                        AI PHOTO SUITE
+                        {t('restoration.title')}
                     </h1>
+                    <p className="text-[var(--text-secondary)] mt-2 text-lg tracking-wide">{t('restoration.subtitle')}</p>
                 </div>
                  <div className="flex justify-end">
                     <ThemeSelector currentTheme={theme} onChangeTheme={setTheme} />

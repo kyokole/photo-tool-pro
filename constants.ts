@@ -1,4 +1,4 @@
-import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle } from './types';
+import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, BeautyFeature, BeautyStyle } from './types';
 
 export const DEFAULT_SETTINGS: Settings = {
   aspectRatio: '3x4',
@@ -474,3 +474,356 @@ export const DEFAULT_FASHION_STUDIO_SETTINGS: {
     description: '',
     highQuality: false
 };
+
+
+// --- BEAUTY STUDIO CONSTANTS ---
+const genericIconUrl = "fa-solid fa-palette";
+
+const intensityStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'intensity', value: 'None' },
+    { id: 'light', labelKey: 'beautyStudio.styles.light', englishLabel: 'Light', type: 'intensity', value: 'Light' },
+    { id: 'medium', labelKey: 'beautyStudio.styles.medium', englishLabel: 'Medium', type: 'intensity', value: 'Medium' },
+    { id: 'strong', labelKey: 'beautyStudio.styles.strong', englishLabel: 'Strong', type: 'intensity', value: 'Strong' },
+];
+
+const smileStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'intensity', value: 'None', promptInstruction: "Keep the original expression." },
+    { id: 'subtle', labelKey: 'beautyStudio.styles.subtle', englishLabel: 'Subtle Lift', type: 'intensity', value: 'Subtle', promptInstruction: "Slightly lift the corners of the mouth for a subtle, gentle smile." },
+    { id: 'gentle', labelKey: 'beautyStudio.styles.gentle', englishLabel: 'Gentle Smile', type: 'intensity', value: 'Gentle', promptInstruction: "Create a soft, gentle, closed-mouth smile." },
+    { id: 'joyful', labelKey: 'beautyStudio.styles.joyful', englishLabel: 'Joyful Beam', type: 'intensity', value: 'Joyful', promptInstruction: "Create a bright, joyful, happy smile, showing teeth naturally." },
+];
+
+const appleLightingStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+    { id: 'natural', labelKey: 'beautyStudio.styles.natural', englishLabel: 'Natural Light', type: 'image', value: genericIconUrl, promptInstruction: "Relight the portrait with soft, natural daylight, as if taken near a large window." },
+    { id: 'studio', labelKey: 'beautyStudio.styles.studio', englishLabel: 'Studio Light', type: 'image', value: genericIconUrl, promptInstruction: "Apply professional studio lighting with a key light and fill light to create a clean, polished look." },
+    { id: 'dramatic', labelKey: 'beautyStudio.styles.dramatic', englishLabel: 'Dramatic', type: 'image', value: genericIconUrl, promptInstruction: "Apply dramatic, high-contrast lighting like Rembrandt or split lighting to create a moody, artistic portrait." },
+];
+
+const filmStockStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+    { id: 'fuji', labelKey: 'beautyStudio.styles.fuji', englishLabel: 'Fuji Velvia', type: 'image', value: genericIconUrl, promptInstruction: "Apply a color grade that mimics the vibrant, saturated colors and high contrast of Fuji Velvia film." },
+    { id: 'kodak', labelKey: 'beautyStudio.styles.kodak', englishLabel: 'Kodak Portra', type: 'image', value: genericIconUrl, promptInstruction: "Apply a color grade that mimics the warm tones and natural skin tones of Kodak Portra film." },
+    { id: 'agfa', labelKey: 'beautyStudio.styles.agfa', englishLabel: 'Agfa Vista', type: 'image', value: genericIconUrl, promptInstruction: "Apply a color grade that mimics the rich, warm reds and distinct grain of Agfa Vista film." },
+];
+
+const flashTypeStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+    { id: 'direct', labelKey: 'beautyStudio.styles.direct', englishLabel: 'Direct Flash', type: 'image', value: genericIconUrl, promptInstruction: "Simulate a direct, on-camera flash effect with harsh shadows and bright highlights for a 'paparazzi' look." },
+    { id: 'ring', labelKey: 'beautyStudio.styles.ring', englishLabel: 'Ring Flash', type: 'image', value: genericIconUrl, promptInstruction: "Simulate a ring flash effect, creating a characteristic circular catchlight in the eyes and flat, even lighting." },
+    { id: 'soft', labelKey: 'beautyStudio.styles.soft', englishLabel: 'Soft Bounce', type: 'image', value: genericIconUrl, promptInstruction: "Simulate a soft, bounced flash effect, with diffused light and soft shadows for a flattering portrait." },
+];
+
+const flashGelStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'color', value: 'transparent' },
+    { id: 'warm', labelKey: 'beautyStudio.styles.warm', englishLabel: 'Warm Gel', type: 'color', value: '#FFDDC1', promptInstruction: "Apply a warm, orange-toned color gel effect over the flash lighting." },
+    { id: 'cool', labelKey: 'beautyStudio.styles.cool', englishLabel: 'Cool Gel', type: 'color', value: '#D6EAF8', promptInstruction: "Apply a cool, blue-toned color gel effect over the flash lighting." },
+    { id: 'red', labelKey: 'beautyStudio.styles.red', englishLabel: 'Red Gel', type: 'color', value: '#FADBD8', promptInstruction: "Apply a vibrant, red-toned color gel effect over the flash lighting." },
+];
+
+const seasonalFilterStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+    { id: 'spring', labelKey: 'beautyStudio.styles.spring', englishLabel: 'Spring', type: 'image', value: genericIconUrl, promptInstruction: "Apply a 'Spring' color grade with fresh greens, soft pastels, and bright, airy light." },
+    { id: 'summer', labelKey: 'beautyStudio.styles.summer', englishLabel: 'Summer', type: 'image', value: genericIconUrl, promptInstruction: "Apply a 'Summer' color grade with warm, golden tones, vibrant colors, and high contrast." },
+    { id: 'autumn', labelKey: 'beautyStudio.styles.autumn', englishLabel: 'Autumn', type: 'image', value: genericIconUrl, promptInstruction: "Apply an 'Autumn' color grade with rich oranges, reds, and browns, and a soft, warm light." },
+    { id: 'winter', labelKey: 'beautyStudio.styles.winter', englishLabel: 'Winter', type: 'image', value: genericIconUrl, promptInstruction: "Apply a 'Winter' color grade with cool, blue tones, muted colors, and a crisp, clean light." },
+];
+
+const idPhotoBgStyles: BeautyStyle[] = [
+    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'color', value: 'transparent' },
+    { id: 'white', labelKey: 'beautyStudio.styles.white', englishLabel: 'White', type: 'color', value: '#FFFFFF', promptInstruction: "Carefully cut out the main subject and place them on a clean, solid white background suitable for an ID photo." },
+    { id: 'blue', labelKey: 'beautyStudio.styles.blue', englishLabel: 'Blue', type: 'color', value: '#E1F5FE', promptInstruction: "Carefully cut out the main subject and place them on a clean, solid light blue background suitable for an ID photo." },
+    { id: 'gray', labelKey: 'beautyStudio.styles.gray', englishLabel: 'Gray', type: 'color', value: '#EEEEEE', promptInstruction: "Carefully cut out the main subject and place them on a clean, solid light gray background suitable for an ID photo." },
+];
+
+const skinTonePresetStyles: BeautyStyle[] = [
+  { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+  { id: 'porcelainCool', labelKey: 'beautyStudio.styles.porcelainCool', englishLabel: 'Porcelain Cool', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a cool porcelain shade." },
+  { id: 'fairNeutral', labelKey: 'beautyStudio.styles.fairNeutral', englishLabel: 'Fair Neutral', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a neutral fair shade." },
+  { id: 'lightWarm', labelKey: 'beautyStudio.styles.lightWarm', englishLabel: 'Light Warm', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a warm light shade." },
+  { id: 'mediumNeutral', labelKey: 'beautyStudio.styles.mediumNeutral', englishLabel: 'Medium Neutral', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a neutral medium shade." },
+  { id: 'oliveNeutral', labelKey: 'beautyStudio.styles.oliveNeutral', englishLabel: 'Olive Neutral', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a neutral olive shade." },
+  { id: 'tanGolden', labelKey: 'beautyStudio.styles.tanGolden', englishLabel: 'Tan Golden', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a golden tan shade." },
+  { id: 'deepWarm', labelKey: 'beautyStudio.styles.deepWarm', englishLabel: 'Deep Warm', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a warm deep shade." },
+  { id: 'richNeutral', labelKey: 'beautyStudio.styles.richNeutral', englishLabel: 'Rich Neutral', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a neutral rich shade." },
+  { id: 'espressoCool', labelKey: 'beautyStudio.styles.espressoCool', englishLabel: 'Espresso Cool', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a cool espresso shade." },
+  { id: 'rosyLight', labelKey: 'beautyStudio.styles.rosyLight', englishLabel: 'Rosy Light', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a light rosy shade." },
+  { id: 'goldenMedium', labelKey: 'beautyStudio.styles.goldenMedium', englishLabel: 'Golden Medium', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a medium golden shade." },
+  { id: 'coolTan', labelKey: 'beautyStudio.styles.coolTan', englishLabel: 'Cool Tan', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a cool tan shade." },
+  { id: 'warmRich', labelKey: 'beautyStudio.styles.warmRich', englishLabel: 'Warm Rich', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a rich warm shade." },
+  { id: 'neutralDeep', labelKey: 'beautyStudio.styles.neutralDeep', englishLabel: 'Neutral Deep', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a deep neutral shade." },
+  { id: 'peach', labelKey: 'beautyStudio.styles.peach', englishLabel: 'Peach', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a peach shade." },
+  { id: 'sand', labelKey: 'beautyStudio.styles.sand', englishLabel: 'Sand', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a sand shade." },
+  { id: 'caramel', labelKey: 'beautyStudio.styles.caramel', englishLabel: 'Caramel', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a caramel shade." },
+  { id: 'almond', labelKey: 'beautyStudio.styles.almond', englishLabel: 'Almond', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to an almond shade." },
+  { id: 'mahogany', labelKey: 'beautyStudio.styles.mahogany', englishLabel: 'Mahogany', type: 'image', value: genericIconUrl, promptInstruction: "Adjust skin tone to a mahogany shade." },
+];
+
+
+export const BEAUTY_FEATURES: BeautyFeature[] = [
+    {
+        id: 'apple_mode', labelKey: 'beautyStudio.tools.apple_mode', englishLabel: 'Apple Mode', icon: "fa-solid fa-lightbulb",
+        subFeatures: [
+            { id: 'lighting', labelKey: 'beautyStudio.subfeatures.lighting', englishLabel: 'Lighting', styles: appleLightingStyles },
+            { id: 'color_profile', labelKey: 'beautyStudio.subfeatures.color_profile', englishLabel: 'Color Profile', styles: intensityStyles },
+        ]
+    },
+    {
+        id: 'camera_film', labelKey: 'beautyStudio.tools.camera_film', englishLabel: 'Camera Film', icon: "fa-solid fa-film",
+        subFeatures: [
+            { id: 'film_stock', labelKey: 'beautyStudio.subfeatures.film_stock', englishLabel: 'Film Stock', styles: filmStockStyles },
+            { id: 'grain', labelKey: 'beautyStudio.subfeatures.grain', englishLabel: 'Grain', styles: intensityStyles },
+        ]
+    },
+    {
+        id: 'flash', labelKey: 'beautyStudio.tools.flash', englishLabel: 'Flash Camera', icon: "fa-solid fa-bolt",
+        subFeatures: [
+            { id: 'flash_type', labelKey: 'beautyStudio.subfeatures.flash_type', englishLabel: 'Flash Type', styles: flashTypeStyles },
+            { id: 'color_gel', labelKey: 'beautyStudio.subfeatures.color_gel', englishLabel: 'Color Gel', styles: flashGelStyles },
+        ]
+    },
+    {
+        id: 'ai_filter', labelKey: 'beautyStudio.tools.ai_filter', englishLabel: 'AI Filter', badge: 'Hot', icon: "fa-solid fa-wand-magic-sparkles",
+        subFeatures: [
+            { id: 'seasonal', labelKey: 'beautyStudio.subfeatures.seasonal', englishLabel: 'Seasonal', styles: seasonalFilterStyles },
+            { id: 'artistic', labelKey: 'beautyStudio.subfeatures.artistic', englishLabel: 'Artistic', styles: [
+                { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                { id: 'cartoon', labelKey: 'beautyStudio.styles.cartoon', englishLabel: 'Cartoon', type: 'image', value: genericIconUrl, promptInstruction: "Redraw the photo in a vibrant cartoon style." },
+                { id: 'oil_painting', labelKey: 'beautyStudio.styles.oil_painting', englishLabel: 'Oil Painting', type: 'image', value: genericIconUrl, promptInstruction: "Transform the photo into a classical oil painting." },
+                { id: 'pencil_sketch', labelKey: 'beautyStudio.styles.pencil_sketch', englishLabel: 'Pencil Sketch', type: 'image', value: genericIconUrl, promptInstruction: "Convert the photo into a detailed pencil sketch." },
+            ] },
+        ]
+    },
+    {
+        id: 'hd_quality', labelKey: 'beautyStudio.tools.hd_quality', englishLabel: 'Image Quality', icon: "fa-solid fa-star", badge: 'NEW',
+        subFeatures: [
+            {
+                id: 'enhancement_level', labelKey: 'beautyStudio.subfeatures.enhancement_level', englishLabel: 'Enhancement Level',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'intensity', value: 'None' },
+                    { id: 'hd', labelKey: 'beautyStudio.styles.hd', englishLabel: 'Sharpen HD', type: 'intensity', value: 'HD', promptInstruction: "Enhance the image to HD quality, improving sharpness and clarity." },
+                    { id: 'upscale', labelKey: 'beautyStudio.styles.upscale', englishLabel: '4K Upscale', type: 'intensity', value: '4K', promptInstruction: "Upscale the image to 4K resolution, intelligently adding detail and refining textures for a high-definition result." },
+                    { id: 'denoise', labelKey: 'beautyStudio.styles.denoise', englishLabel: 'Denoise', type: 'intensity', value: 'Denoise', promptInstruction: "Apply noise reduction to the image, smoothing out grain while preserving important details." },
+                ]
+            }
+        ]
+    },
+    {
+        id: 'beautify', labelKey: 'beautyStudio.tools.beautify', englishLabel: 'Beautify', icon: "fa-solid fa-paintbrush", badge: 'Hot',
+        subFeatures: [
+            { id: 'remove_oil', labelKey: 'beautyStudio.subfeatures.remove_oil', englishLabel: 'Remove Oiliness', styles: intensityStyles, promptInstruction: "Reduce shine and oiliness on the skin to a '{{style}}' degree for a more matte finish." },
+            { id: 'slim_face', labelKey: 'beautyStudio.subfeatures.slim_face', englishLabel: 'Slim Face', styles: intensityStyles, promptInstruction: "Realistically and subtly slim the subject's face, focusing on the jawline and cheeks. Apply the effect to a '{{style}}' degree." },
+            {
+                id: 'skin_tone', labelKey: 'beautyStudio.subfeatures.skin_tone', englishLabel: 'Skin Tone',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'color', value: 'transparent' },
+                    { id: 'ivory', labelKey: 'beautyStudio.styles.ivory', englishLabel: 'Fair Ivory', type: 'color', value: '#FFFAF0', promptInstruction: "Adjust the skin tone to a 'Fair Ivory' shade." },
+                    { id: 'beige', labelKey: 'beautyStudio.styles.beige', englishLabel: 'Natural Beige', type: 'color', value: '#F5DEB3', promptInstruction: "Adjust the skin tone to a 'Natural Beige' shade." },
+                    { id: 'honey', labelKey: 'beautyStudio.styles.honey', englishLabel: 'Warm Honey', type: 'color', value: '#D2A679', promptInstruction: "Adjust the skin tone to a 'Warm Honey' shade." },
+                    { id: 'bronze', labelKey: 'beautyStudio.styles.bronze', englishLabel: 'Sun-kissed Bronze', type: 'color', value: '#A0522D', promptInstruction: "Adjust the skin tone to a 'Sun-kissed Bronze' shade." },
+                ]
+            },
+            { id: 'expression_sub', labelKey: 'beautyStudio.subfeatures.expression_sub', englishLabel: 'Smile Adjustment', styles: smileStyles, promptInstruction: "Adjust the person's expression to create a '{{style}}'." },
+            {
+                id: '3d_lighting', labelKey: 'beautyStudio.subfeatures.3d_lighting', englishLabel: '3D Lighting',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'natural', labelKey: 'beautyStudio.styles.soft_natural', englishLabel: 'Soft Natural', type: 'image', value: genericIconUrl, promptInstruction: "Apply a soft, natural 3D lighting effect to enhance facial features." },
+                    { id: 'studio', labelKey: 'beautyStudio.styles.bright_studio', englishLabel: 'Bright Studio', type: 'image', value: genericIconUrl, promptInstruction: "Apply a bright, professional studio lighting effect to the portrait." },
+                    { id: 'contour', labelKey: 'beautyStudio.styles.dramatic_contour', englishLabel: 'Dramatic Contour', type: 'image', value: genericIconUrl, promptInstruction: "Apply dramatic contour lighting to sculpt and define the facial features." },
+                    { id: 'golden_hour', labelKey: 'beautyStudio.styles.golden_hour', englishLabel: 'Golden Hour', type: 'image', value: genericIconUrl, promptInstruction: "Relight the portrait with the warm, soft glow of a 'Golden Hour' sunset." },
+                ]
+            },
+            { id: 'face_lift', labelKey: 'beautyStudio.subfeatures.face_lift', englishLabel: 'Face Lift', styles: intensityStyles, promptInstruction: "Apply a subtle digital face lift effect, tightening the jawline and brow area to a '{{style}}' degree." },
+            { id: 'acne_removal', labelKey: 'beautyStudio.subfeatures.acne_removal', englishLabel: 'Acne Removal', styles: intensityStyles, promptInstruction: "Remove acne and skin blemishes with a '{{style}}' intensity, ensuring the skin texture looks natural." },
+            { id: 'remove_double_chin', labelKey: 'beautyStudio.subfeatures.remove_double_chin', englishLabel: 'Remove Double Chin', styles: intensityStyles, promptInstruction: "Reduce or remove the appearance of a double chin to a '{{style}}' degree, defining the jawline." },
+            { id: 'remove_dark_circles', labelKey: 'beautyStudio.subfeatures.remove_dark_circles', englishLabel: 'Remove Dark Circles', styles: intensityStyles, promptInstruction: "Reduce the appearance of dark circles under the eyes with a '{{style}}' intensity." },
+            { id: 'teeth_whitening', labelKey: 'beautyStudio.subfeatures.teeth_whitening', englishLabel: 'Teeth Whitening', styles: intensityStyles, promptInstruction: "Whiten the teeth to a '{{style}}' degree, making sure they look bright but natural." },
+        ]
+    },
+    {
+        id: 'skin_tone_adjustment', labelKey: 'beautyStudio.tools.skin_tone_adjustment', englishLabel: 'Skin Tone Adjustment', icon: "fa-solid fa-palette",
+        subFeatures: [
+            { id: 'skin_tone_presets', labelKey: 'beautyStudio.subfeatures.skin_tone_presets', englishLabel: 'Presets', styles: skinTonePresetStyles }
+        ]
+    },
+    {
+        id: 'remove_bg', labelKey: 'beautyStudio.tools.remove_bg', englishLabel: 'Remove Background', icon: "fa-regular fa-object-ungroup", badge: 'NEW',
+        subFeatures: [
+            {
+              id: 'replace_background', labelKey: 'beautyStudio.subfeatures.replace_background', englishLabel: 'Replace Background',
+              styles: [
+                  { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                  { id: 'transparent', labelKey: 'beautyStudio.styles.transparent', englishLabel: 'Transparent', type: 'image', value: genericIconUrl, promptInstruction: "Carefully cut out the main subject from the photo and place it on a transparent background." },
+                  { id: 'white', labelKey: 'beautyStudio.styles.white', englishLabel: 'White', type: 'image', value: genericIconUrl, promptInstruction: "Carefully cut out the main subject from the photo and place it on a clean, solid white background." },
+                  { id: 'city', labelKey: 'beautyStudio.styles.city', englishLabel: 'City', type: 'image', value: genericIconUrl, promptInstruction: "Carefully cut out the main subject from the photo and place them on a realistic, slightly blurred city street background." },
+              ]
+            }
+        ]
+    },
+    {
+        id: 'ai_portrait', labelKey: 'beautyStudio.tools.ai_portrait', englishLabel: 'AI Portrait', icon: "fa-solid fa-user-astronaut",
+        subFeatures: [
+            {
+                id: 'style', labelKey: 'beautyStudio.subfeatures.style', englishLabel: 'Style',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'classic', labelKey: 'beautyStudio.styles.classic', englishLabel: 'Classic', type: 'image', value: genericIconUrl, promptInstruction: "Transform the photo into a classic, timeless portrait." },
+                    { id: 'cartoon', labelKey: 'beautyStudio.styles.cartoon', englishLabel: 'Cartoon', type: 'image', value: genericIconUrl, promptInstruction: "Redraw the portrait in a vibrant cartoon style." },
+                    { id: 'oil_painting', labelKey: 'beautyStudio.styles.oil_painting', englishLabel: 'Oil Painting', type: 'image', value: genericIconUrl, promptInstruction: "Transform the portrait into a classical oil painting." },
+                    { id: 'pencil_sketch', labelKey: 'beautyStudio.styles.pencil_sketch', englishLabel: 'Pencil Sketch', type: 'image', value: genericIconUrl, promptInstruction: "Convert the portrait into a detailed pencil sketch." },
+                    { id: 'watercolor', labelKey: 'beautyStudio.styles.watercolor', englishLabel: 'Watercolor', type: 'image', value: genericIconUrl, promptInstruction: "Recreate the portrait in a soft and flowing watercolor style." },
+                    { id: 'pop_art', labelKey: 'beautyStudio.styles.pop_art', englishLabel: 'Pop Art', type: 'image', value: genericIconUrl, promptInstruction: "Reimagine the portrait in a bold and colorful Pop Art style, reminiscent of Andy Warhol." },
+                    { id: 'cyberpunk', labelKey: 'beautyStudio.styles.cyberpunk', englishLabel: 'Cyberpunk', type: 'image', value: genericIconUrl, promptInstruction: "Transform the portrait into a futuristic, neon-lit Cyberpunk style." },
+                ]
+            }
+        ]
+    },
+    {
+        id: 'hair', labelKey: 'beautyStudio.tools.hair', englishLabel: 'Hair', icon: "fa-solid fa-khanda",
+        subFeatures: [
+            {
+                id: 'dye', labelKey: 'beautyStudio.subfeatures.dye', englishLabel: 'Dye',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'honey_brown', labelKey: 'beautyStudio.styles.honey_brown', englishLabel: 'Honey Brown', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a warm 'Honey Brown'." },
+                    { id: 'teddy_blonde', labelKey: 'beautyStudio.styles.teddy_blonde', englishLabel: 'Teddy Blonde', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a 'Teddy Blonde' shade." },
+                    { id: 'cool_tone', labelKey: 'beautyStudio.styles.cool_tone', englishLabel: 'Cool Tone', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a 'Cool Tone' brown." },
+                    { id: 'leopard', labelKey: 'beautyStudio.styles.leopard', englishLabel: 'Leopard', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a 'Leopard' print style." },
+                    { id: 'orange_streaks', labelKey: 'beautyStudio.styles.orange_streaks', englishLabel: 'Orange Streaks', type: 'image', value: genericIconUrl, promptInstruction: "Add 'Orange Streaks' to the hair." },
+                    { id: 'red_bangs', labelKey: 'beautyStudio.styles.red_bangs', englishLabel: 'Red Bangs', type: 'image', value: genericIconUrl, promptInstruction: "Add 'Red Streaks' to the bangs." },
+                    { id: 'charcoal', labelKey: 'beautyStudio.styles.charcoal', englishLabel: 'Charcoal', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to 'Charcoal'." },
+                    { id: 'ash_gray', labelKey: 'beautyStudio.styles.ash_gray', englishLabel: 'Ash Gray', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a trendy 'Ash Gray'." },
+                    { id: 'pastel_pink', labelKey: 'beautyStudio.styles.pastel_pink', englishLabel: 'Pastel Pink', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a soft 'Pastel Pink'." },
+                    { id: 'electric_blue', labelKey: 'beautyStudio.styles.electric_blue', englishLabel: 'Electric Blue', type: 'image', value: genericIconUrl, promptInstruction: "Change the hair color to a vivid 'Electric Blue'." },
+                ]
+            },
+            {
+                id: 'hair_style', labelKey: 'beautyStudio.subfeatures.hair_style', englishLabel: 'Hairstyle',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'long_wavy', labelKey: 'beautyStudio.styles.long_wavy', englishLabel: 'Long Wavy', type: 'image', value: genericIconUrl, promptInstruction: "Change the hairstyle to long and wavy." },
+                    { id: 'sleek_ponytail', labelKey: 'beautyStudio.styles.sleek_ponytail', englishLabel: 'Sleek Ponytail', type: 'image', value: genericIconUrl, promptInstruction: "Change the hairstyle to a sleek ponytail." },
+                    { id: 'pixie_cut', labelKey: 'beautyStudio.styles.pixie_cut', englishLabel: 'Pixie Cut', type: 'image', value: genericIconUrl, promptInstruction: "Change the hairstyle to a short pixie cut." },
+                    { id: 'messy_bun', labelKey: 'beautyStudio.styles.messy_bun', englishLabel: 'Messy Bun', type: 'image', value: genericIconUrl, promptInstruction: "Change the hairstyle to a casual messy bun." },
+                ]
+            },
+        ]
+    },
+    {
+        id: 'expand_bg', labelKey: 'beautyStudio.tools.expand_bg', englishLabel: 'Expand Background', icon: "fa-solid fa-expand",
+        promptInstruction: "You are an AI with outpainting capabilities. Expand the background of the image to a '{{style}}' aspect ratio using a content-aware fill that seamlessly matches the original image's style, lighting, and content.",
+        subFeatures: [
+            { id: 'ratio', labelKey: 'beautyStudio.subfeatures.ratio', englishLabel: 'Aspect Ratio', styles: [
+                { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'intensity', value: 'None' },
+                { id: 'square', labelKey: 'beautyStudio.styles.square', englishLabel: 'Square 1:1', type: 'intensity', value: '1:1' },
+                { id: 'portrait', labelKey: 'beautyStudio.styles.portrait', englishLabel: 'Portrait 4:5', type: 'intensity', value: '4:5' },
+                { id: 'story', labelKey: 'beautyStudio.styles.story', englishLabel: 'Story 9:16', type: 'intensity', value: '9:16' },
+            ]},
+        ]
+    },
+    {
+        id: 'expression', labelKey: 'beautyStudio.tools.expression', englishLabel: 'Expression', icon: "fa-regular fa-face-smile",
+        subFeatures: [
+            {
+                id: 'emotion', labelKey: 'beautyStudio.subfeatures.emotion', englishLabel: 'Emotion',
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'happy', labelKey: 'beautyStudio.styles.happy', englishLabel: 'Happy', type: 'image', value: genericIconUrl, promptInstruction: "Modify the person's expression to be genuinely happy, with a natural smile." },
+                    { id: 'wink', labelKey: 'beautyStudio.styles.wink', englishLabel: 'Wink', type: 'image', value: genericIconUrl, promptInstruction: "Modify the person's expression to give a playful wink." },
+                    { id: 'surprised', labelKey: 'beautyStudio.styles.surprised', englishLabel: 'Surprised', type: 'image', value: genericIconUrl, promptInstruction: "Modify the person's expression to look surprised." },
+                    { id: 'sultry', labelKey: 'beautyStudio.styles.sultry', englishLabel: 'Sultry', type: 'image', value: genericIconUrl, promptInstruction: "Modify the person's expression to be sultry and alluring." },
+                ]
+            }
+        ]
+    },
+    {
+        id: 'id_photo', labelKey: 'beautyStudio.tools.id_photo', englishLabel: 'ID Photo', icon: "fa-regular fa-id-card",
+        subFeatures: [
+            { id: 'background_color', labelKey: 'beautyStudio.subfeatures.background_color', englishLabel: 'Background Color', styles: idPhotoBgStyles },
+        ]
+    },
+    {
+        id: 'makeup', labelKey: 'beautyStudio.tools.makeup', englishLabel: 'Makeup', icon: "fa-solid fa-lips",
+        subFeatures: [
+            {
+                id: 'lipstick', labelKey: 'beautyStudio.subfeatures.lipstick', englishLabel: 'Lipstick',
+                promptInstruction: "Apply a '{{style}}' colored lipstick to the lips.",
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'color', value: 'transparent' },
+                    { id: 'rd01', labelKey: 'beautyStudio.styles.rd01', englishLabel: 'RD01 Red', type: 'color', value: '#C7383B' },
+                    { id: 'pk04', labelKey: 'beautyStudio.styles.pk04', englishLabel: 'PK04 Pink', type: 'color', value: '#E87A7D' },
+                    { id: 'pk01', labelKey: 'beautyStudio.styles.pk01', englishLabel: 'PK01 Light Pink', type: 'color', value: '#EA89A0' },
+                    { id: 'pk03', labelKey: 'beautyStudio.styles.pk03', englishLabel: 'PK03 Deep Pink', type: 'color', value: '#E9527E' },
+                    { id: 'or01', labelKey: 'beautyStudio.styles.or01', englishLabel: 'OR01 Orange', type: 'color', value: '#E26D4F' },
+                    { id: 'cr01', labelKey: 'beautyStudio.styles.cr01', englishLabel: 'CR01 Coral', type: 'color', value: '#E58572' },
+                    { id: 'rd03', labelKey: 'beautyStudio.styles.rd03', englishLabel: 'RD03 Deep Red', type: 'color', value: '#B92B27' },
+                    { id: 'vl04', labelKey: 'beautyStudio.styles.vl04', englishLabel: 'VL04 Violet', type: 'color', value: '#D0A9C5' },
+                    { id: 'br01', labelKey: 'beautyStudio.styles.br01', englishLabel: 'BR01 Brown', type: 'color', value: '#A15F54' },
+                    { id: 'pk05', labelKey: 'beautyStudio.styles.pk05', englishLabel: 'PK05 Fuchsia', type: 'color', value: '#D94A8C' },
+                    { id: 'nude_beige', labelKey: 'beautyStudio.styles.nude_beige', englishLabel: 'Nude Beige', type: 'color', value: '#C9A995' },
+                    { id: 'dusty_rose', labelKey: 'beautyStudio.styles.dusty_rose', englishLabel: 'Dusty Rose', type: 'color', value: '#B56B73' },
+                    { id: 'berry_plum', labelKey: 'beautyStudio.styles.berry_plum', englishLabel: 'Berry Plum', type: 'color', value: '#8E3A59' },
+                ]
+            },
+            {
+                id: 'blush', labelKey: 'beautyStudio.subfeatures.blush', englishLabel: 'Blush',
+                promptInstruction: "Apply a '{{style}}' colored blush to the cheeks.",
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'color', value: 'transparent' },
+                    { id: 'rd01_blush', labelKey: 'beautyStudio.styles.rd01_blush', englishLabel: 'RD01 Red', type: 'color', value: '#E88B8C' },
+                    { id: 'br01_blush', labelKey: 'beautyStudio.styles.br01_blush', englishLabel: 'BR01 Brown', type: 'color', value: '#D4A392' },
+                    { id: 'pk01_blush', labelKey: 'beautyStudio.styles.pk01_blush', englishLabel: 'PK01 Pink', type: 'color', value: '#F0A2B1' },
+                    { id: 'vl01_blush', labelKey: 'beautyStudio.styles.vl01_blush', englishLabel: 'VL01 Violet', type: 'color', value: '#D6A6C7' },
+                    { id: 'nd01_blush', labelKey: 'beautyStudio.styles.nd01_blush', englishLabel: 'ND01 Nude', type: 'color', value: '#E6A89A' },
+                    { id: 'or01_blush', labelKey: 'beautyStudio.styles.or01_blush', englishLabel: 'OR01 Orange', type: 'color', value: '#F0A88A' },
+                    { id: 'peach_puff', labelKey: 'beautyStudio.styles.peach_puff', englishLabel: 'Peach Puff', type: 'color', value: '#FFDAB9' },
+                    { id: 'rose_pink', labelKey: 'beautyStudio.styles.rose_pink', englishLabel: 'Rose Pink', type: 'color', value: '#E7ACCF' },
+                ]
+            },
+            {
+                id: 'eyebrows', labelKey: 'beautyStudio.subfeatures.eyebrows', englishLabel: 'Eyebrows',
+                promptInstruction: "Reshape the eyebrows to a '{{style}}' style.",
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'natural_arch', labelKey: 'beautyStudio.styles.natural_arch', englishLabel: 'Natural Arch', type: 'image', value: genericIconUrl },
+                    { id: 'straight', labelKey: 'beautyStudio.styles.straight', englishLabel: 'Straight', type: 'image', value: genericIconUrl },
+                    { id: 'full_natural', labelKey: 'beautyStudio.styles.full_natural', englishLabel: 'Full & Natural', type: 'image', value: genericIconUrl },
+                    { id: 'bold', labelKey: 'beautyStudio.styles.bold', englishLabel: 'Bold', type: 'image', value: genericIconUrl },
+                ]
+            },
+            {
+                id: 'eyelashes', labelKey: 'beautyStudio.subfeatures.eyelashes', englishLabel: 'Eyelashes',
+                promptInstruction: "Apply '{{style}}' style false eyelashes.",
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'daily_natural', labelKey: 'beautyStudio.styles.daily_natural', englishLabel: 'Daily Natural', type: 'image', value: genericIconUrl },
+                    { id: 'barbie_doll', labelKey: 'beautyStudio.styles.barbie_doll', englishLabel: 'Barbie Doll', type: 'image', value: genericIconUrl },
+                    { id: 'wispy', labelKey: 'beautyStudio.styles.wispy', englishLabel: 'Wispy', type: 'image', value: genericIconUrl },
+                    { id: 'manga', labelKey: 'beautyStudio.styles.manga', englishLabel: 'Manga', type: 'image', value: genericIconUrl },
+                ]
+            },
+            {
+                id: 'freckles', labelKey: 'beautyStudio.subfeatures.freckles', englishLabel: 'Freckles',
+                promptInstruction: "Add '{{style}}' style freckles to the face.",
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'lightly_dotted', labelKey: 'beautyStudio.styles.lightly_dotted', englishLabel: 'Lightly Dotted', type: 'image', value: genericIconUrl },
+                    { id: 'under_eye', labelKey: 'beautyStudio.styles.under_eye', englishLabel: 'Under Eye', type: 'image', value: genericIconUrl },
+                    { id: 'across_nose_cheeks', labelKey: 'beautyStudio.styles.across_nose_cheeks', englishLabel: 'Across Nose and Cheeks', type: 'image', value: genericIconUrl },
+                ]
+            },
+            {
+                id: 'contact_lenses', labelKey: 'beautyStudio.subfeatures.contact_lenses', englishLabel: 'Contact Lenses',
+                promptInstruction: "Change the eye color and style to look like '{{style}}' contact lenses.",
+                styles: [
+                    { id: 'none', labelKey: 'beautyStudio.styles.none', englishLabel: 'None', type: 'image', value: genericIconUrl },
+                    { id: 'aura', labelKey: 'beautyStudio.styles.aura', englishLabel: 'Aura', type: 'image', value: genericIconUrl },
+                    { id: 'yellow', labelKey: 'beautyStudio.styles.yellow', englishLabel: 'Yellow', type: 'image', value: genericIconUrl },
+                    { id: 'bright_eyes', labelKey: 'beautyStudio.styles.bright_eyes', englishLabel: 'Bright Eyes', type: 'image', value: genericIconUrl },
+                    { id: 'ash_gray', labelKey: 'beautyStudio.styles.ash_gray', englishLabel: 'Ash Gray', type: 'image', value: genericIconUrl },
+                ]
+            },
+        ]
+    },
+];
