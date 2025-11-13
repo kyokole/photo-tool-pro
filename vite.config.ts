@@ -7,7 +7,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: [
-        'i18next-browser-languagedetector'
+        'i18next-browser-languagedetector',
+        'react-compare-slider'
       ]
     }
   }
