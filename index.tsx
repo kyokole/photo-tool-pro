@@ -1,95 +1,70 @@
+// index.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 import { initializeFirebase } from './services/firebase';
 
-// A robust promise wrapper to add a definitive timeout to any async operation.
-const promiseWithTimeout = <T,>(
-  promise: Promise<T>,
-  ms: number,
-  timeoutError = new Error('Promise timed out')
-): Promise<T> => {
-  // Create a new promise that races the original promise and a timeout.
-  const timeout = new Promise<never>((_, reject) => {
-    const id = setTimeout(() => {
-      clearTimeout(id);
-      reject(timeoutError);
-    }, ms);
-  });
-
-  return Promise.race([promise, timeout]);
-};
-
-
-// Wrap the startup in an async function to allow for dynamic imports inside the try/catch block.
-// This is critical for catching module-level errors (e.g., from Firebase initialization).
-async function main() {
-  const preloader = document.getElementById('preloader');
-
+/**
+ * This is the ultimate, bulletproof entry point for the application.
+ * It wraps the entire startup process in a simple try/catch block.
+ * Crucially, it dynamically imports the main App component. This ensures that ANY error
+ * that occurs during the static import phase of any file in the App's dependency tree
+ * will be caught here as a promise rejection, rather than causing a silent browser hang.
+ */
+async function startup() {
   try {
-    // Define the entire startup sequence as a single async operation.
-    const startupPromise = (async () => {
-      // **CRITICAL STEP 1:** Wait for Firebase to initialize.
-      // This now includes fetching config AND downloading the Firebase SDK scripts.
-      await initializeFirebase();
+    // Initialize services that must be ready before the app renders.
+    // Any failure here will be caught below.
+    await initializeFirebase();
 
-      // **CRITICAL STEP 2:** Dynamically import the App component.
-      // This waits for App.tsx and all its dependencies (like firebase/auth) to download.
-      const App = (await import('./App')).default;
+    // Dynamically import the main App component. This is the key to catching all module-level errors.
+    const App = (await import('./App')).default;
 
-      const rootElement = document.getElementById('root');
-      if (!rootElement) {
-        throw new Error("Could not find root element to mount to");
-      }
-
-      const root = ReactDOM.createRoot(rootElement);
-      root.render(
-        <React.StrictMode>
-          <I18nextProvider i18n={i18n}>
-            <App />
-          </I18nextProvider>
-        </React.StrictMode>
-      );
-    })();
-    
-    // **MASTER TIMEOUT:** Apply a single, robust timeout to the entire startup process.
-    // This will catch hangs from ANY network request (config, SDKs, App code).
-    await promiseWithTimeout(
-        startupPromise,
-        30000, // 30-second timeout, generous for slow mobile networks
-        new Error("Application startup timed out after 30 seconds. This is likely due to a poor network connection. Please check your connection and refresh.")
-    );
-
-
-    // The app has been successfully mounted. Now, we can safely remove the preloader.
-    if (preloader) {
-        preloader.classList.add('loaded');
-        setTimeout(() => {
-            preloader.remove();
-        }, 500); // Wait for the fade-out animation to complete
+    const rootElement = document.getElementById('root');
+    if (!rootElement) {
+      // This is a fatal, non-recoverable error.
+      throw new Error("Root element '#root' not found in the DOM.");
     }
 
-  } catch (e) {
-    console.error("Fatal error during application startup:", e);
+    // Render the app.
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <I18nextProvider i18n={i18n}>
+          <App />
+        </I18nextProvider>
+      </React.StrictMode>
+    );
+
+    // If we reach this point, the app has started successfully.
+    // We can now safely remove the preloader.
+    const preloader = document.getElementById('preloader');
     if (preloader) {
-      // Stop the spinner animation
-      const spinner = preloader.querySelector('.spinner');
-      if (spinner) {
-        (spinner as HTMLElement).style.display = 'none';
-      }
-      
-      // Display an informative error message
+      preloader.classList.add('loaded');
+      // Remove from DOM after fade-out animation
+      setTimeout(() => preloader.remove(), 500);
+    }
+
+  } catch (error) {
+    // This is the global error handler. It will catch ANY error during startup.
+    // It directly manipulates the DOM to display the error, ensuring it's always visible.
+    console.error("A fatal error occurred during application startup:", error);
+    
+    const preloader = document.getElementById('preloader');
+    if (preloader) {
+      // Remove the spinning animation and replace content with a detailed error message.
+      // This fulfills the user's request to "remove the loading circle" to see the real error.
       preloader.innerHTML = `
-        <div style="padding: 20px; text-align: center; color: #ff8a8a; font-family: sans-serif; max-width: 600px; margin: auto;">
-            <h1 style="font-size: 24px; margin-bottom: 10px;">Application Startup Error</h1>
-            <p style="font-size: 16px; margin-bottom: 20px;">Could not load the application. The most common cause is a misconfiguration of <strong>Environment Variables</strong>. Please double-check your Firebase keys in your project settings and redeploy.</p>
-            <pre style="background: #2d2d2d; color: #ccc; padding: 15px; border-radius: 5px; text-align: left; white-space: pre-wrap; word-wrap: break-word; font-size: 12px; max-height: 200px; overflow-y: auto;">${(e as Error).stack || (e as Error).message}</pre>
+        <div style="font-family: 'Inter', sans-serif; color: #c9d1d9; text-align: center; padding: 20px; max-width: 800px; margin: auto;">
+          <h1 style="color: #f85149; font-size: 24px;">Application Failed to Start</h1>
+          <p style="color: #8b949e; margin-top: 8px;">A critical error prevented the application from loading. Please check the details below and contact support if the issue persists.</p>
+          <pre style="background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 15px; border-radius: 6px; text-align: left; white-space: pre-wrap; word-break: break-all; font-size: 13px; margin-top: 20px; max-height: 400px; overflow-y: auto;">${(error as Error).stack || (error as Error).message}</pre>
         </div>
       `;
     }
   }
 }
 
-// Run the application startup logic.
-main();
+// Execute the startup function.
+startup();
