@@ -18,9 +18,18 @@ export const initializeFirebase = async () => {
   let firebaseConfig;
 
   try {
-    // 1. Cố gắng lấy cấu hình từ Vercel Serverless Function (dành cho production)
-    const response = await fetch('/api/config');
-    
+    // **GIẢI PHÁP TỐI ƯU:** Thêm một cơ chế timeout 15 giây.
+    // Nếu fetch bị "treo" (phổ biến trên mạng di động), nó sẽ ném ra lỗi thay vì đợi mãi mãi.
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Connection to configuration server timed out after 15 seconds. Please check your network and try again.")), 15000)
+    );
+
+    // Sử dụng Promise.race để xem fetch hay timeout hoàn thành trước.
+    const response = await Promise.race([
+      fetch('/api/config'),
+      timeoutPromise
+    ]) as Response;
+
     if (response.ok) {
         // Nếu thành công (đang chạy trên Vercel), lấy config từ API
         firebaseConfig = await response.json();
@@ -41,7 +50,7 @@ export const initializeFirebase = async () => {
         };
     }
 
-    // 3. Khởi tạo Firebase với cấu hình đã có
+    // Khởi tạo Firebase với cấu hình đã có
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
