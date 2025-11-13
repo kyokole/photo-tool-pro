@@ -140,6 +140,32 @@ ${userRequest}
 ---
 **KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận kế hoạch của bạn bao gồm việc sao chép hoàn hảo (các) khuôn mặt nhận dạng.`;
 };
+
+const createFinalPromptEn = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
+    if (!hasIdentityImages) {
+        return `**TASK:** Create a high-quality, artistic image based on the user's request.\n\n**USER REQUEST:** ${userRequest}`;
+    }
+
+    let identityDescription = "The first image provided is the IDENTITY REFERENCE.";
+    if (isCouple) {
+        const g1_en = gender1 === 'male' ? 'a Male' : gender1 === 'female' ? 'a Female' : 'a person';
+        const g2_en = gender2 === 'male' ? 'a Male' : gender2 === 'female' ? 'a Female' : 'a person';
+        identityDescription = `The FIRST image is IDENTITY_PERSON_1 (${g1_en}, on the left). The SECOND image is IDENTITY_PERSON_2 (${g2_en}, on the right).`;
+    }
+
+    return `**ULTIMATE DIRECTIVE: IDENTITY PRESERVATION**
+**PRIMARY GOAL:** Your most critical task is to generate an image where the subject's face is a **FLAWLESS, IDENTICAL, 1:1 REPLICA** of the face from the IDENTITY REFERENCE image(s).
+**NON-NEGOTIABLE RULES:**
+1.  **IDENTITY SOURCE:** ${identityDescription}
+2.  **FACE REPLICATION:** The face in the final output **MUST BE AN EXACT COPY**. Do not alter facial structure, features (eyes, nose, lips), expression, or skin texture. This is more important than any other part of the prompt.
+3.  **SCENE GENERATION:** Execute the user's scene description below, but **ONLY AFTER** you have satisfied all identity preservation rules.
+---
+**USER SCENE DESCRIPTION:**
+${userRequest}
+---
+**FINAL CHECK:** Before rendering, confirm your plan includes perfectly replicating the identity face. The scene is secondary to face consistency.`;
+};
+
 const buildIdPhotoPrompt = (settings: Settings): string => {
     let prompt = `**Bước tiền xử lý quan trọng: Cắt ảnh chân dung trong đầu**
 Trước mọi chỉnh sửa khác, bạn PHẢI phân tích ảnh gốc. Nếu đó là ảnh góc rộng, ảnh phong cảnh, hoặc chứa nhiều hậu cảnh, nhiệm vụ đầu tiên của bạn là cắt ảnh trong đầu thành một bức chân dung tiêu chuẩn từ đầu đến vai. Chỉ tập trung vào đầu và phần thân trên của chủ thể chính. Loại bỏ tất cả các yếu tố cảnh quan khác. Tất cả các chỉnh sửa tiếp theo (nền, quần áo, v.v.) sẽ CHỈ được thực hiện trên khu vực chân dung đã cắt trong đầu này. Điều này đảm bảo đầu ra cuối cùng là một bức chân dung đúng nghĩa, không phải là một hình người nhỏ trong một khung hình lớn.
@@ -486,7 +512,7 @@ Example response format:
                 if (!payload || !payload.imagePart || !payload.prompt) return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
                 const { imagePart, prompt } = payload;
 
-                const fullPrompt = createFinalPromptVn(prompt, true);
+                const fullPrompt = createFinalPromptEn(prompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
@@ -799,7 +825,7 @@ Example response format:
                 }
 
                 const promises = promptsToRun.flatMap(({ prompt, parts, isCouple, gender1, gender2 }) => {
-                    const userRequest = createFinalPromptVn(prompt, parts.length > 0, isCouple, gender1, gender2);
+                    const userRequest = createFinalPromptEn(prompt, parts.length > 0, isCouple, gender1, gender2);
                     const finalParts = [...parts, { text: userRequest }];
                     const loopCount = promptsToRun.length > 1 ? 1 : numImages;
                     
