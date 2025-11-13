@@ -58,13 +58,6 @@ export const generateIdPhoto = async (originalImage: string, settings: Settings,
     return imageData;
 };
 
-// --- Beauty Studio ---
-export const applyBeautyEffect = async (base64Image: string, prompt: string): Promise<string> => {
-    const { imageData } = await callBackendApi('applyBeautyEffect', { base64Image, prompt });
-    return imageData;
-};
-
-
 // --- Headshot Generator ---
 export const generateHeadshot = async (imagePart: FilePart, prompt: string, signal?: AbortSignal): Promise<string> => {
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
@@ -136,5 +129,11 @@ export const detectOutfit = async (base64Image: string, mimeType: string): Promi
 
 export const editOutfitOnImage = async (base64Image: string, mimeType: string, newOutfitPrompt: string): Promise<string> => {
     const { imageData } = await callBackendApi('editOutfitOnImage', { base64Image, mimeType, newOutfitPrompt });
+    return imageData;
+};
+
+// --- Beauty Studio ---
+export const applyBeautyEffect = async (baseImageDataUrl: string, prompt: string): Promise<string> => {
+    const { imageData } = await callBackendApi('applyBeautyEffect', { baseImageDataUrl, prompt });
     return imageData;
 };

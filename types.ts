@@ -43,45 +43,6 @@ export interface HistoryItem {
     settings: Settings;
 }
 
-// --- Types for Beauty Studio ---
-export type BeautyStyleType = 'image' | 'color' | 'intensity';
-
-export interface BeautyStyle {
-  id: string;
-  labelKey: string;
-  englishLabel: string;
-  type: BeautyStyleType;
-  value: string; // URL for 'image', hex code for 'color', label for 'intensity'
-  promptInstruction?: string;
-}
-
-export interface BeautySubFeature {
-  id: string;
-  labelKey: string;
-  englishLabel: string;
-  styles?: BeautyStyle[];
-  promptInstruction?: string;
-}
-
-export type BeautyBadgeType = 'Free' | 'Hot' | 'NEW';
-
-export interface BeautyFeature {
-  id: string;
-  labelKey: string;
-  englishLabel: string;
-  icon: string;
-  badge?: BeautyBadgeType;
-  subFeatures?: BeautySubFeature[];
-  promptInstruction?: string;
-}
-
-export interface BeautyHistoryItem {
-  id: string;
-  imageDataUrl: string;
-}
-// --- End of Types for Beauty Studio ---
-
-
 export interface HeadshotStyle {
   id: string;
   nameKey: string; // Changed from name to nameKey for i18n
@@ -347,3 +308,38 @@ export interface Job extends JobDefinition {
 
 // Re-export for use in other components if needed
 export type LayoutResult = CoreLayoutResult;
+
+// --- Types for Beauty Studio ---
+export type BeautyBadgeType = 'Free' | 'Hot' | 'NEW';
+
+export interface BeautyStyle {
+  id: string;
+  labelKey: string;
+  type: 'image' | 'color' | 'intensity'; // 'image' for thumbnails/icons, 'color' for swatches, 'intensity' for buttons like "Low", "Medium"
+  value: string; // URL, hex color code, or a value for intensity
+  englishLabel: string; // for the prompt
+  promptInstruction?: string;
+}
+
+export interface BeautySubFeature {
+  id: string;
+  labelKey: string;
+  englishLabel: string;
+  styles: BeautyStyle[] | null; // null if it's a direct action
+  promptInstruction?: string;
+}
+
+export interface BeautyFeature {
+  id: string;
+  labelKey: string;
+  englishLabel: string;
+  icon: string;
+  badge?: BeautyBadgeType;
+  subFeatures?: BeautySubFeature[];
+  promptInstruction?: string;
+}
+
+export interface BeautyHistoryItem {
+    id: string;
+    imageDataUrl: string;
+}

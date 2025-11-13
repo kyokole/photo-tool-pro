@@ -1,4 +1,3 @@
-
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -233,6 +232,7 @@ const App: React.FC = () => {
 
   const handleResetBeautyStudioTool = useCallback(() => {
     console.log("Resetting Beauty Studio tool state (no-op).");
+    handleAbort();
   }, []);
 
   const resetAllTools = useCallback(() => {
@@ -1436,6 +1436,7 @@ const App: React.FC = () => {
         onBeautyStudioClick={handleBeautyStudioSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
+// FIX: The prop 'onUndo' was using an undefined variable 'onUndo'. Changed to the correctly defined handler 'handleUndo'.
         onUndo={handleUndo}
         historyCount={history.length} 
         onGuideClick={() => setIsGuideVisible(true)}

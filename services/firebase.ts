@@ -27,12 +27,12 @@ export const initializeFirebase = async () => {
     } else if (response.status === 404) {
         console.warn("Could not fetch /api/config (404). Assuming development environment. Using dummy config.");
         firebaseConfig = {
-            apiKey: "AIzaSy...",
-            authDomain: "dummy-project.firebaseapp.com",
-            projectId: "dummy-project",
-            storageBucket: "dummy-project.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:dummy",
+            apiKey: "AIzaSyAXjFpzO4v9ESWsi_2Zdb5wxXudiMz0E2c",
+            authDomain: "photo-tool-pro.firebaseapp.com",
+            projectId: "photo-tool-pro",
+            storageBucket: "photo-tool-pro.appspot.com",
+            messagingSenderId: "407393374385",
+            appId: "1:407393374385:web:fc7fa01812492ed7a51290",
         };
     } else {
         throw new Error(`Failed to fetch config from server. Status: ${response.status} ${response.statusText}`);

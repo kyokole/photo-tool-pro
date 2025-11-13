@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { applyBeautyEffect } from '../services/geminiService';
-import { BEAUTY_FEATURES } from '../constants';
+// FIX: The BEAUTY_FEATURES constant is defined in its own file. Updated the import path to correctly reference it and resolve the module not found error.
+import { BEAUTY_FEATURES } from '../constants/beautyConstants';
 import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
 
 import { ImageProcessor } from './beautystudio/ImageProcessor';

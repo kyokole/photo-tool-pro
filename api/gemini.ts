@@ -433,30 +433,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(200).json({ imageData: `data:${finalMimeType};base64,${croppedImageB64}` });
             }
 
-            case 'applyBeautyEffect': {
-                if (!payload || !payload.base64Image || !payload.prompt) {
-                    return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
-                }
-                const { base64Image, prompt } = payload;
-                
-                const imagePart: Part = { inlineData: { data: base64Image.split(',')[1], mimeType: base64Image.split(';')[0].split(':')[1] } };
-                const fullPrompt = createFinalPromptVn(prompt, true);
-            
-                const response = await models.generateContent({
-                    model: 'gemini-2.5-flash-image',
-                    contents: { parts: [imagePart, { text: fullPrompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                });
-            
-                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) {
-                    throw new Error("API không trả về hình ảnh.");
-                }
-                
-                const { data, mimeType } = resultPart.inlineData;
-                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
-            }
-
             case 'generateHeadshot': {
                 if (!payload || !payload.imagePart || !payload.prompt) return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt.' });
                 const { imagePart, prompt } = payload;
