@@ -409,25 +409,7 @@ export default {
       "title": "2. SETTINGS & PREVIEW"
     },
     "generationError": "Only {{successCount}} out of {{total}} requested images could be generated. Some images may have been blocked due to content policies.",
-    "creativeTip": "✨ Creative Tip: Now, edit the prompt below to transform the image to your liking!",
-    "videoCreator": {
-      "progress": {
-        "sending": "Sending video creation request...",
-        "done": "Video created! Downloading...",
-        "preparing": "Preparing..."
-      },
-      "error": {
-        "invalidKey": "Invalid API Key. Please select again."
-      },
-      "altSource": "Video source",
-      "filters": {
-        "none": "None",
-        "vintage": "Vintage",
-        "bw": "B&W",
-        "vivid": "Vivid",
-        "cool": "Cool"
-      }
-    }
+    "creativeTip": "✨ Creative Tip: Now, edit the prompt below to transform the image to your liking!"
   },
   "hairstyles": {
     "female": {
@@ -627,7 +609,7 @@ export default {
             }
         },
         "options": {
-            "aspectRatio": {
+             "aspectRatio": {
                 "story": "9:16 (Story)",
                 "portrait": "3:4 (Portrait)",
                 "social": "4:5 (Social)",

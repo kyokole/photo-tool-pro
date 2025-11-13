@@ -1,5 +1,5 @@
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
-import React, { useState, useCallback, useRef, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -18,31 +18,20 @@ import UserGuideModal from './components/UserGuideModal';
 import AboutModal from './components/AboutModal';
 import DonateModal from './components/DonateModal';
 import HeadshotGenerator from './components/HeadshotGenerator';
-// import RestorationTool from './components/RestorationTool';
-// import FashionStudio from './components/FashionStudio';
-// import FootballStudio from './components/FootballStudio';
+import RestorationTool from './components/RestorationTool';
+import FashionStudio from './components/FashionStudio';
+import FootballStudio from './components/FootballStudio';
 import AuthModal from './components/AuthModal';
 import AdminPanel from './components/AdminPanel';
 import ChangePasswordModal from './components/ChangePasswordModal';
-// import CreativeStudio from './components/CreativeStudio';
-// import PromptAnalyzer from './components/PromptAnalyzer';
+import CreativeStudio from './components/CreativeStudio';
+import PromptAnalyzer from './components/PromptAnalyzer';
 import { ThemeSelector } from './components/creativestudio/ThemeSelector';
 import UpgradeVipModal from './components/SubscriptionExpiredModal';
 import BatchProcessor from './components/BatchProcessor';
-// import FourSeasonsStudio from './components/FourSeasonsStudio';
+import FourSeasonsStudio from './components/FourSeasonsStudio';
 import LegalModal from './components/LegalModal';
 import VerificationModal from './components/VerificationModal';
-// import BeautyStudio from './components/BeautyStudio';
-
-// --- LAZY LOADING FOR VIP COMPONENTS ---
-const RestorationTool = React.lazy(() => import('./components/RestorationTool'));
-const FashionStudio = React.lazy(() => import('./components/FashionStudio'));
-const FootballStudio = React.lazy(() => import('./components/FootballStudio'));
-const CreativeStudio = React.lazy(() => import('./components/CreativeStudio'));
-const PromptAnalyzer = React.lazy(() => import('./components/PromptAnalyzer'));
-const FourSeasonsStudio = React.lazy(() => import('./components/FourSeasonsStudio'));
-const BeautyStudio = React.lazy(() => import('./components/BeautyStudio'));
-
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -125,6 +114,18 @@ const App: React.FC = () => {
     if (!currentUser) return false;
     return currentUser.isAdmin || (new Date(currentUser.subscriptionEndDate) > new Date());
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!isAuthLoading) {
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+            preloader.classList.add('loaded');
+            setTimeout(() => {
+                preloader.remove();
+            }, 500);
+        }
+    }
+  }, [isAuthLoading]);
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
@@ -228,10 +229,6 @@ const App: React.FC = () => {
     handleAbort();
   }, []);
 
-  const handleResetBeautyStudioTool = useCallback(() => {
-    console.log("Resetting Beauty Studio tool state (no-op).");
-  }, []);
-
   const resetAllTools = useCallback(() => {
     handleAbort();
     handleResetIdPhotoTool();
@@ -241,9 +238,8 @@ const App: React.FC = () => {
     handleResetPromptAnalyzerTool();
     handleResetFootballStudioTool();
     handleResetFourSeasonsTool();
-    handleResetBeautyStudioTool();
     setIsFreeTierLocked(false);
-  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool]);
+  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool]);
 
   const handleModeChange = useCallback((newMode: AppMode) => {
     handleAbort();
@@ -315,7 +311,7 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio'];
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
                 const targetIsVipTool = vipModes.includes(postLoginRedirect);
                 const userIsVip = appUser.isAdmin || (new Date(appUser.subscriptionEndDate) > new Date());
 
@@ -969,19 +965,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleBeautyStudioSelect = () => {
-    if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'beauty_studio') handleModeChange('beauty_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
-    } else {
-        setPostLoginRedirect('beauty_studio');
-        setIsAuthModalVisible(true);
-    }
-  };
-
   const handleAdminPanelSelect = () => {
     if (currentUser?.isAdmin) {
         handleAbort();
@@ -1135,7 +1118,7 @@ const App: React.FC = () => {
         return; 
       }
 
-      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio'];
+      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
       
       if (vipModes.includes(appMode) || isBatchMode) {
         handleModeChange('headshot');
@@ -1153,17 +1136,6 @@ const App: React.FC = () => {
     setCreativeStudioInitialState({ image, prompt });
     handleModeChange('creative_studio');
   }, [handleModeChange]);
-
-  const VIPSuspenseFallback = () => (
-    <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
-        <svg className="animate-spin h-16 w-16 text-[var(--accent-blue)] mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <h2 className="text-2xl font-bold text-[var(--accent-blue)] mb-2">{t('common.processing')}</h2>
-        <p className="text-[var(--text-secondary)] mt-4 text-sm">{t('loading.patience')}</p>
-    </div>
-  );
 
 
   const isLoading = isGenerating || isHeadshotLoading || isFashionStudioLoading || isBatchProcessing; 
@@ -1299,52 +1271,46 @@ const App: React.FC = () => {
         );
       case 'restoration':
           return (
-            <Suspense fallback={<VIPSuspenseFallback />}>
-                <RestorationTool
-                    theme={theme}
-                    setTheme={setTheme}
-                    isVip={isVip}
-                />
-            </Suspense>
+              <RestorationTool
+                  theme={theme}
+                  setTheme={setTheme}
+                  isVip={isVip}
+              />
           );
       case 'fashion_studio':
           return (
-             <Suspense fallback={<VIPSuspenseFallback />}>
-                <FashionStudio 
-                  sourceFile={fashionStudioFile}
-                  settings={fashionStudioSettings}
-                  onSettingsChange={handleFashionSettingsChange}
-                  result={fashionStudioResult}
-                  isLoading={isFashionStudioLoading}
-                  error={fashionStudioError}
-                  onImageUpload={processSingleFile}
-                  onGenerate={handleGenerateFashionPhoto}
-                  onReset={handleResetFashionStudioTool}
-                  theme={theme}
-                  setTheme={setTheme}
-                />
-             </Suspense>
+              <FashionStudio 
+                sourceFile={fashionStudioFile}
+                settings={fashionStudioSettings}
+                onSettingsChange={handleFashionSettingsChange}
+                result={fashionStudioResult}
+                isLoading={isFashionStudioLoading}
+                error={fashionStudioError}
+                onImageUpload={processSingleFile}
+                onGenerate={handleGenerateFashionPhoto}
+                onReset={handleResetFashionStudioTool}
+                theme={theme}
+                setTheme={setTheme}
+              />
           );
       case 'football_studio':
-          return <Suspense fallback={<VIPSuspenseFallback />}><FootballStudio theme={theme} setTheme={setTheme} /></Suspense>;
+          return <FootballStudio theme={theme} setTheme={setTheme} />;
        case 'prompt_analyzer':
-            return <Suspense fallback={<VIPSuspenseFallback />}><PromptAnalyzer 
+            return <PromptAnalyzer 
                         theme={theme} 
                         setTheme={setTheme}
                         onUseInStudio={handleUsePromptInStudio}
-                   /></Suspense>;
+                   />;
       case 'creative_studio':
-          return <Suspense fallback={<VIPSuspenseFallback />}><CreativeStudio 
+          return <CreativeStudio 
                     key={creativeStudioKey} 
                     theme={theme} 
                     setTheme={setTheme} 
                     initialState={creativeStudioInitialState}
                     onInitialStateConsumed={handleCreativeStudioStateConsumed}
-                /></Suspense>;
+                />;
       case 'four_seasons_studio':
-          return <Suspense fallback={<VIPSuspenseFallback />}><FourSeasonsStudio theme={theme} setTheme={setTheme} isVip={isVip} /></Suspense>;
-      case 'beauty_studio':
-          return <Suspense fallback={<VIPSuspenseFallback />}><BeautyStudio theme={theme} setTheme={setTheme} /></Suspense>;
+          return <FourSeasonsStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1369,10 +1335,8 @@ const App: React.FC = () => {
     }
   };
 
-  if (isAuthLoading && !currentUser) {
-    // While checking auth for the first time, show nothing to avoid UI flicker
-    // The preloader from index.html will cover this empty state.
-    return null; 
+  if (isAuthLoading) {
+    return null;
   }
 
   return (
@@ -1426,7 +1390,6 @@ const App: React.FC = () => {
         onCreativeStudioClick={handleCreativeStudioSelect}
         onPromptAnalyzerClick={handlePromptAnalyzerSelect}
         onFourSeasonsClick={handleFourSeasonsSelect}
-        onBeautyStudioClick={handleBeautyStudioSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
         onUndo={handleUndo}

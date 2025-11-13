@@ -65,7 +65,6 @@ export default {
             "title": "Tính năng VIP xử lý hàng loạt",
             "description": "Xử lý nhiều ảnh cùng lúc là một tính năng cao cấp. Vui lòng nâng cấp để sử dụng.",
             "button": "Liên hệ & Nâng cấp"
-        },
-        "vipFeatureAlert": "Xử lý hàng loạt là một tính năng VIP."
+        }
     }
 }

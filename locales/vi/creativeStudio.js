@@ -409,25 +409,7 @@ export default {
       "title": "2. CÀI ĐẶT & XEM TRƯỚC"
     },
     "generationError": "Chỉ tạo được {{successCount}} trên {{total}} ảnh yêu cầu. Một số ảnh có thể đã bị chặn do chính sách nội dung.",
-    "creativeTip": "✨ Mẹo Sáng tạo: Bây giờ, hãy chỉnh sửa câu lệnh dưới đây để biến đổi hình ảnh theo ý thích của bạn!",
-    "videoCreator": {
-      "progress": {
-        "sending": "Đang gửi yêu cầu tạo video...",
-        "done": "Video đã tạo xong! Đang tải...",
-        "preparing": "Đang chuẩn bị..."
-      },
-      "error": {
-        "invalidKey": "API Key không hợp lệ. Vui lòng chọn lại."
-      },
-      "altSource": "Nguồn video",
-      "filters": {
-        "none": "Không",
-        "vintage": "Cổ điển",
-        "bw": "Trắng đen",
-        "vivid": "Rực rỡ",
-        "cool": "Mát mẻ"
-      }
-    }
+    "creativeTip": "✨ Mẹo Sáng tạo: Bây giờ, hãy chỉnh sửa câu lệnh dưới đây để biến đổi hình ảnh theo ý thích của bạn!"
   },
   "hairstyles": {
     "female": {
