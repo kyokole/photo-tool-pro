@@ -31,7 +31,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ before, af
     return (
         <div 
             ref={containerRef}
-            className="relative w-full aspect-[4/3] max-w-full max-h-full overflow-hidden select-none cursor-ew-resize rounded-lg bg-black/20"
+            className="relative w-full h-full max-w-full max-h-full overflow-hidden select-none cursor-ew-resize rounded-lg bg-black/20"
             onMouseDown={onMouseDown}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}

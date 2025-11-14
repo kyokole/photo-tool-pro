@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
+import { BeforeAfterSlider } from '../BeforeAfterSlider';
 
 interface ImageProcessorProps {
   originalImage: string | null;
@@ -171,11 +171,7 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
                 {!hasResult ? (
                     <img src={originalImage} alt="Original" className="object-cover w-full h-full" />
                 ) : (
-                    <ReactCompareSlider
-                        className="w-full h-full"
-                        itemOne={<ReactCompareSliderImage style={{objectFit: 'cover'}} src={originalImage} alt="Original" />}
-                        itemTwo={<ReactCompareSliderImage style={{objectFit: 'cover'}} src={generatedImage} alt="Generated" />}
-                    />
+                    <BeforeAfterSlider before={originalImage} after={generatedImage!} />
                 )}
             </div>
 
