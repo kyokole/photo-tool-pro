@@ -456,7 +456,21 @@ export default {
             "pinchaMayurasana": "Tư thế Con Công (Pincha Mayurasana)",
             "adhoMukhaVrikshasana": "Tư thế Trồng Cây Chuối Bằng Tay (Adho Mukha Vrikshasana)",
             "visvamitrasana": "Tư thế Visvamitra (Visvamitrasana)",
-            "vasisthasana": "Tư thế Tấm Ván Nghiêng (Vasisthasana)"
+            "vasisthasana": "Tư thế Tấm Ván Nghiêng (Vasisthasana)",
+            "ekaPadaRajakapotasana": "Tư thế Vua Bồ Câu (Eka Pada Rajakapotasana)",
+            "svargaDvijasana": "Tư thế Chim Thiên Đường (Svarga Dvijasana)",
+            "tittibhasana": "Tư thế Con Đom Đóm (Tittibhasana)",
+            "astavakrasana": "Tư thế Tám Góc (Astavakrasana)",
+            "vrischikasana": "Tư thế Bọ Cạp (Vrischikasana)",
+            "handstandHollowback": "Tư thế Handstand Hollowback",
+            "scorpionHandstand": "Tư thế Bọ Cạp Trồng Chuối",
+            "ustrasana": "Tư thế Lạc Đà (Ustrasana)",
+            "anjaneyasanaBackbend": "Tư thế Trăng Lưỡi Liềm Ngả Sau (Anjaneyasana)",
+            "seatedWheelPose": "Tư thế Bánh Xe Ngồi",
+            "hanumanasana": "Tư thế Xoạc Dọc (Hanumanasana)",
+            "ekaPadaGalavasana": "Tư thế Bồ Câu Bay (Eka Pada Galavasana)",
+            "compassPose": "Tư thế La Bàn (Parivrtta Surya Yantrasana)",
+            "gandaBherundasana": "Tư thế Ganda Bherundasana"
           }
         }
       }

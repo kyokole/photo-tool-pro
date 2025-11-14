@@ -48,7 +48,13 @@ export const MALE_HAIRSTYLE_NAMES: string[] = [
 
 export const YOGA_POSES_BEGINNER = ["tadasana", "vrikshasana", "adhoMukhaSvanasana", "virabhadrasanaI", "virabhadrasanaII", "trikonasana"];
 export const YOGA_POSES_INTERMEDIATE = ["bakasana", "sirsasana", "sarvangasana", "urdhvaDhanurasana", "natarajasana"];
-export const YOGA_POSES_ADVANCED = ["ekaPadaKoundinyasanaII", "pinchaMayurasana", "adhoMukhaVrikshasana", "visvamitrasana", "vasisthasana"];
+export const YOGA_POSES_ADVANCED = [
+    "ekaPadaKoundinyasanaII", "pinchaMayurasana", "adhoMukhaVrikshasana", "visvamitrasana", 
+    "vasisthasana", "ekaPadaRajakapotasana", "svargaDvijasana", "tittibhasana", "astavakrasana", 
+    "vrischikasana", "handstandHollowback", "scorpionHandstand", "ustrasana", 
+    "anjaneyasanaBackbend", "seatedWheelPose", "hanumanasana", "ekaPadaGalavasana", 
+    "compassPose", "gandaBherundasana"
+];
 export const YOGA_LOCATIONS = ["studio", "beach", "forest", "mountain", "temple"];
 export const YOGA_LIGHTING = ["softStudio", "sunrise", "dramatic"];
 export const YOGA_OUTFITS = ["modern", "linen", "traditional"];

@@ -456,7 +456,21 @@ export default {
             "pinchaMayurasana": "Feathered Peacock Pose (Pincha Mayurasana)",
             "adhoMukhaVrikshasana": "Handstand (Adho Mukha Vrikshasana)",
             "visvamitrasana": "Visvamitra's Pose (Visvamitrasana)",
-            "vasisthasana": "Side Plank Pose (Vasisthasana)"
+            "vasisthasana": "Side Plank Pose (Vasisthasana)",
+            "ekaPadaRajakapotasana": "King Pigeon Pose (Eka Pada Rajakapotasana)",
+            "svargaDvijasana": "Bird of Paradise Pose (Svarga Dvijasana)",
+            "tittibhasana": "Firefly Pose (Tittibhasana)",
+            "astavakrasana": "Eight-Angle Pose (Astavakrasana)",
+            "vrischikasana": "Scorpion Pose (Vrischikasana)",
+            "handstandHollowback": "Handstand Hollowback Pose",
+            "scorpionHandstand": "Scorpion Handstand Pose",
+            "ustrasana": "Camel Pose (Ustrasana)",
+            "anjaneyasanaBackbend": "Crescent Moon Pose with Backbend (Anjaneyasana)",
+            "seatedWheelPose": "Seated Wheel Pose",
+            "hanumanasana": "Monkey Pose / Splits (Hanumanasana)",
+            "ekaPadaGalavasana": "Flying Pigeon Pose (Eka Pada Galavasana)",
+            "compassPose": "Compass Pose (Parivrtta Surya Yantrasana)",
+            "gandaBherundasana": "Formidable Face Pose (Ganda Bherundasana)"
           }
         }
       }
