@@ -21,6 +21,7 @@ import viFourSeasons from './locales/vi/fourSeasons.js';
 import viLegal from './locales/vi/legal.js';
 import viImageVariation from './locales/vi/imageVariation.js';
 import viBeautyStudio from './locales/vi/beautyStudio.js';
+import viHistory from './locales/vi/history.js';
 
 // English imports
 import enActionBar from './locales/en/actionBar.js';
@@ -42,6 +43,7 @@ import enFourSeasons from './locales/en/fourSeasons.js';
 import enLegal from './locales/en/legal.js';
 import enImageVariation from './locales/en/imageVariation.js';
 import enBeautyStudio from './locales/en/beautyStudio.js';
+import enHistory from './locales/en/history.js';
 
 
 const resources = {
@@ -65,7 +67,8 @@ const resources = {
       ...enFourSeasons,
       ...enLegal,
       ...enImageVariation,
-      ...enBeautyStudio
+      ...enBeautyStudio,
+      ...enHistory
     }
   },
   vi: {
@@ -88,7 +91,8 @@ const resources = {
       ...viFourSeasons,
       ...viLegal,
       ...viImageVariation,
-      ...viBeautyStudio
+      ...viBeautyStudio,
+      ...viHistory
     }
   }
 };

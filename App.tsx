@@ -33,6 +33,7 @@ import FourSeasonsStudio from './components/FourSeasonsStudio';
 import LegalModal from './components/LegalModal';
 import VerificationModal from './components/VerificationModal';
 import BeautyStudio from './components/BeautyStudio';
+import HistoryPanel from './components/HistoryPanel';
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -1120,6 +1121,23 @@ const App: React.FC = () => {
     }
   };
 
+  const handleHistorySelect = useCallback((item: HistoryItem) => {
+    setProcessedImage(item.image);
+    setSettings(item.settings);
+    setIsResultReady(true);
+  }, []);
+
+  const handleClearHistory = useCallback(() => {
+    if (window.confirm(t('history.clearConfirmation'))) {
+        setHistory([]);
+        setProcessedImage(null);
+        setIsResultReady(false);
+        if (!isVip) {
+          setIsFreeTierLocked(false);
+        }
+    }
+  }, [t, isVip]);
+
   const handleOpenDonateModal = () => {
     setIsAboutModalVisible(false);
     setIsDonateModalVisible(true);
@@ -1257,6 +1275,14 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+            {history.length > 0 && !isGenerating && (
+                <HistoryPanel
+                    history={history}
+                    currentImage={processedImage}
+                    onSelect={handleHistorySelect}
+                    onClear={handleClearHistory}
+                />
+            )}
             {idPhotoError && (
               <div className="bg-red-500 text-white text-center p-2 mx-6 mb-2 rounded-md">
                 {idPhotoError}

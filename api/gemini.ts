@@ -318,9 +318,12 @@ const buildRestorationPrompt = (options: RestorationOptions): string => {
 };
 
 // New prompt builder for Beauty Studio
-const buildBeautyPrompt = (tool: BeautyFeature, subFeature?: BeautySubFeature, style?: BeautyStyle): string => {
-    const baseInstruction = "The result should be realistic, high-quality, and seamlessly blended with the original photo. Only return the modified image.";
-    
+const buildBeautyPrompt = (tool: BeautyFeature, subFeature: BeautySubFeature | null, style: BeautyStyle | null): string => {
+    const mainInstruction = "You are an expert AI photo retouching artist. Your task is to perform a highly specific, localized modification on the provided image.";
+    const preservationRule = "CRITICAL RULE: You MUST preserve all aspects of the original image—including the person's identity, facial expression, pose, background, and lighting—unless explicitly instructed to change them. Apply the change seamlessly and realistically. Only modify the target area. Do not regenerate the entire image.";
+    const outputRule = "Return only the modified image, with no text or other artifacts.";
+
+    let specificModification = "";
     const customPrompt = style?.promptInstruction || subFeature?.promptInstruction || tool?.promptInstruction;
 
     if (customPrompt) {
@@ -334,14 +337,17 @@ const buildBeautyPrompt = (tool: BeautyFeature, subFeature?: BeautySubFeature, s
         if(tool) {
             finalCustomPrompt = finalCustomPrompt.replace('{{tool}}', tool.englishLabel);
         }
-        return `${finalCustomPrompt} ${baseInstruction}`;
+        specificModification = `The specific modification is: ${finalCustomPrompt}`;
     } else {
-        let effectDescription = `a '${tool.englishLabel}' effect`;
+        // Fallback for tools without specific instructions (though most should have them)
+        let effectDescription = `Apply a '${tool.englishLabel}' effect.`;
         if (subFeature && style && style.id !== 'none') {
-            effectDescription += `, specifically for the '${subFeature.englishLabel}' with the style '${style.englishLabel}'`;
+            effectDescription += ` Specifically for the '${subFeature.englishLabel}' with the style '${style.englishLabel}'.`;
         }
-        return `You are an expert AI photo retouching artist. The user wants to apply ${effectDescription}. ${baseInstruction}`;
+        specificModification = `The specific modification is: ${effectDescription}`;
     }
+
+    return `${mainInstruction} ${preservationRule} ${specificModification} ${outputRule}`;
 };
 
 

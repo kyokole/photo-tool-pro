@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { BeforeAfterSlider } from '../BeforeAfterSlider';
 
 interface ImageProcessorProps {
-  originalImage: string | null;
-  generatedImage: string | null;
+  originalUpload: string | null;
+  currentImage: string | null;
+  previewImage: string | null;
   onUploadClick: () => void;
   isLoading: boolean;
   error: string | null;
@@ -84,7 +85,7 @@ const ActionControls: React.FC<{
     );
 };
 
-export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ originalImage, generatedImage, onUploadClick, isLoading, error, onSave, canSave }) => {
+export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ originalUpload, currentImage, previewImage, onUploadClick, isLoading, error, onSave, canSave }) => {
   const { t } = useTranslation();
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(3/4);
@@ -95,7 +96,7 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
   const lastPanPoint = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const imageToMeasure = generatedImage || originalImage;
+    const imageToMeasure = previewImage || currentImage || originalUpload;
     if (imageToMeasure) {
       const img = new Image();
       img.onload = () => {
@@ -107,7 +108,7 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
     }
     setZoom(1);
     setPan({ x: 0, y: 0 });
-  }, [originalImage, generatedImage]);
+  }, [originalUpload, currentImage, previewImage]);
  
   useEffect(() => {
     if (zoom === 1) {
@@ -140,8 +141,8 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
     lastPanPoint.current = { x: e.clientX, y: e.clientY };
   };
 
-  const imageToShow = generatedImage || originalImage;
-  const hasResult = originalImage && generatedImage;
+  const hasBeenModified = originalUpload && currentImage && originalUpload !== currentImage;
+  const hasResult = hasBeenModified || !!previewImage;
 
   return (
     <div
@@ -150,7 +151,7 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
     >
       {isLoading && <Loader />}
 
-      {!originalImage && (
+      {!originalUpload && (
         <div
             onClick={onUploadClick}
             className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-[var(--border-color)] rounded-lg h-full w-full cursor-pointer hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-hover)] transition-colors"
@@ -161,7 +162,7 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
         </div>
       )}
      
-      {originalImage && (
+      {originalUpload && (
          <div
             ref={imageContainerRef}
             className="w-full h-full relative"
@@ -179,9 +180,9 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
                 }}
             >
                 {hasResult ? (
-                    <BeforeAfterSlider before={originalImage} after={generatedImage} />
+                    <BeforeAfterSlider before={originalUpload} after={previewImage || currentImage!} />
                 ) : (
-                    <img src={originalImage} alt="Original" className="object-cover w-full h-full" />
+                    <img src={originalUpload} alt="Original" className="object-cover w-full h-full" />
                 )}
             </div>
 

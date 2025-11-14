@@ -20,8 +20,9 @@ interface BeautyStudioProps {
 
 const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) => {
   const { t } = useTranslation();
+  const [originalUpload, setOriginalUpload] = useState<string | null>(null);
   const [currentBaseImage, setCurrentBaseImage] = useState<string | null>(null);
-  const [activeResult, setActiveResult] = useState<string | null>(null);
+  const [activePreview, setActivePreview] = useState<string | null>(null);
  
   const [activeTool, setActiveTool] = useState<BeautyFeature | null>(null);
   const [activeSubFeature, setActiveSubFeature] = useState<BeautySubFeature | null>(null);
@@ -34,26 +35,21 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generateModification = useCallback(async (toolOverride?: BeautyFeature, subFeatureOverride?: BeautySubFeature, styleOverride?: BeautyStyle) => {
-    const currentTool = toolOverride || activeTool;
-    const currentSubFeature = subFeatureOverride || activeSubFeature;
-    const currentStyle = styleOverride || activeStyle;
-    const imageToModify = activeResult || currentBaseImage;
+  const generateModification = useCallback(async (tool: BeautyFeature, subFeature: BeautySubFeature | null, style: BeautyStyle | null, isSingleClickAction: boolean = false) => {
+    const imageToModify = activePreview || currentBaseImage;
 
     if (!imageToModify) {
       setError(t('errors.uploadRequired'));
       return;
     }
-    if (!currentTool) {
+    if (!tool) {
       setError("Vui lòng chọn một công cụ.");
       return;
     }
-
-    if (currentTool.subFeatures && currentTool.subFeatures.length > 0) {
-      if (!currentSubFeature || !currentStyle || currentStyle.id === 'none') {
-        // This case is handled by disabling the button now, but we keep this for safety
-        return;
-      }
+    
+    // For tools with sub-features, ensure a style is selected
+    if (tool.subFeatures && (!subFeature || !style || style.id === 'none')) {
+      return; // Do nothing if no specific style is chosen for a complex tool
     }
 
     setIsLoading(true);
@@ -62,42 +58,42 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     try {
       const imageDataFromServer = await generateBeautyPhoto(
         imageToModify,
-        currentTool,
-        currentSubFeature,
-        currentStyle
+        tool,
+        subFeature,
+        style
       );
       
       const newImageDataUrl = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
 
-      if (!toolOverride) { // This is a preview generation
-        setActiveResult(newImageDataUrl);
-      } else { // This is a single-click action, so apply directly
+      if (isSingleClickAction) {
         const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: newImageDataUrl };
         setHistory(prev => [newHistoryItem, ...prev]);
         setCurrentBaseImage(newImageDataUrl);
-        setActiveResult(null);
+        setActivePreview(null);
+      } else {
+        setActivePreview(newImageDataUrl);
       }
 
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : t('errors.unknownError');
       setError(t('errors.beautyGenerationFailed', { error: errorMessage }));
-      setActiveResult(null); // Clear result on error
+      setActivePreview(null);
     } finally {
       setIsLoading(false);
     }
-  }, [activeTool, activeSubFeature, activeStyle, activeResult, currentBaseImage, isVip, t]);
+  }, [activePreview, currentBaseImage, isVip, t]);
  
   const handleToolSelect = useCallback((tool: BeautyFeature) => {
-    if (activeResult) {
-      const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activeResult };
+    if (activePreview) {
+      const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activePreview };
       setHistory(prev => [newHistoryItem, ...prev]);
-      setCurrentBaseImage(activeResult);
-      setActiveResult(null);
+      setCurrentBaseImage(activePreview);
+      setActivePreview(null);
     }
     
     if (!tool.subFeatures || tool.subFeatures.length === 0) {
-        generateModification(tool, undefined, undefined);
+        generateModification(tool, null, null, true);
         return;
     }
 
@@ -107,38 +103,40 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     const noneStyle = defaultSubFeature?.styles?.find(s => s.id === 'none') || null;
     setActiveStyle(noneStyle);
 
-  }, [activeResult, generateModification]);
+  }, [activePreview, generateModification]);
 
-  const handleStyleSelect = useCallback((style: BeautyStyle) => {
+  const handleStyleSelect = useCallback((style: BeautyStyle, subFeature: BeautySubFeature, tool: BeautyFeature) => {
       setActiveStyle(style);
-      // When user selects a new style, clear the previous preview
-      // to ensure the confirm button is disabled until a new preview is generated.
-      setActiveResult(null);
-  }, []);
+      setActivePreview(null); // Clear old preview
+      if (style.id !== 'none') {
+        generateModification(tool, subFeature, style);
+      }
+  }, [generateModification]);
 
   const handleCancel = useCallback(() => {
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
-    setActiveResult(null);
+    setActivePreview(null);
   }, []);
 
   const handleConfirm = useCallback(() => {
-    if (activeResult) {
-        const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activeResult };
+    if (activePreview) {
+        const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activePreview };
         setHistory(prev => [newHistoryItem, ...prev]);
-        setCurrentBaseImage(activeResult);
+        setCurrentBaseImage(activePreview);
     }
-    setActiveResult(null);
+    setActivePreview(null);
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
-  }, [activeResult]);
+  }, [activePreview]);
 
   const handleImageUpload = (imageDataUrl: string) => {
     const initialHistoryItem: BeautyHistoryItem = { id: 'original', imageDataUrl };
+    setOriginalUpload(imageDataUrl);
     setCurrentBaseImage(imageDataUrl);
-    setActiveResult(null);
+    setActivePreview(null);
     setError(null);
     setHistory([initialHistoryItem]);
     setActiveTool(null);
@@ -147,24 +145,24 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
   };
  
   const handleBackToMainToolbar = useCallback(() => {
-    setActiveResult(null);
+    setActivePreview(null);
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
   }, []);
 
   const handleUndo = useCallback(() => {
-    if (activeResult) {
-        setActiveResult(null);
+    if (activePreview) {
+        setActivePreview(null);
     } else if (history.length > 1) {
         const newHistory = history.slice(1);
         setCurrentBaseImage(newHistory[0].imageDataUrl);
         setHistory(newHistory);
     }
-  }, [activeResult, history]);
+  }, [activePreview, history]);
 
   const handleSave = useCallback(async () => {
-    const imageToSave = activeResult || currentBaseImage;
+    const imageToSave = activePreview || currentBaseImage;
     if (!imageToSave) return;
 
     try {
@@ -196,7 +194,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
             document.body.removeChild(link);
         }
     }
-  }, [currentBaseImage, activeResult]);
+  }, [currentBaseImage, activePreview]);
 
   const handleChangeImageClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -216,7 +214,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
   const handleHistorySelect = (item: BeautyHistoryItem) => {
     setCurrentBaseImage(item.imageDataUrl);
-    setActiveResult(null);
+    setActivePreview(null);
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
@@ -232,7 +230,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
       const originalItem = history[history.length - 1];
       setCurrentBaseImage(originalItem.imageDataUrl);
       setHistory([originalItem]);
-      setActiveResult(null);
+      setActivePreview(null);
     }
   }, [history]);
 
@@ -252,7 +250,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                 </div>
             </header>
 
-            <main className="space-y-6">
+            <main className={`space-y-6 ${activeTool ? 'pb-[280px] sm:pb-[250px]' : ''}`}>
                 <div className="relative">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                 
@@ -261,13 +259,14 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                             onBack={handleBackToMainToolbar}
                             onUndo={handleUndo}
                             showBack={!!activeTool}
-                            showUndo={!!activeResult || history.length > 1}
+                            showUndo={!!activePreview || history.length > 1}
                         />
                     )}
                 
                     <BeautyStudioImageProcessor
-                        originalImage={currentBaseImage}
-                        generatedImage={activeResult}
+                        originalUpload={originalUpload}
+                        currentImage={currentBaseImage}
+                        previewImage={activePreview}
                         onUploadClick={handleChangeImageClick}
                         isLoading={isLoading}
                         error={error}
@@ -291,23 +290,23 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                         onStyleSelect={handleStyleSelect}
                         onConfirm={handleConfirm}
                         onCancel={handleCancel}
-                        onGenerate={() => generateModification()}
                         isLoading={isLoading}
-                        hasPreview={!!activeResult}
+                        hasPreview={!!activePreview}
                     />
-                ) : (
+                ) : currentBaseImage ? ( // Only show main toolbar if an image is loaded
                     <BeautyStudioMainToolbar
                         tools={BEAUTY_FEATURES}
                         onToolSelect={handleToolSelect}
                         isDisabled={!currentBaseImage || isLoading}
                     />
-                )}
+                ) : null}
+
 
                 {history.length > 1 && (
                     <BeautyStudioHistoryPanel
                         history={history}
                         onSelect={handleHistorySelect}
-                        currentImage={activeResult || currentBaseImage}
+                        currentImage={activePreview || currentBaseImage}
                         onClear={handleClearHistory}
                     />
                 )}

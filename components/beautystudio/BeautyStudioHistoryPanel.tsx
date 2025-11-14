@@ -22,16 +22,16 @@ export const BeautyStudioHistoryPanel: React.FC<HistoryPanelProps> = ({ history,
   }
 
   return (
-    <div className="bg-[var(--bg-interactive)] backdrop-blur-sm rounded-2xl shadow-inner p-2">
-       <div className="flex items-center justify-between mb-2 px-3 pt-1">
-        <h2 className="text-lg font-bold text-[var(--text-primary)]">{t('beautyStudio.history.title')}</h2>
+    <div className="bg-[var(--bg-component)] rounded-xl p-4 border border-[var(--border-color)] shadow-lg">
+       <div className="flex justify-between items-center mb-3">
+        <h2 className="text-lg font-semibold animated-gradient-text">{t('history.title')}</h2>
         <button
           onClick={onClear}
           className="flex items-center space-x-1 text-xs font-semibold text-[var(--text-secondary)] hover:text-red-500 transition-colors"
-          title={t('beautyStudio.history.clear')}
+          title={t('history.clear')}
         >
           <TrashIcon />
-          <span>{t('beautyStudio.history.clear')}</span>
+          <span>{t('history.clear')}</span>
         </button>
       </div>
       <div className="overflow-x-auto overflow-y-hidden pb-2 scrollbar-thin">
@@ -40,11 +40,11 @@ export const BeautyStudioHistoryPanel: React.FC<HistoryPanelProps> = ({ history,
             <div
               key={item.id}
               onClick={() => onSelect(item)}
-              className={`flex-shrink-0 w-20 h-20 rounded-lg cursor-pointer p-0.5 transition-all duration-200 ${currentImage === item.imageDataUrl ? 'bg-[var(--accent-cyan)]' : 'bg-transparent'}`}
+              className={`flex-shrink-0 w-20 h-20 rounded-lg cursor-pointer p-1 transition-all duration-200 ${currentImage === item.imageDataUrl ? 'bg-[var(--accent-cyan)]' : 'bg-transparent hover:bg-white/10'}`}
             >
               <img
                 src={item.imageDataUrl}
-                alt={`History item ${item.id}`}
+                alt={`${t('history.version')} ${item.id}`}
                 className="w-full h-full object-cover rounded-md border-2 border-[var(--bg-component)]"
               />
             </div>
