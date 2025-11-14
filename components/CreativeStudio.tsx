@@ -5,7 +5,7 @@ import { Header } from './creativestudio/Header';
 import { FeatureSelector } from './creativestudio/FeatureSelector';
 import { InputSection } from './creativestudio/InputSection';
 import { ImageGallery } from './creativestudio/ImageGallery';
-import { FEATURES } from '../../constants/creativeStudioConstants';
+import { FEATURES } from '../constants/creativeStudioConstants';
 import { FeatureAction, FeatureInput, Concept } from '../types';
 import { generateImagesFromFeature } from '../services/creativeStudioService';
 import { LibraryModal } from './creativestudio/LibraryModal';
