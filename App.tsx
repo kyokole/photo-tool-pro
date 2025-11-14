@@ -32,6 +32,7 @@ import BatchProcessor from './components/BatchProcessor';
 import FourSeasonsStudio from './components/FourSeasonsStudio';
 import LegalModal from './components/LegalModal';
 import VerificationModal from './components/VerificationModal';
+import BeautyStudio from './components/BeautyStudio';
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -228,6 +229,12 @@ const App: React.FC = () => {
     console.log("Resetting Four Seasons tool state (no-op).");
     handleAbort();
   }, []);
+  
+  const handleResetBeautyStudioTool = useCallback(() => {
+    console.log("Resetting Beauty Studio tool state.");
+    handleAbort();
+    // Logic will be added as the component is built out
+  }, []);
 
   const resetAllTools = useCallback(() => {
     handleAbort();
@@ -238,8 +245,9 @@ const App: React.FC = () => {
     handleResetPromptAnalyzerTool();
     handleResetFootballStudioTool();
     handleResetFourSeasonsTool();
+    handleResetBeautyStudioTool();
     setIsFreeTierLocked(false);
-  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool]);
+  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool]);
 
   const handleModeChange = useCallback((newMode: AppMode) => {
     handleAbort();
@@ -311,7 +319,7 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio'];
                 const targetIsVipTool = vipModes.includes(postLoginRedirect);
                 const userIsVip = appUser.isAdmin || (new Date(appUser.subscriptionEndDate) > new Date());
 
@@ -925,6 +933,19 @@ const App: React.FC = () => {
         setIsAuthModalVisible(true);
     }
   };
+  
+  const handleBeautyStudioSelect = () => {
+    if (currentUser) {
+        if (isVip) {
+            if (appMode !== 'beauty_studio') handleModeChange('beauty_studio');
+        } else {
+            setIsSubscriptionModalVisible(true);
+        }
+    } else {
+        setPostLoginRedirect('beauty_studio');
+        setIsAuthModalVisible(true);
+    }
+  };
 
   const handleCreativeStudioSelect = () => {
     if (currentUser) {
@@ -1118,7 +1139,7 @@ const App: React.FC = () => {
         return; 
       }
 
-      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio'];
+      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio'];
       
       if (vipModes.includes(appMode) || isBatchMode) {
         handleModeChange('headshot');
@@ -1311,6 +1332,8 @@ const App: React.FC = () => {
                 />;
       case 'four_seasons_studio':
           return <FourSeasonsStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+      case 'beauty_studio':
+          return <BeautyStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1390,6 +1413,7 @@ const App: React.FC = () => {
         onCreativeStudioClick={handleCreativeStudioSelect}
         onPromptAnalyzerClick={handlePromptAnalyzerSelect}
         onFourSeasonsClick={handleFourSeasonsSelect}
+        onBeautyStudioClick={handleBeautyStudioSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
         onUndo={handleUndo}

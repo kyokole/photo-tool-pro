@@ -24,7 +24,8 @@ export default {
     "footballStudio": "Studio Bóng Đá",
     "creativeStudio": "Studio AI",
     "promptAnalyzer": "Phân Tích Ảnh",
-    "fourSeasons": "Ảnh 4 Mùa"
+    "fourSeasons": "Ảnh 4 Mùa",
+    "beautyStudio": "Studio Làm Đẹp"
   },
   "utilities": {
     "guide": "Hướng dẫn sử dụng",

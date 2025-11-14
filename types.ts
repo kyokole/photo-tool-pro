@@ -1,6 +1,8 @@
+// FIX: Import React to provide the 'React' namespace for React.ReactNode.
+import React from 'react';
 import type { LayoutResult as CoreLayoutResult } from './utils/canvasUtils';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';
@@ -303,6 +305,43 @@ export interface Job extends JobDefinition {
   status: JobStatus;
   result: GeneratedImage[];
   error?: string;
+}
+
+// --- NEW TYPES FOR BEAUTY STUDIO ---
+export type BeautyStyleType = 'image' | 'color' | 'intensity';
+
+export interface BeautyStyle {
+  id: string;
+  label: string;
+  englishLabel: string;
+  type: BeautyStyleType;
+  value: string;
+  promptInstruction?: string;
+}
+
+export interface BeautySubFeature {
+  id: string;
+  label:string;
+  englishLabel: string;
+  styles: BeautyStyle[];
+  promptInstruction?: string;
+}
+
+export type BeautyBadgeType = 'Free' | 'Hot' | 'NEW';
+
+export interface BeautyFeature {
+  id: string;
+  label: string;
+  englishLabel: string;
+  icon: React.ReactNode;
+  badge?: BeautyBadgeType;
+  subFeatures?: BeautySubFeature[];
+  promptInstruction?: string;
+}
+
+export interface BeautyHistoryItem {
+  id: string;
+  imageDataUrl: string;
 }
 
 

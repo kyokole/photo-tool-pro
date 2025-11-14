@@ -1,35 +1,35 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { applyBeautyEffect } from '../services/geminiService';
-import { BEAUTY_FEATURES } from '../constants';
-import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
-
-import { ImageProcessor } from './beautystudio/ImageProcessor';
-import { MainToolbar } from './beautystudio/MainToolbar';
-import { DetailedEditor } from './beautystudio/DetailedEditor';
-import { HistoryPanel } from './beautystudio/HistoryPanel';
-import { ImageToolbar } from './beautystudio/ImageToolbar';
+import React, { useState, useCallback, useRef } from 'react';
+import { GoogleGenAI, Modality } from "@google/genai";
 import { ThemeSelector } from './creativestudio/ThemeSelector';
-import { CameraView } from './beautystudio/CameraView';
+import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
+import { BEAUTY_FEATURES } from '../constants/beautyStudioConstants';
+
+import { BeautyStudioImageProcessor } from './beautystudio/BeautyStudioImageProcessor';
+import { BeautyStudioMainToolbar } from './beautystudio/BeautyStudioMainToolbar';
+import { DetailedEditor } from './beautystudio/DetailedEditor';
+import { BeautyStudioHistoryPanel } from './beautystudio/BeautyStudioHistoryPanel';
+import { ImageToolbar } from './beautystudio/ImageToolbar';
 
 interface BeautyStudioProps {
     theme: string;
     setTheme: (theme: string) => void;
+    isVip: boolean;
 }
 
-const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
-  const { t } = useTranslation();
-  
+const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) => {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+ 
   const [activeTool, setActiveTool] = useState<BeautyFeature | null>(null);
   const [activeSubFeature, setActiveSubFeature] = useState<BeautySubFeature | null>(null);
   const [activeStyle, setActiveStyle] = useState<BeautyStyle | null>(null);
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
   const [history, setHistory] = useState<BeautyHistoryItem[]>([]);
+ 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const generateModification = async (tool?: BeautyFeature, subFeature?: BeautySubFeature, style?: BeautyStyle, baseImageOverride?: string | null) => {
     const currentTool = tool || activeTool;
@@ -58,15 +58,26 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
     setError(null);
 
     try {
+      // TODO: Refactor to use geminiService.ts and backend proxy
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const base64Data = imageToModify.split(',')[1];
+
       const baseInstruction = "The result should be realistic, high-quality, and seamlessly blended with the original photo. Only return the modified image.";
       let prompt: string;
+
       const customPrompt = currentStyle?.promptInstruction || currentSubFeature?.promptInstruction || currentTool?.promptInstruction;
 
       if (customPrompt) {
           let finalCustomPrompt = customPrompt;
-          if (currentStyle) finalCustomPrompt = finalCustomPrompt.replace('{{style}}', currentStyle.englishLabel);
-          if (currentSubFeature) finalCustomPrompt = finalCustomPrompt.replace('{{sub_feature}}', currentSubFeature.englishLabel);
-          if (currentTool) finalCustomPrompt = finalCustomPrompt.replace('{{tool}}', currentTool.englishLabel);
+          if (currentStyle) {
+            finalCustomPrompt = finalCustomPrompt.replace('{{style}}', currentStyle.englishLabel);
+          }
+          if (currentSubFeature) {
+            finalCustomPrompt = finalCustomPrompt.replace('{{sub_feature}}', currentSubFeature.englishLabel);
+          }
+          if(currentTool) {
+            finalCustomPrompt = finalCustomPrompt.replace('{{tool}}', currentTool.englishLabel);
+          }
           prompt = `${finalCustomPrompt} ${baseInstruction}`;
       } else {
           let effectDescription = `a '${currentTool.englishLabel}' effect`;
@@ -76,16 +87,50 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
           prompt = `You are an expert AI photo retouching artist. The user wants to apply ${effectDescription}. ${baseInstruction}`;
       }
 
-      const newImageDataUrl = await applyBeautyEffect(imageToModify, prompt);
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: 'image/jpeg',
+              },
+            },
+            {
+              text: prompt,
+            },
+          ],
+        },
+        config: {
+          responseModalities: [Modality.IMAGE],
+        },
+      });
+     
+      let imageFound = false;
+      if (response.candidates && response.candidates.length > 0) {
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                const generatedBase64 = part.inlineData.data;
+                const newImageDataUrl = `data:image/png;base64,${generatedBase64}`;
+                setGeneratedImage(newImageDataUrl);
 
-      setGeneratedImage(newImageDataUrl);
-
-      const newHistoryItem: BeautyHistoryItem = {
-        id: Date.now().toString(),
-        imageDataUrl: newImageDataUrl
-      };
-      setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
-      handleClearActiveTool();
+                const newHistoryItem: BeautyHistoryItem = {
+                  id: Date.now().toString(),
+                  imageDataUrl: newImageDataUrl
+                };
+                setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
+                imageFound = true;
+                break;
+            }
+        }
+      }
+     
+      if (!imageFound) {
+        throw new Error("No image was generated. The response may have been blocked.");
+      } else {
+        handleClearActiveTool();
+      }
 
     } catch (e) {
       console.error(e);
@@ -114,8 +159,9 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
    
     const stylesToConsider = defaultSubFeature?.styles || [];
     const defaultStyle = stylesToConsider?.find(s => s.id !== 'none') || stylesToConsider?.[0] || defaultSubFeature?.styles?.find(s => s.id === 'none') || null;
+
     setActiveStyle(defaultStyle);
-  }, [originalImage, generatedImage, generateModification]);
+  }, [originalImage, generatedImage]);
 
   const handleClearActiveTool = useCallback(() => {
     setActiveTool(null);
@@ -125,7 +171,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
 
   const handleConfirm = useCallback(() => {
     generateModification();
-  }, [activeTool, activeSubFeature, activeStyle, originalImage, generateModification]);
+  }, [activeTool, activeSubFeature, activeStyle, originalImage]);
 
   const handleImageUpload = (imageDataUrl: string) => {
     setOriginalImage(imageDataUrl);
@@ -148,7 +194,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
     if (imageToSave) {
       const link = document.createElement('a');
       link.href = imageToSave;
-      link.download = 'beauty-plus-result.png';
+      link.download = 'beauty-studio-result.png';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -181,98 +227,79 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme }) => {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 font-sans bg-[var(--bg-primary)] animate-fade-in">
-        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-        {isCameraOpen && <CameraView onCapture={(dataUrl) => { handleImageUpload(dataUrl); setIsCameraOpen(false); }} onClose={() => setIsCameraOpen(false)} />}
-        <style>{`
-            .title-beauty-plus { font-family: 'Exo 2', sans-serif; }
-        `}</style>
-      <div className="w-full max-w-2xl mx-auto">
-        <header className="text-center mb-8 bg-[var(--bg-component)] rounded-xl py-6 px-4 shadow-lg border border-[var(--border-color)] flex items-center justify-between">
-          <div></div>
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text title-beauty-plus">Beauty Plus</h1>
-            <p className="text-[var(--text-secondary)] mt-2 max-w-md mx-auto">
-                Biết trước gương mặt bạn thay đổi sau 30 giây với gương thần AI.
-            </p>
-          </div>
-          <ThemeSelector currentTheme={theme} onChangeTheme={setTheme} />
-        </header>
+    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 font-sans animate-fade-in">
+        <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
+            <header className="w-full max-w-6xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                <div />
+                <div className="text-center">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text" style={{ fontFamily: "'Exo 2', sans-serif" }}>
+                        Studio Làm Đẹp
+                    </h1>
+                    <p className="text-[var(--text-secondary)] mt-2 text-lg tracking-wide">Biết trước gương mặt bạn thay đổi sau 30 giây với gương thần AI.</p>
+                </div>
+                <div className="flex justify-end">
+                    <ThemeSelector currentTheme={theme} onChangeTheme={setTheme} />
+                </div>
+            </header>
 
-        <main className="space-y-6">
-            {!originalImage ? (
-                <div className="bg-[var(--bg-component)] rounded-2xl shadow-inner p-8 flex flex-col items-center justify-center min-h-[400px] border border-[var(--border-color)]">
-                    <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Bắt đầu Sáng tạo</h2>
-                    <p className="text-[var(--text-secondary)] mb-8">Chọn nguồn ảnh của bạn để bắt đầu chỉnh sửa.</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-md">
-                        <button onClick={handleChangeImageClick} className="flex flex-col items-center justify-center p-6 bg-[var(--bg-tertiary)] rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-[var(--border-color)] hover:border-[var(--accent-cyan)]">
-                             <div className="text-4xl mb-3 animated-gradient-text"><i className="fas fa-upload"></i></div>
-                             <span className="font-bold text-[var(--text-primary)]">Tải ảnh lên</span>
-                             <span className="text-xs text-[var(--text-secondary)] mt-1">Từ thiết bị của bạn</span>
-                        </button>
-                        <button onClick={() => setIsCameraOpen(true)} className="flex flex-col items-center justify-center p-6 bg-[var(--bg-tertiary)] rounded-2xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-[var(--border-color)] hover:border-[var(--accent-cyan)]">
-                            <div className="text-4xl mb-3 animated-gradient-text"><i className="fas fa-camera-retro"></i></div>
-                            <span className="font-bold text-[var(--text-primary)]">Sử dụng Camera</span>
-                            <span className="text-xs text-[var(--text-secondary)] mt-1">Chụp ảnh trực tiếp</span>
-                        </button>
+            <main className="space-y-6">
+                <div className="relative">
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                
+                    {originalImage && (
+                    <ImageToolbar
+                        onBack={handleBack}
+                        onUndo={handleUndo}
+                        showBack={!!activeTool}
+                        showUndo={!!generatedImage && !activeTool}
+                    />
+                    )}
+                
+                    <BeautyStudioImageProcessor
+                        originalImage={originalImage}
+                        generatedImage={generatedImage}
+                        onUploadClick={handleChangeImageClick}
+                        isLoading={isLoading}
+                        error={error}
+                        onSave={handleSave}
+                        canSave={!!originalImage}
+                    />
+                </div>
+
+                <BeautyStudioHistoryPanel
+                    history={history}
+                    onSelect={handleHistorySelect}
+                    currentImage={generatedImage}
+                    onClear={handleClearHistory}
+                />
+                
+                <div className="pt-2">
+                    <div
+                    className={`w-full text-white font-bold text-lg py-4 px-6 rounded-xl shadow-lg flex items-center justify-center btn-gradient`}
+                    >
+                    Trải nghiệm gương thần AI
                     </div>
                 </div>
-            ) : (
-                <>
-                    <div className="relative">
-                        <ImageToolbar
-                            onBack={handleBack}
-                            onUndo={handleUndo}
-                            showBack={!!activeTool}
-                            showUndo={!!generatedImage && !activeTool}
-                        />
-                        <ImageProcessor
-                            originalImage={originalImage}
-                            generatedImage={generatedImage}
-                            onUploadClick={handleChangeImageClick}
-                            isLoading={isLoading}
-                            error={error}
-                            onSave={handleSave}
-                            canSave={!!originalImage}
-                        />
-                    </div>
-
-                    <HistoryPanel
-                        history={history}
-                        onSelect={handleHistorySelect}
-                        currentImage={generatedImage}
-                        onClear={handleClearHistory}
+                
+                {activeTool ? (
+                    <DetailedEditor
+                        activeTool={activeTool}
+                        activeSubFeature={activeSubFeature}
+                        activeStyle={activeStyle}
+                        onSubFeatureSelect={setActiveSubFeature}
+                        onStyleSelect={setActiveStyle}
+                        onConfirm={handleConfirm}
+                        onCancel={handleClearActiveTool}
                     />
-                    
-                    <div className="pt-2">
-                        <div
-                        className={`w-full text-white font-bold text-lg py-4 px-6 rounded-xl shadow-lg flex items-center justify-center btn-gradient`}
-                        >
-                        Trải nghiệm gương thần AI
-                        </div>
-                    </div>
-                    
-                    {activeTool ? (
-                        <DetailedEditor
-                            activeTool={activeTool}
-                            activeSubFeature={activeSubFeature}
-                            activeStyle={activeStyle}
-                            onSubFeatureSelect={setActiveSubFeature}
-                            onStyleSelect={setActiveStyle}
-                            onConfirm={handleConfirm}
-                            onCancel={handleClearActiveTool}
-                        />
-                    ) : (
-                        <MainToolbar
-                            tools={BEAUTY_FEATURES}
-                            onToolSelect={handleToolSelect}
-                            isDisabled={!originalImage || isLoading}
-                        />
-                    )}
-                </>
-            )}
-        </main>
-      </div>
+                ) : (
+                    <BeautyStudioMainToolbar
+                        tools={BEAUTY_FEATURES}
+                        onToolSelect={handleToolSelect}
+                        isDisabled={!originalImage || isLoading}
+                    />
+                )}
+            </main>
+        </div>
     </div>
   );
 };
