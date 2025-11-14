@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
 import { BEAUTY_FEATURES } from '../constants/beautyStudioConstants';
 import { generateBeautyPhoto } from '../services/geminiService';
-import { applyWatermark } from '../utils/canvasUtils';
+import { applyWatermark, dataUrlToBlob } from '../utils/canvasUtils';
 
 import { BeautyStudioImageProcessor } from './beautystudio/BeautyStudioImageProcessor';
 import { BeautyStudioMainToolbar } from './beautystudio/BeautyStudioMainToolbar';
@@ -34,10 +34,10 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const generateModification = async (tool?: BeautyFeature, subFeature?: BeautySubFeature, style?: BeautyStyle) => {
-    const currentTool = tool || activeTool;
-    const currentSubFeature = subFeature || activeSubFeature;
-    const currentStyle = style || activeStyle;
+  const generateModification = useCallback(async (toolOverride?: BeautyFeature, subFeatureOverride?: BeautySubFeature, styleOverride?: BeautyStyle) => {
+    const currentTool = toolOverride || activeTool;
+    const currentSubFeature = subFeatureOverride || activeSubFeature;
+    const currentStyle = styleOverride || activeStyle;
     const imageToModify = activeResult || currentBaseImage;
 
     if (!imageToModify) {
@@ -51,14 +51,13 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
     if (currentTool.subFeatures && currentTool.subFeatures.length > 0) {
       if (!currentSubFeature || !currentStyle || currentStyle.id === 'none') {
-        setActiveResult(null); // Clear temporary preview if "None" is selected
+        // This case is handled by disabling the button now, but we keep this for safety
         return;
       }
     }
 
     setIsLoading(true);
     setError(null);
-    setActiveResult(null); // Clear previous result before generating new one
 
     try {
       const imageDataFromServer = await generateBeautyPhoto(
@@ -69,19 +68,27 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
       );
       
       const newImageDataUrl = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
-      setActiveResult(newImageDataUrl);
+
+      if (!toolOverride) { // This is a preview generation
+        setActiveResult(newImageDataUrl);
+      } else { // This is a single-click action, so apply directly
+        const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: newImageDataUrl };
+        setHistory(prev => [newHistoryItem, ...prev]);
+        setCurrentBaseImage(newImageDataUrl);
+        setActiveResult(null);
+      }
 
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : t('errors.unknownError');
       setError(t('errors.beautyGenerationFailed', { error: errorMessage }));
+      setActiveResult(null); // Clear result on error
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTool, activeSubFeature, activeStyle, activeResult, currentBaseImage, isVip, t]);
  
   const handleToolSelect = useCallback((tool: BeautyFeature) => {
-    // If there's an active result, commit it to the base image and history
     if (activeResult) {
       const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activeResult };
       setHistory(prev => [newHistoryItem, ...prev]);
@@ -89,26 +96,31 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
       setActiveResult(null);
     }
     
-    // Simple tools without sub-features generate immediately
     if (!tool.subFeatures || tool.subFeatures.length === 0) {
         generateModification(tool, undefined, undefined);
         return;
     }
 
-    // For complex tools, open the detailed editor
     setActiveTool(tool);
     const defaultSubFeature = tool.subFeatures[0] || null;
     setActiveSubFeature(defaultSubFeature);
-    const defaultStyle = defaultSubFeature?.styles?.find(s => s.id !== 'none') || defaultSubFeature?.styles?.[0] || null;
-    setActiveStyle(defaultStyle);
+    const noneStyle = defaultSubFeature?.styles?.find(s => s.id === 'none') || null;
+    setActiveStyle(noneStyle);
 
   }, [activeResult, generateModification]);
+
+  const handleStyleSelect = useCallback((style: BeautyStyle) => {
+      setActiveStyle(style);
+      // When user selects a new style, clear the previous preview
+      // to ensure the confirm button is disabled until a new preview is generated.
+      setActiveResult(null);
+  }, []);
 
   const handleCancel = useCallback(() => {
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
-    setActiveResult(null); // Discard preview
+    setActiveResult(null);
   }, []);
 
   const handleConfirm = useCallback(() => {
@@ -124,43 +136,65 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
   }, [activeResult]);
 
   const handleImageUpload = (imageDataUrl: string) => {
+    const initialHistoryItem: BeautyHistoryItem = { id: 'original', imageDataUrl };
     setCurrentBaseImage(imageDataUrl);
     setActiveResult(null);
     setError(null);
-    setHistory([]);
+    setHistory([initialHistoryItem]);
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
   };
  
   const handleBackToMainToolbar = useCallback(() => {
-    setActiveResult(null); // Discard temp changes
+    setActiveResult(null);
     setActiveTool(null);
     setActiveSubFeature(null);
     setActiveStyle(null);
   }, []);
 
   const handleUndo = useCallback(() => {
-    if (activeResult) { // Undo the preview
+    if (activeResult) {
         setActiveResult(null);
-    } else if(history.length > 0) { // Revert to previous history state
-        const lastItem = history[0];
+    } else if (history.length > 1) {
         const newHistory = history.slice(1);
-        const previousState = newHistory[0]?.imageDataUrl || null;
-        setCurrentBaseImage(lastItem.imageDataUrl); // Set the base to the last committed change
+        setCurrentBaseImage(newHistory[0].imageDataUrl);
         setHistory(newHistory);
     }
   }, [activeResult, history]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     const imageToSave = activeResult || currentBaseImage;
-    if (imageToSave) {
-      const link = document.createElement('a');
-      link.href = imageToSave;
-      link.download = 'beauty-studio-result.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if (!imageToSave) return;
+
+    try {
+        const blob = dataUrlToBlob(imageToSave);
+        const file = new File([blob], 'beauty-studio-result.png', { type: 'image/png' });
+        
+        if (navigator.share && /Mobi/i.test(navigator.userAgent)) {
+            await navigator.share({
+                files: [file],
+                title: 'Beauty Studio Result',
+                text: 'Created with AI PHOTO SUITE',
+            });
+        } else {
+            const link = document.createElement('a');
+            link.href = imageToSave;
+            link.download = 'beauty-studio-result.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    } catch (err) {
+        console.error('Error saving or sharing file:', err);
+        if (err instanceof Error && err.name !== 'AbortError') {
+            const link = document.createElement('a');
+            link.href = imageToSave;
+            link.download = 'beauty-studio-result.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     }
   }, [currentBaseImage, activeResult]);
 
@@ -184,8 +218,9 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     setCurrentBaseImage(item.imageDataUrl);
     setActiveResult(null);
     setActiveTool(null);
+    setActiveSubFeature(null);
+    setActiveStyle(null);
 
-    // Prune history to the selected point
     const itemIndex = history.findIndex(h => h.id === item.id);
     if (itemIndex > -1) {
         setHistory(prev => prev.slice(itemIndex));
@@ -193,13 +228,13 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
   };
  
   const handleClearHistory = useCallback(() => {
-    setHistory([]);
-    if (currentBaseImage) {
-        // If there's an image, create a single history item for it as the new start point
-        const initialHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: currentBaseImage };
-        setHistory([initialHistoryItem]);
+    if (history.length > 0) {
+      const originalItem = history[history.length - 1];
+      setCurrentBaseImage(originalItem.imageDataUrl);
+      setHistory([originalItem]);
+      setActiveResult(null);
     }
-  }, [currentBaseImage]);
+  }, [history]);
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 font-sans animate-fade-in">
@@ -226,7 +261,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                             onBack={handleBackToMainToolbar}
                             onUndo={handleUndo}
                             showBack={!!activeTool}
-                            showUndo={!!activeResult || history.length > 0}
+                            showUndo={!!activeResult || history.length > 1}
                         />
                     )}
                 
@@ -246,21 +281,6 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                         <strong>{t('common.error')}:</strong> {error}
                     </div>
                 )}
-
-                <BeautyStudioHistoryPanel
-                    history={history}
-                    onSelect={handleHistorySelect}
-                    currentImage={activeResult || currentBaseImage}
-                    onClear={handleClearHistory}
-                />
-                
-                <div className="pt-2">
-                    <div
-                        className={`w-full text-white font-bold text-lg py-4 px-6 rounded-xl shadow-lg flex items-center justify-center btn-gradient`}
-                    >
-                       {t('beautyStudio.magicMirror')}
-                    </div>
-                </div>
                 
                 {activeTool ? (
                     <DetailedEditor
@@ -268,15 +288,27 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                         activeSubFeature={activeSubFeature}
                         activeStyle={activeStyle}
                         onSubFeatureSelect={setActiveSubFeature}
-                        onStyleSelect={setActiveStyle}
+                        onStyleSelect={handleStyleSelect}
                         onConfirm={handleConfirm}
                         onCancel={handleCancel}
+                        onGenerate={() => generateModification()}
+                        isLoading={isLoading}
+                        hasPreview={!!activeResult}
                     />
                 ) : (
                     <BeautyStudioMainToolbar
                         tools={BEAUTY_FEATURES}
                         onToolSelect={handleToolSelect}
                         isDisabled={!currentBaseImage || isLoading}
+                    />
+                )}
+
+                {history.length > 1 && (
+                    <BeautyStudioHistoryPanel
+                        history={history}
+                        onSelect={handleHistorySelect}
+                        currentImage={activeResult || currentBaseImage}
+                        onClear={handleClearHistory}
                     />
                 )}
             </main>

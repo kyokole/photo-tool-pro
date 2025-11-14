@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BeautySubFeature } from '../../types';
 
 interface SubFeatureTabsProps {
@@ -8,6 +9,7 @@ interface SubFeatureTabsProps {
 }
 
 export const SubFeatureTabs: React.FC<SubFeatureTabsProps> = ({ subFeatures, selectedSubFeature, onSelect }) => {
+  const { t } = useTranslation();
   if (!subFeatures || subFeatures.length <= 1) { // Hide tabs if only one or zero sub-features
     return null;
   }
@@ -26,7 +28,7 @@ export const SubFeatureTabs: React.FC<SubFeatureTabsProps> = ({ subFeatures, sel
                     }`}
                 >
                     <div className="flex items-center space-x-1">
-                        <span>{subFeature.label}</span>
+                        <span>{t(subFeature.labelKey)}</span>
                     </div>
                     {selectedSubFeature?.id === subFeature.id && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent-cyan)] rounded-full"></div>

@@ -312,7 +312,7 @@ export type BeautyStyleType = 'image' | 'color' | 'intensity';
 
 export interface BeautyStyle {
   id: string;
-  label: string;
+  labelKey: string;
   englishLabel: string;
   type: BeautyStyleType;
   value: string;
@@ -321,7 +321,7 @@ export interface BeautyStyle {
 
 export interface BeautySubFeature {
   id: string;
-  label:string;
+  labelKey: string;
   englishLabel: string;
   styles: BeautyStyle[];
   promptInstruction?: string;
@@ -331,9 +331,9 @@ export type BeautyBadgeType = 'Free' | 'Hot' | 'NEW';
 
 export interface BeautyFeature {
   id: string;
-  label: string;
+  labelKey: string;
   englishLabel: string;
-  icon: React.ReactNode;
+  icon: string;
   badge?: BeautyBadgeType;
   subFeatures?: BeautySubFeature[];
   promptInstruction?: string;
