@@ -46,6 +46,13 @@ export const MALE_HAIRSTYLE_NAMES: string[] = [
     "hairstyles.male.shoulderLength", "hairstyles.male.taperFade", "hairstyles.male.highFade", "hairstyles.male.lowFade", "hairstyles.male.dropFade"
 ];
 
+export const YOGA_POSES_BEGINNER = ["tadasana", "vrikshasana", "adhoMukhaSvanasana", "virabhadrasanaI", "virabhadrasanaII", "trikonasana"];
+export const YOGA_POSES_INTERMEDIATE = ["bakasana", "sirsasana", "sarvangasana", "urdhvaDhanurasana", "natarajasana"];
+export const YOGA_POSES_ADVANCED = ["ekaPadaKoundinyasanaII", "pinchaMayurasana", "adhoMukhaVrikshasana", "visvamitrasana", "vasisthasana"];
+export const YOGA_LOCATIONS = ["studio", "beach", "forest", "mountain", "temple"];
+export const YOGA_LIGHTING = ["softStudio", "sunrise", "dramatic"];
+export const YOGA_OUTFITS = ["modern", "linen", "traditional"];
+
 export const HIDDEN_ADDONS: string = [
   "Phong cách ảnh lookbook Hàn Quốc chuyên nghiệp, thần thái tinh tế",
   "Chất lượng ảnh cao cấp: ánh sáng điện ảnh, chi tiết 8K, màu sắc tinh gọn, xử lý da và tóc hoàn hảo.",
@@ -179,6 +186,51 @@ export const FEATURES: Feature[] = [
     action: FeatureAction.AI_THUMBNAIL_DESIGNER,
     icon: 'fab fa-youtube',
     inputs: [],
+  },
+  {
+    name: `aiStudio.features.${FeatureAction.YOGA_STUDIO}`,
+    action: FeatureAction.YOGA_STUDIO,
+    icon: 'fas fa-spa',
+    inputs: [
+      { type: 'file', label: 'aiStudio.inputs.yoga.subject_image.label', name: 'subject_image', accept: ['image/*'], required: true },
+      { 
+        type: 'select', 
+        label: 'aiStudio.inputs.yoga.pose_level.label', 
+        name: 'pose_level', 
+        options: ['aiStudio.inputs.yoga.pose_level.options.beginner', 'aiStudio.inputs.yoga.pose_level.options.intermediate', 'aiStudio.inputs.yoga.pose_level.options.advanced'],
+        default: 'aiStudio.inputs.yoga.pose_level.options.beginner'
+      },
+      { 
+        type: 'select', 
+        label: 'aiStudio.inputs.yoga.yoga_pose.label', 
+        name: 'yoga_pose', 
+        options: [], // Dynamic
+        placeholder: 'aiStudio.inputs.yoga.yoga_pose.placeholder',
+        required: true
+      },
+      { 
+        type: 'select', 
+        label: 'aiStudio.inputs.yoga.location.label', 
+        name: 'location', 
+        options: YOGA_LOCATIONS.map(l => `aiStudio.inputs.yoga.location.options.${l}`),
+        default: `aiStudio.inputs.yoga.location.options.${YOGA_LOCATIONS[0]}`
+      },
+      { 
+        type: 'select', 
+        label: 'aiStudio.inputs.yoga.lighting.label', 
+        name: 'lighting', 
+        options: YOGA_LIGHTING.map(l => `aiStudio.inputs.yoga.lighting.options.${l}`),
+        default: `aiStudio.inputs.yoga.lighting.options.${YOGA_LIGHTING[0]}`
+      },
+      { 
+        type: 'select', 
+        label: 'aiStudio.inputs.yoga.outfit.label', 
+        name: 'outfit', 
+        options: YOGA_OUTFITS.map(o => `aiStudio.inputs.yoga.outfit.options.${o}`),
+        default: `aiStudio.inputs.yoga.outfit.options.${YOGA_OUTFITS[0]}`
+      },
+      { type: 'checkbox', label: 'aiStudio.inputs.korean_style_studio.face_consistency.label', name: 'face_consistency', default: true },
+    ]
   },
   {
     name: `aiStudio.features.${FeatureAction.PRODUCT_PHOTO}`,

@@ -180,6 +180,7 @@ export enum FeatureAction {
   BATCH_GENERATOR = 'batch_generator',
   IMAGE_VARIATION_GENERATOR = 'image_variation_generator',
   KOREAN_STYLE_STUDIO = 'korean_style_studio',
+  YOGA_STUDIO = 'yoga_studio',
 }
 
 export interface BaseInput {

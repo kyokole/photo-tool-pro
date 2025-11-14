@@ -5,7 +5,7 @@ import { Header } from './creativestudio/Header';
 import { FeatureSelector } from './creativestudio/FeatureSelector';
 import { InputSection } from './creativestudio/InputSection';
 import { ImageGallery } from './creativestudio/ImageGallery';
-import { FEATURES } from '../constants/creativeStudioConstants';
+import { FEATURES } from '../../constants/creativeStudioConstants';
 import { FeatureAction, FeatureInput, Concept } from '../types';
 import { generateImagesFromFeature } from '../services/creativeStudioService';
 import { LibraryModal } from './creativestudio/LibraryModal';
@@ -129,14 +129,26 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
     };
 
     const handleInsertConcept = (fieldName: string, tag: string) => {
-        const key = fieldName.includes('additional_components') ? fieldName : 'description';
-        
+        // For creative composite, descriptions are nested. This is a simplified approach.
         if (fieldName.includes('additional_components')) {
+            const match = fieldName.match(/\[(\d+)\]/);
+            if(match) {
+                const index = parseInt(match[1], 10);
+                setFormData(prev => {
+                    const newComps = [...(prev.additional_components || [])];
+                    if (newComps[index]) {
+                        newComps[index] = { ...newComps[index], description: `${newComps[index].description || ''} ${tag}`.trim() };
+                    }
+                    return { ...prev, additional_components: newComps };
+                });
+            }
+        } else if (fieldName === 'main_subject_description') {
              setFormData(prev => ({
                 ...prev,
-                [fieldName]: `${prev[fieldName] || ''} ${tag}`.trim()
+                main_subject_description: `${prev.main_subject_description || ''} ${tag}`.trim()
             }));
-        } else {
+        }
+        else {
              setFormData(prev => ({
                 ...prev,
                 [fieldName]: `${prev[fieldName] || ''} ${tag}`.trim()

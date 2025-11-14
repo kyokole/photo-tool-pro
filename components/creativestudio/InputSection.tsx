@@ -6,7 +6,7 @@ import { FileUpload } from './FileUpload';
 import { MultiSelect } from './MultiSelect';
 import { Spinner } from './Spinner';
 import { getHotTrends } from '../../services/creativeStudioService';
-import { MALE_HAIRSTYLE_NAMES, FEMALE_HAIRSTYLE_NAMES } from '../../constants/creativeStudioConstants';
+import { MALE_HAIRSTYLE_NAMES, FEMALE_HAIRSTYLE_NAMES, YOGA_POSES_BEGINNER, YOGA_POSES_INTERMEDIATE, YOGA_POSES_ADVANCED } from '../../constants/creativeStudioConstants';
 import { ConceptInserter } from '../ConceptInserter';
 import { SliderInput } from './SliderInput';
 
@@ -39,10 +39,14 @@ export const InputSection: React.FC<InputSectionProps> = ({
   }, [feature.action]);
 
   useEffect(() => {
+      // Reset dependent dropdowns when their controller changes
       if (feature.action === FeatureAction.CHANGE_HAIRSTYLE) {
           handleFormChange('hairstyle', '');
       }
-  }, [formData.gender, feature.action]);
+      if (feature.action === FeatureAction.YOGA_STUDIO) {
+          handleFormChange('yoga_pose', '');
+      }
+  }, [formData.gender, formData.pose_level, feature.action]);
 
 
   const handleFormChange = (name: string, value: any) => {
@@ -142,7 +146,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
           <div key={name} className="col-span-1 md:col-span-2">
             <div className="flex justify-between items-center mb-1">
                 <label htmlFor={name} className="block font-semibold text-[var(--text-primary)] mb-2">{t(label)}</label>
-                <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept(name, tag)} />
+                {concepts.length > 0 && <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept(name, tag)} />}
             </div>
             <textarea
               id={name}
@@ -155,19 +159,59 @@ export const InputSection: React.FC<InputSectionProps> = ({
           </div>
         );
       case 'select': {
-        let selectOptions = input.options;
+        let selectOptions: (string | { value: string; label: string })[] = input.options;
         let isDisabled = false;
         let placeholder = input.placeholder;
-    
+        let yogaLevelKeyPart = ''; // Will hold 'beginner', 'intermediate', or 'advanced'
+        let hairstyleGenderKey = ''; // Will hold 'male' or 'female'
+
+        // --- Start of dynamic logic ---
         if (feature.action === FeatureAction.CHANGE_HAIRSTYLE && name === 'hairstyle') {
-            if (!formData.gender) {
+            const genderValue = formData.gender || '';
+            const genderInput = feature.inputs.find(i => i.name === 'gender');
+            if (genderInput && genderInput.type === 'select') {
+                const foundKey = (genderInput.options as string[]).find(key => key === genderValue || t(key) === genderValue);
+                if (foundKey) {
+                    hairstyleGenderKey = foundKey.split('.').pop() || '';
+                }
+            }
+            
+            if (!hairstyleGenderKey) {
                 isDisabled = true;
                 selectOptions = [];
             } else {
                 placeholder = undefined;
-                selectOptions = formData.gender === 'aiStudio.inputs.change_hairstyle.gender.options.male' ? MALE_HAIRSTYLE_NAMES : FEMALE_HAIRSTYLE_NAMES;
+                selectOptions = hairstyleGenderKey === 'male' ? MALE_HAIRSTYLE_NAMES : FEMALE_HAIRSTYLE_NAMES;
             }
         }
+        
+        if (feature.action === FeatureAction.YOGA_STUDIO && name === 'yoga_pose') {
+            const levelValue = formData.pose_level || '';
+            if (!levelValue) {
+                isDisabled = true;
+                selectOptions = [];
+            } else {
+                placeholder = undefined;
+                const poseLevelInput = feature.inputs.find(i => i.name === 'pose_level');
+                if (poseLevelInput && poseLevelInput.type === 'select') {
+                    const foundOptionKey = (poseLevelInput.options as string[]).find(key => key === levelValue || t(key) === levelValue);
+                    if (foundOptionKey) {
+                        yogaLevelKeyPart = foundOptionKey.split('.').pop() || '';
+                    }
+                }
+                
+                if (yogaLevelKeyPart === 'beginner') {
+                    selectOptions = YOGA_POSES_BEGINNER;
+                } else if (yogaLevelKeyPart === 'intermediate') {
+                    selectOptions = YOGA_POSES_INTERMEDIATE;
+                } else if (yogaLevelKeyPart === 'advanced') {
+                    selectOptions = YOGA_POSES_ADVANCED;
+                } else {
+                    selectOptions = [];
+                }
+            }
+        }
+        // --- End of dynamic logic ---
         
         return (
           <div key={name}>
@@ -182,9 +226,33 @@ export const InputSection: React.FC<InputSectionProps> = ({
               {placeholder && <option value="">{t(placeholder)}</option>}
               {selectOptions.map(opt => {
                 if (typeof opt === 'string') {
-                    return <option key={opt} value={opt}>{t(opt)}</option>;
+                    let optionKey = opt;
+                    let valueAttr = t(optionKey);
+
+                    // For controlling dropdowns, their state value MUST be the key itself.
+                    if (
+                        (feature.action === FeatureAction.YOGA_STUDIO && name === 'pose_level') ||
+                        (feature.action === FeatureAction.CHANGE_HAIRSTYLE && name === 'gender')
+                    ) {
+                        valueAttr = optionKey;
+                    }
+                    
+                    // For dependent dropdowns, construct the full translation key.
+                    if (feature.action === FeatureAction.YOGA_STUDIO && name === 'yoga_pose') {
+                        if (yogaLevelKeyPart) {
+                            optionKey = `aiStudio.inputs.yoga.poses.${yogaLevelKeyPart}.${opt}`;
+                            valueAttr = t(optionKey);
+                        }
+                    }
+                    if (feature.action === FeatureAction.CHANGE_HAIRSTYLE && name === 'hairstyle') {
+                        // Here, `opt` is already the full key from the constants array.
+                        valueAttr = t(opt);
+                    }
+
+                    return <option key={optionKey} value={valueAttr}>{t(optionKey)}</option>;
                 }
-                return <option key={opt.value} value={opt.value}>{t(opt.label)}</option>;
+                // This handles object-based options like { value: '...', label: '...' }
+                return <option key={opt.value} value={t(opt.label)}>{t(opt.label)}</option>;
               })}
             </select>
           </div>
@@ -331,7 +399,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                          <div className="relative mt-2">
                             <div className="flex justify-between items-center mb-1">
                                 <label className="block font-semibold text-[var(--text-primary)] mb-2">{t('aiStudio.composite.mainDesc')}</label>
-                                <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept('main_subject_description', tag)} />
+                                {concepts.length > 0 && <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept('main_subject_description', tag)} />}
                             </div>
                             <input
                                 type="text"
@@ -345,7 +413,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
                     <div className="relative">
                          <div className="flex justify-between items-center mb-1">
                             <h3 className="font-semibold text-[var(--accent-text-end)]">{t('aiStudio.composite.scene')}</h3>
-                            <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept('scene_description', tag)} />
+                            {concepts.length > 0 && <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept('scene_description', tag)} />}
                         </div>
                          {showCreativeTip && (
                             <p className="text-sm mb-2 animated-gradient-text">
@@ -373,12 +441,12 @@ export const InputSection: React.FC<InputSectionProps> = ({
                         <div className="self-center">
                             <div className="flex justify-between items-center mb-1">
                                  <label className="block font-semibold text-[var(--text-primary)] mb-2">{`${t('aiStudio.composite.additionalDesc')} ${index + 1}`}</label>
-                                 <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept(`additional_components_${index}_description`, tag)} />
+                                 {concepts.length > 0 && <ConceptInserter concepts={concepts} onInsert={(tag) => onInsertConcept(`additional_components[${index}].description`, tag)} />}
                             </div>
                             <input
                                 type="text"
-                                value={formData[`additional_components_${index}_description`] || ''}
-                                onChange={(e) => handleFormChange(`additional_components_${index}_description`, e.target.value)}
+                                value={comp.description}
+                                onChange={(e) => updateComponent(index, 'description', e.target.value)}
                                 className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg p-2"
                             />
                         </div>
@@ -410,7 +478,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
         )
     }
 
-    const gridCols = [FeatureAction.FASHION_STUDIO, FeatureAction.CREATE_ALBUM, FeatureAction.BIRTHDAY_PHOTO, FeatureAction.CHANGE_HAIRSTYLE].includes(feature.action) ? 3 : 2;
+    const gridCols = [FeatureAction.FASHION_STUDIO, FeatureAction.CREATE_ALBUM, FeatureAction.BIRTHDAY_PHOTO, FeatureAction.CHANGE_HAIRSTYLE, FeatureAction.YOGA_STUDIO].includes(feature.action) ? 3 : 2;
     return (
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${gridCols} gap-4 items-start`}>
         {feature.inputs.map(renderInput)}

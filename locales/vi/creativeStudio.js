@@ -76,7 +76,8 @@ export default {
       "ai_thumbnail_designer": "Thiết kế Thumbnail AI",
       "batch_generator": "Tạo ảnh hàng loạt",
       "image_variation_generator": "Tạo Biến Thể Ảnh",
-      "korean_style_studio": "Studio Phong Cách Hàn"
+      "korean_style_studio": "Studio Phong Cách Hàn",
+      "yoga_studio": "Studio Yoga"
     },
     "inputs": {
       "common": {
@@ -393,6 +394,71 @@ export default {
             "portrait": "3:4 Đứng",
             "story": "9:16 Story"
         }
+      },
+      "yoga": {
+        "subject_image": { "label": "Ảnh chân dung của bạn" },
+        "pose_level": {
+          "label": "Cấp độ Tư thế",
+          "options": {
+            "beginner": "Cơ bản",
+            "intermediate": "Trung cấp",
+            "advanced": "Nâng cao"
+          }
+        },
+        "yoga_pose": {
+          "label": "Tư thế Yoga",
+          "placeholder": "Chọn cấp độ trước"
+        },
+        "location": {
+          "label": "Bối cảnh",
+          "options": {
+            "studio": "Studio tối giản",
+            "beach": "Bãi biển lúc bình minh",
+            "forest": "Rừng sâu tĩnh lặng",
+            "mountain": "Trên đỉnh núi",
+            "temple": "Ngôi đền cổ kính"
+          }
+        },
+        "lighting": {
+          "label": "Ánh sáng",
+          "options": {
+            "softStudio": "Ánh sáng studio dịu nhẹ",
+            "sunrise": "Ánh nắng ban mai",
+            "dramatic": "Tương phản kịch tính"
+          }
+        },
+        "outfit": {
+          "label": "Trang phục",
+          "options": {
+            "modern": "Đồ tập yoga hiện đại",
+            "linen": "Đồ vải lanh thướt tha",
+            "traditional": "Trang phục truyền thống"
+          }
+        },
+        "poses": {
+          "beginner": {
+            "tadasana": "Tư thế Trái Núi (Tadasana)",
+            "vrikshasana": "Tư thế Cái Cây (Vrikshasana)",
+            "adhoMukhaSvanasana": "Tư thế Chó Úp Mặt (Adho Mukha Svanasana)",
+            "virabhadrasanaI": "Tư thế Chiến Binh I (Virabhadrasana I)",
+            "virabhadrasanaII": "Tư thế Chiến Binh II (Virabhadrasana II)",
+            "trikonasana": "Tư thế Tam Giác (Trikonasana)"
+          },
+          "intermediate": {
+            "bakasana": "Tư thế Con Quạ (Bakasana)",
+            "sirsasana": "Tư thế Trồng Cây Chuối (Sirsasana)",
+            "sarvangasana": "Tư thế Đứng Bằng Vai (Sarvangasana)",
+            "urdhvaDhanurasana": "Tư thế Bánh Xe (Urdhva Dhanurasana)",
+            "natarajasana": "Tư thế Vũ Công (Natarajasana)"
+          },
+          "advanced": {
+            "ekaPadaKoundinyasanaII": "Tư thế Bay Tách (Eka Pada Koundinyasana II)",
+            "pinchaMayurasana": "Tư thế Con Công (Pincha Mayurasana)",
+            "adhoMukhaVrikshasana": "Tư thế Trồng Cây Chuối Bằng Tay (Adho Mukha Vrikshasana)",
+            "visvamitrasana": "Tư thế Visvamitra (Visvamitrasana)",
+            "vasisthasana": "Tư thế Tấm Ván Nghiêng (Vasisthasana)"
+          }
+        }
       }
     },
     "header": {
@@ -491,6 +557,7 @@ export default {
     "typeLabel": "Loại Concept",
     "typeCharacter": "Nhân vật (Giữ nguyên gương mặt)",
     "typeStyle": "Phong cách (Màu sắc, ánh sáng...)",
+    "imagesLabel": "Ảnh huấn luyện",
     "imagesHelp": "Tải lên ít nhất 3 ảnh. Với nhân vật, nên dùng ảnh nhiều góc mặt khác nhau. Với phong cách, nên dùng ảnh có chung một chủ đề.",
     "insertTooltip": "Chèn nhân vật hoặc phong cách đã huấn luyện",
     "insertButton": "Chèn concept",

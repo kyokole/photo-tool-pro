@@ -98,6 +98,7 @@ export enum FeatureAction {
   BATCH_GENERATOR = 'batch_generator',
   IMAGE_VARIATION_GENERATOR = 'image_variation_generator',
   KOREAN_STYLE_STUDIO = 'korean_style_studio',
+  YOGA_STUDIO = 'yoga_studio',
 }
 
 // --- MERGED CONSTANTS from constants.ts ---
@@ -116,8 +117,8 @@ const HIDDEN_ADDONS: string = [
 
 
 // --- MERGED PROMPTS from _serverSidePrompts.ts ---
-const createFinalPromptVn = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
-    if (!hasIdentityImages) {
+const createFinalPromptVn = (userRequest: string, useFaceLock: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
+    if (!useFaceLock) {
         return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}`;
     }
 
@@ -141,8 +142,8 @@ ${userRequest}
 **KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận kế hoạch của bạn bao gồm việc sao chép hoàn hảo (các) khuôn mặt nhận dạng.`;
 };
 
-const createFinalPromptEn = (userRequest: string, hasIdentityImages: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
-    if (!hasIdentityImages) {
+const createFinalPromptEn = (userRequest: string, useFaceLock: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
+    if (!useFaceLock) {
         return `**TASK:** Create a high-quality, artistic image based on the user's request.\n\n**USER REQUEST:** ${userRequest}`;
     }
 
@@ -651,9 +652,19 @@ Example response format:
                 const { featureAction, formData, numImages } = payload;
                 if (!featureAction || !formData) return res.status(400).json({ error: 'Thiếu action hoặc dữ liệu form.' });
 
-                let promptsToRun: { prompt: string, parts: Part[], isCouple?: boolean, gender1?: string, gender2?: string }[] = [];
+                let promptsToRun: { prompt: string, parts: Part[], isCouple?: boolean, gender1?: string, gender2?: string, faceConsistency?: boolean }[] = [];
 
                 switch(featureAction) {
+                    case FeatureAction.YOGA_STUDIO: {
+                        const { subject_image, yoga_pose, location, lighting, outfit, face_consistency } = formData;
+                        if (!subject_image || !yoga_pose) {
+                            throw new Error('Thiếu ảnh hoặc tư thế yoga.');
+                        }
+                        const prompt = `Một người đang thực hiện tư thế yoga "${yoga_pose}". Bối cảnh: ${location}. Ánh sáng: ${lighting}. Trang phục: ${outfit}. Ảnh chụp theo phong cách chân thực, chất lượng cao, 8K, tập trung vào sự tĩnh tại và vẻ đẹp của tư thế.`;
+                        const parts = [base64ToPart(subject_image)];
+                        promptsToRun.push({ prompt, parts, faceConsistency: face_consistency });
+                        break;
+                    }
                     case FeatureAction.IMAGE_VARIATION_GENERATOR: {
                         const { reference_image, aspectRatio, identityLock, variationStrength, themeAnchor, style } = formData;
                         if (!reference_image) throw new Error('Thiếu ảnh tham chiếu.');
@@ -701,10 +712,9 @@ Example response format:
                         if (quality === 'high') qualityPrompt = 'high resolution, 4K,';
                         if (quality === 'ultra') qualityPrompt = 'hyper-detailed, 8K, photorealistic, cinematic lighting,';
 
-                        const finalUserRequest = `${qualityPrompt} ${k_concept}. ${HIDDEN_ADDONS}. Final aspect ratio must be ${aspect_ratio}.`;
-                        const fullPrompt = createFinalPromptVn(finalUserRequest, face_consistency);
-                        const parts = [base64ToPart(subject_image), { text: fullPrompt }];
-                        promptsToRun.push({ prompt: finalUserRequest, parts });
+                        const prompt = `${qualityPrompt} ${k_concept}. ${HIDDEN_ADDONS}. Final aspect ratio must be ${aspect_ratio}.`;
+                        const parts = [base64ToPart(subject_image)];
+                        promptsToRun.push({ prompt, parts, faceConsistency: face_consistency });
                         break;
                     }
                     case FeatureAction.TRY_ON_OUTFIT: {
@@ -824,8 +834,8 @@ Example response format:
                      return res.status(400).json({ error: `Không có tác vụ nào để thực hiện cho tính năng '${featureAction}'. Vui lòng kiểm tra lại đầu vào.` });
                 }
 
-                const promises = promptsToRun.flatMap(({ prompt, parts, isCouple, gender1, gender2 }) => {
-                    const userRequest = createFinalPromptEn(prompt, parts.length > 0, isCouple, gender1, gender2);
+                const promises = promptsToRun.flatMap(({ prompt, parts, isCouple, gender1, gender2, faceConsistency }) => {
+                    const userRequest = createFinalPromptVn(prompt, faceConsistency ?? (parts.length > 0), isCouple, gender1, gender2);
                     const finalParts = [...parts, { text: userRequest }];
                     const loopCount = promptsToRun.length > 1 ? 1 : numImages;
                     

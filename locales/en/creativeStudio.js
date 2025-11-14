@@ -76,7 +76,8 @@ export default {
       "ai_thumbnail_designer": "AI Thumbnail Designer",
       "batch_generator": "Batch Generator",
       "image_variation_generator": "Image Variation Generator",
-      "korean_style_studio": "Korean Style Studio"
+      "korean_style_studio": "Korean Style Studio",
+      "yoga_studio": "Yoga Studio"
     },
     "inputs": {
       "common": {
@@ -393,6 +394,71 @@ export default {
             "portrait": "3:4 Portrait",
             "story": "9:16 Story"
         }
+      },
+      "yoga": {
+        "subject_image": { "label": "Your Portrait Photo" },
+        "pose_level": {
+          "label": "Pose Level",
+          "options": {
+            "beginner": "Beginner",
+            "intermediate": "Intermediate",
+            "advanced": "Advanced"
+          }
+        },
+        "yoga_pose": {
+          "label": "Yoga Pose",
+          "placeholder": "Select a level first"
+        },
+        "location": {
+          "label": "Location",
+          "options": {
+            "studio": "Minimalist Studio",
+            "beach": "Beach at Sunrise",
+            "forest": "Serene Forest",
+            "mountain": "Mountain Peak",
+            "temple": "Ancient Temple"
+          }
+        },
+        "lighting": {
+          "label": "Lighting",
+          "options": {
+            "softStudio": "Soft Studio Light",
+            "sunrise": "Golden Sunrise",
+            "dramatic": "Dramatic Contrast"
+          }
+        },
+        "outfit": {
+          "label": "Outfit",
+          "options": {
+            "modern": "Modern Yoga Wear",
+            "linen": "Flowy Linen Clothes",
+            "traditional": "Traditional Attire"
+          }
+        },
+        "poses": {
+          "beginner": {
+            "tadasana": "Mountain Pose (Tadasana)",
+            "vrikshasana": "Tree Pose (Vrikshasana)",
+            "adhoMukhaSvanasana": "Downward-Facing Dog (Adho Mukha Svanasana)",
+            "virabhadrasanaI": "Warrior I (Virabhadrasana I)",
+            "virabhadrasanaII": "Warrior II (Virabhadrasana II)",
+            "trikonasana": "Triangle Pose (Trikonasana)"
+          },
+          "intermediate": {
+            "bakasana": "Crow Pose (Bakasana)",
+            "sirsasana": "Headstand (Sirsasana)",
+            "sarvangasana": "Shoulder Stand (Sarvangasana)",
+            "urdhvaDhanurasana": "Wheel Pose (Urdhva Dhanurasana)",
+            "natarajasana": "Dancer's Pose (Natarajasana)"
+          },
+          "advanced": {
+            "ekaPadaKoundinyasanaII": "Flying Splits Pose (Eka Pada Koundinyasana II)",
+            "pinchaMayurasana": "Feathered Peacock Pose (Pincha Mayurasana)",
+            "adhoMukhaVrikshasana": "Handstand (Adho Mukha Vrikshasana)",
+            "visvamitrasana": "Visvamitra's Pose (Visvamitrasana)",
+            "vasisthasana": "Side Plank Pose (Vasisthasana)"
+          }
+        }
       }
     },
     "header": {
@@ -491,6 +557,7 @@ export default {
     "typeLabel": "Concept Type",
     "typeCharacter": "Character (Preserve face)",
     "typeStyle": "Style (Colors, lighting...)",
+    "imagesLabel": "Training Images",
     "imagesHelp": "Upload at least 3 images. For characters, use different angles of the face. For styles, use images with a common theme.",
     "insertTooltip": "Insert a trained character or style",
     "insertButton": "Insert Concept",
