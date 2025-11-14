@@ -8,7 +8,7 @@ interface SubFeatureTabsProps {
 }
 
 export const SubFeatureTabs: React.FC<SubFeatureTabsProps> = ({ subFeatures, selectedSubFeature, onSelect }) => {
-  if (!subFeatures || subFeatures.length === 0) {
+  if (!subFeatures || subFeatures.length <= 1) { // Hide tabs if only one or zero sub-features
     return null;
   }
  

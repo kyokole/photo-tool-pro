@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BeautyFeature, BeautyBadgeType } from '../../types';
 
 interface MainToolbarProps {
@@ -31,9 +32,10 @@ const FeatureItem: React.FC<{ feature: BeautyFeature; onSelect: () => void; }> =
 );
 
 export const BeautyStudioMainToolbar: React.FC<MainToolbarProps> = ({ tools, onToolSelect, isDisabled }) => {
+    const { t } = useTranslation();
     return (
         <div className="bg-[var(--bg-interactive)] backdrop-blur-sm rounded-2xl shadow-inner p-2">
-            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 px-3 pt-1">Công cụ làm đẹp</h2>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 px-3 pt-1">{t('beautyStudio.toolbar.title')}</h2>
             <div className={`overflow-x-auto overflow-y-hidden pb-2 scrollbar-thin ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-start space-x-1">
                     {tools.map(tool => (

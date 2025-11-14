@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const BackIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -20,16 +21,17 @@ interface ImageToolbarProps {
 }
 
 export const ImageToolbar: React.FC<ImageToolbarProps> = ({ onBack, onUndo, showBack, showUndo }) => {
+  const { t } = useTranslation();
   return (
     <>
       <div className="absolute top-3 left-3 z-20 flex items-center space-x-2">
         {showBack && (
-          <button onClick={onBack} title="Back" className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all backdrop-blur-sm">
+          <button onClick={onBack} title={t('beautyStudio.imageToolbar.back')} className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all backdrop-blur-sm">
             <BackIcon />
           </button>
         )}
         {showUndo && (
-          <button onClick={onUndo} title="Hoàn tác" className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all backdrop-blur-sm">
+          <button onClick={onUndo} title={t('beautyStudio.imageToolbar.undo')} className="p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-all backdrop-blur-sm">
             <UndoIcon />
           </button>
         )}
