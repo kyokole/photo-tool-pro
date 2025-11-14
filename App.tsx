@@ -1127,6 +1127,18 @@ const App: React.FC = () => {
     setIsResultReady(true);
   }, []);
 
+  const handleSelectOriginal = useCallback(() => {
+    setProcessedImage(null);
+    setIsResultReady(false);
+    setSettings(loadSettingsFromSession());
+    setActiveWizardSection('layout');
+    setEnabledWizardSections(['layout']);
+    setIsAiCropped(false);
+    if (!isVip) {
+      setIsFreeTierLocked(false);
+    }
+  }, [isVip]);
+
   const handleClearHistory = useCallback(() => {
     if (window.confirm(t('history.clearConfirmation'))) {
         setHistory([]);
@@ -1275,11 +1287,13 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-            {history.length > 0 && !isGenerating && (
+            {(originalImage || history.length > 0) && !isGenerating && (
                 <HistoryPanel
+                    originalImage={originalImage}
                     history={history}
                     currentImage={processedImage}
                     onSelect={handleHistorySelect}
+                    onSelectOriginal={handleSelectOriginal}
                     onClear={handleClearHistory}
                 />
             )}

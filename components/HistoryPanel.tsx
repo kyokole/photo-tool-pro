@@ -4,18 +4,16 @@ import { useTranslation } from 'react-i18next';
 import type { HistoryItem } from '../types';
 
 interface HistoryPanelProps {
+  originalImage: string | null;
   history: HistoryItem[];
   currentImage: string | null;
   onSelect: (item: HistoryItem) => void;
+  onSelectOriginal: () => void;
   onClear: () => void;
 }
 
-const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, currentImage, onSelect, onClear }) => {
+const HistoryPanel: React.FC<HistoryPanelProps> = ({ originalImage, history, currentImage, onSelect, onSelectOriginal, onClear }) => {
   const { t } = useTranslation();
-
-  if (history.length === 0) {
-    return null;
-  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-6 pb-4 animate-fade-in">
@@ -34,6 +32,19 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, currentImage, onSe
           </button>
         </div>
         <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-thin">
+          {originalImage && (
+             <div
+              onClick={onSelectOriginal}
+              className={`flex-shrink-0 w-20 h-20 rounded-lg cursor-pointer p-1 transition-all duration-200 ${currentImage === null ? 'bg-[var(--accent-cyan)]' : 'bg-transparent hover:bg-white/10'}`}
+              title={t('imagePanes.originalTitle')}
+            >
+              <img
+                src={originalImage}
+                alt={t('imagePanes.originalTitle')}
+                className="w-full h-full object-cover rounded-md border-2 border-[var(--bg-component)]"
+              />
+            </div>
+          )}
           {history.map((item, index) => (
             <div
               key={index}

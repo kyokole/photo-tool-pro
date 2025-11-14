@@ -67,7 +67,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
       if (isSingleClickAction) {
         const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: newImageDataUrl };
-        setHistory(prev => [newHistoryItem, ...prev]);
+        setHistory(prev => [...prev, newHistoryItem]);
         setCurrentBaseImage(newImageDataUrl);
         setActivePreview(null);
       } else {
@@ -87,7 +87,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
   const handleToolSelect = useCallback((tool: BeautyFeature) => {
     if (activePreview) {
       const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activePreview };
-      setHistory(prev => [newHistoryItem, ...prev]);
+      setHistory(prev => [...prev, newHistoryItem]);
       setCurrentBaseImage(activePreview);
       setActivePreview(null);
     }
@@ -123,7 +123,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
   const handleConfirm = useCallback(() => {
     if (activePreview) {
         const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: activePreview };
-        setHistory(prev => [newHistoryItem, ...prev]);
+        setHistory(prev => [...prev, newHistoryItem]);
         setCurrentBaseImage(activePreview);
     }
     setActivePreview(null);
@@ -155,8 +155,8 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     if (activePreview) {
         setActivePreview(null);
     } else if (history.length > 1) {
-        const newHistory = history.slice(1);
-        setCurrentBaseImage(newHistory[0].imageDataUrl);
+        const newHistory = history.slice(0, -1);
+        setCurrentBaseImage(newHistory[newHistory.length - 1].imageDataUrl);
         setHistory(newHistory);
     }
   }, [activePreview, history]);
@@ -221,13 +221,13 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
     const itemIndex = history.findIndex(h => h.id === item.id);
     if (itemIndex > -1) {
-        setHistory(prev => prev.slice(itemIndex));
+        setHistory(prev => prev.slice(0, itemIndex + 1));
     }
   };
  
   const handleClearHistory = useCallback(() => {
     if (history.length > 0) {
-      const originalItem = history[history.length - 1];
+      const originalItem = history[0];
       setCurrentBaseImage(originalItem.imageDataUrl);
       setHistory([originalItem]);
       setActivePreview(null);
@@ -250,7 +250,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                 </div>
             </header>
 
-            <main className={`space-y-6 ${activeTool ? 'pb-[280px] sm:pb-[250px]' : ''}`}>
+            <main className={`space-y-6 ${activeTool ? 'pb-[280px] sm:pb-[250px]' : (history.length > 1 ? 'pb-32' : '')}`}>
                 <div className="relative">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                 
@@ -302,7 +302,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                 ) : null}
 
 
-                {history.length > 1 && (
+                {history.length > 1 && !activeTool && (
                     <BeautyStudioHistoryPanel
                         history={history}
                         onSelect={handleHistorySelect}

@@ -133,8 +133,10 @@ const HIDDEN_ADDONS: string = [
 
 // --- MERGED PROMPTS from _serverSidePrompts.ts ---
 const createFinalPromptVn = (userRequest: string, useFaceLock: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
+    const qualityBooster = "\n\n**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu tự nhiên và ánh sáng điện ảnh.";
+    
     if (!useFaceLock) {
-        return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}`;
+        return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}${qualityBooster}`;
     }
 
     let identityDescription = "Ảnh đầu tiên được cung cấp là ảnh THAM CHIẾU NHẬN DẠNG.";
@@ -154,12 +156,15 @@ const createFinalPromptVn = (userRequest: string, useFaceLock: boolean, isCouple
 **YÊU CẦU (Tiếng Việt):**
 ${userRequest}
 ---
+${qualityBooster}
 **KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận kế hoạch của bạn bao gồm việc sao chép hoàn hảo (các) khuôn mặt nhận dạng.`;
 };
 
 const createFinalPromptEn = (userRequest: string, useFaceLock: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
+    const qualityBooster = "\n\n**QUALITY DIRECTIVE:** The final image must be a photorealistic masterpiece, 8K, with hyper-detailed textures and cinematic lighting.";
+
     if (!useFaceLock) {
-        return `**TASK:** Create a high-quality, artistic image based on the user's request.\n\n**USER REQUEST:** ${userRequest}`;
+        return `**TASK:** Create a high-quality, artistic image based on the user's request.\n\n**USER REQUEST:** ${userRequest}${qualityBooster}`;
     }
 
     let identityDescription = "The first image provided is the IDENTITY REFERENCE.";
@@ -179,6 +184,7 @@ const createFinalPromptEn = (userRequest: string, useFaceLock: boolean, isCouple
 **USER SCENE DESCRIPTION:**
 ${userRequest}
 ---
+${qualityBooster}
 **FINAL CHECK:** Before rendering, confirm your plan includes perfectly replicating the identity face. The scene is secondary to face consistency.`;
 };
 
@@ -187,7 +193,7 @@ const buildIdPhotoPrompt = (settings: Settings): string => {
 Trước mọi chỉnh sửa khác, bạn PHẢI phân tích ảnh gốc. Nếu đó là ảnh góc rộng, ảnh phong cảnh, hoặc chứa nhiều hậu cảnh, nhiệm vụ đầu tiên của bạn là cắt ảnh trong đầu thành một bức chân dung tiêu chuẩn từ đầu đến vai. Chỉ tập trung vào đầu và phần thân trên của chủ thể chính. Loại bỏ tất cả các yếu tố cảnh quan khác. Tất cả các chỉnh sửa tiếp theo (nền, quần áo, v.v.) sẽ CHỈ được thực hiện trên khu vực chân dung đã cắt trong đầu này. Điều này đảm bảo đầu ra cuối cùng là một bức chân dung đúng nghĩa, không phải là một hình người nhỏ trong một khung hình lớn.
 
 Hãy đóng vai một biên tập viên ảnh chuyên nghiệp. Nhiệm vụ của bạn là thực hiện các chỉnh sửa chất lượng cao trên một bức chân dung do người dùng cung cấp.
-Làm theo các hướng dẫn cụ thể về nền, quần áo và điều chỉnh khuôn mặt dưới đây.
+Làm theo các hướng dẫn cụ thể về nền, quần áo và điều chỉnh khuôn mặt dưới đây. Đảm bảo ánh sáng chuyên nghiệp và kết cấu da tự nhiên.
 `;
 
     if (settings.background.mode === 'ai' && settings.background.customPrompt.trim() !== '') {
@@ -733,7 +739,11 @@ Example response format:
                         if (!subject_image || !yoga_pose) {
                             throw new Error('Thiếu ảnh hoặc tư thế yoga.');
                         }
-                        const prompt = `Một người đang thực hiện tư thế yoga "${yoga_pose}". Bối cảnh: ${location}. Ánh sáng: ${lighting}. Trang phục: ${outfit}. Ảnh chụp theo phong cách chân thực, chất lượng cao, 8K, tập trung vào sự tĩnh tại và vẻ đẹp của tư thế.`;
+                        const prompt = `**Photorealistic Masterpiece:** A person is performing the yoga pose "${yoga_pose}".
+- **Location:** ${location}.
+- **Lighting:** ${lighting}.
+- **Outfit:** ${outfit}.
+- **Realism Details:** Shot on a Canon EOS R5 with an 85mm f/1.2 lens, cinematic lighting, hyper-detailed, extremely sharp focus on the subject, natural skin texture with pores visible, realistic fabric texture on clothes, background has a beautiful cinematic bokeh.`;
                         const parts = [base64ToPart(subject_image)];
                         promptsToRun.push({ prompt, parts, faceConsistency: face_consistency });
                         break;

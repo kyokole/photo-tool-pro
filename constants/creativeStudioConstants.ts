@@ -61,7 +61,7 @@ export const YOGA_OUTFITS = ["modern", "linen", "traditional"];
 
 export const HIDDEN_ADDONS: string = [
   "Phong cách ảnh lookbook Hàn Quốc chuyên nghiệp, thần thái tinh tế",
-  "Chất lượng ảnh cao cấp: ánh sáng điện ảnh, chi tiết 8K, màu sắc tinh gọn, xử lý da và tóc hoàn hảo.",
+  "Chất lượng ảnh cao cấp: chụp bằng máy ảnh medium format, ánh sáng điện ảnh, chi tiết 8K, tiêu cự siêu nét (extremely sharp focus), màu sắc tinh gọn, xử lý da và tóc hoàn hảo, kết cấu da tự nhiên.",
   "Giữ nguyên khuôn mặt tham chiếu (Face Consistency)",
 ].join(", ");
 

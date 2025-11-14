@@ -1,6 +1,6 @@
 import type { FilePart } from '../types';
 
-const MAX_DIMENSION = 1024; // Max width or height for the image
+const MAX_DIMENSION = 4096; // Max width or height for the image
 
 // New resizing utility
 const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }> => {
@@ -38,7 +38,7 @@ const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }>
         
         // Convert to JPEG for compression. Gemini handles JPEG fine.
         const mimeType = 'image/jpeg';
-        const dataUrl = canvas.toDataURL(mimeType, 0.9); // 90% quality
+        const dataUrl = canvas.toDataURL(mimeType, 0.95); // 95% quality
         resolve({ dataUrl, mimeType });
       };
       img.onerror = (err) => reject(new Error(`Image load error: ${String(err)}`));

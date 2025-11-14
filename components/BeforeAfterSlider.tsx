@@ -40,9 +40,10 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ before, af
             onTouchEnd={onTouchEnd}
             onTouchMove={onTouchMove}
         >
-            <img src={before} alt={t('restoration.originalAlt')} className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+            {/* FIX: Swapped `before` and `after` images. Now `before` is on top and is clipped, revealing `after` underneath. This makes the left side the original and right side the edited version. */}
+            <img src={after} alt={t('restoration.resultAlt')} className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
             <div className="absolute inset-0 w-full h-full pointer-events-none" style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
-                <img src={after} alt={t('restoration.resultAlt')} className="absolute inset-0 w-full h-full object-contain" />
+                <img src={before} alt={t('restoration.originalAlt')} className="absolute inset-0 w-full h-full object-contain" />
             </div>
             <div className="absolute top-0 bottom-0 bg-white w-1 cursor-ew-resize pointer-events-none" style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}>
                 <div className="absolute top-1/2 -translate-y-1/2 -left-4 bg-white rounded-full h-9 w-9 flex items-center justify-center shadow-lg pointer-events-none">
