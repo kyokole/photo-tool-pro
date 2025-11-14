@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { GoogleGenAI, Modality } from "@google/genai";
+import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
 import { BEAUTY_FEATURES } from '../constants/beautyStudioConstants';
+import { generateBeautyPhoto } from '../services/geminiService';
+import { applyWatermark } from '../utils/canvasUtils';
 
 import { BeautyStudioImageProcessor } from './beautystudio/BeautyStudioImageProcessor';
 import { BeautyStudioMainToolbar } from './beautystudio/BeautyStudioMainToolbar';
@@ -17,6 +19,7 @@ interface BeautyStudioProps {
 }
 
 const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) => {
+  const { t } = useTranslation();
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
  
@@ -35,14 +38,15 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     const currentTool = tool || activeTool;
     const currentSubFeature = subFeature || activeSubFeature;
     const currentStyle = style || activeStyle;
-    const imageToModify = baseImageOverride || originalImage;
+    const imageToModify = baseImageOverride || generatedImage || originalImage;
+
 
     if (!imageToModify) {
-      setError("Please upload an image first.");
+      setError("Vui lòng tải ảnh lên trước.");
       return;
     }
     if (!currentTool) {
-      setError("Please select a tool.");
+      setError("Vui lòng chọn một công cụ.");
       return;
     }
 
@@ -58,84 +62,29 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     setError(null);
 
     try {
-      // TODO: Refactor to use geminiService.ts and backend proxy
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const base64Data = imageToModify.split(',')[1];
+      const imageDataFromServer = await generateBeautyPhoto(
+        imageToModify,
+        currentTool,
+        currentSubFeature,
+        currentStyle
+      );
+      
+      const newImageDataUrl = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
 
-      const baseInstruction = "The result should be realistic, high-quality, and seamlessly blended with the original photo. Only return the modified image.";
-      let prompt: string;
+      setGeneratedImage(newImageDataUrl);
 
-      const customPrompt = currentStyle?.promptInstruction || currentSubFeature?.promptInstruction || currentTool?.promptInstruction;
-
-      if (customPrompt) {
-          let finalCustomPrompt = customPrompt;
-          if (currentStyle) {
-            finalCustomPrompt = finalCustomPrompt.replace('{{style}}', currentStyle.englishLabel);
-          }
-          if (currentSubFeature) {
-            finalCustomPrompt = finalCustomPrompt.replace('{{sub_feature}}', currentSubFeature.englishLabel);
-          }
-          if(currentTool) {
-            finalCustomPrompt = finalCustomPrompt.replace('{{tool}}', currentTool.englishLabel);
-          }
-          prompt = `${finalCustomPrompt} ${baseInstruction}`;
-      } else {
-          let effectDescription = `a '${currentTool.englishLabel}' effect`;
-          if (currentSubFeature && currentStyle && currentStyle.id !== 'none') {
-              effectDescription += `, specifically for the '${currentSubFeature.englishLabel}' with the style '${currentStyle.englishLabel}'`;
-          }
-          prompt = `You are an expert AI photo retouching artist. The user wants to apply ${effectDescription}. ${baseInstruction}`;
-      }
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data: base64Data,
-                mimeType: 'image/jpeg',
-              },
-            },
-            {
-              text: prompt,
-            },
-          ],
-        },
-        config: {
-          responseModalities: [Modality.IMAGE],
-        },
-      });
-     
-      let imageFound = false;
-      if (response.candidates && response.candidates.length > 0) {
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                const generatedBase64 = part.inlineData.data;
-                const newImageDataUrl = `data:image/png;base64,${generatedBase64}`;
-                setGeneratedImage(newImageDataUrl);
-
-                const newHistoryItem: BeautyHistoryItem = {
-                  id: Date.now().toString(),
-                  imageDataUrl: newImageDataUrl
-                };
-                setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
-                imageFound = true;
-                break;
-            }
-        }
-      }
-     
-      if (!imageFound) {
-        throw new Error("No image was generated. The response may have been blocked.");
-      } else {
-        handleClearActiveTool();
-      }
+      const newHistoryItem: BeautyHistoryItem = {
+        id: Date.now().toString(),
+        imageDataUrl: newImageDataUrl
+      };
+      setHistory(prevHistory => [newHistoryItem, ...prevHistory]);
+      
+      handleClearActiveTool();
 
     } catch (e) {
       console.error(e);
-      const errorMessage = e instanceof Error ? e.message : "An unknown error occurred during image generation.";
-      setError(`Failed to generate image. ${errorMessage}`);
+      const errorMessage = e instanceof Error ? e.message : t('errors.unknownError');
+      setError(t('errors.beautyGenerationFailed', { error: errorMessage }));
     } finally {
       setIsLoading(false);
     }
@@ -161,7 +110,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     const defaultStyle = stylesToConsider?.find(s => s.id !== 'none') || stylesToConsider?.[0] || defaultSubFeature?.styles?.find(s => s.id === 'none') || null;
 
     setActiveStyle(defaultStyle);
-  }, [originalImage, generatedImage]);
+  }, [originalImage, generatedImage, generateModification]);
 
   const handleClearActiveTool = useCallback(() => {
     setActiveTool(null);
@@ -171,7 +120,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
   const handleConfirm = useCallback(() => {
     generateModification();
-  }, [activeTool, activeSubFeature, activeStyle, originalImage]);
+  }, [activeTool, activeSubFeature, activeStyle, originalImage, generatedImage, generateModification]);
 
   const handleImageUpload = (imageDataUrl: string) => {
     setOriginalImage(imageDataUrl);
@@ -265,6 +214,12 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                         canSave={!!originalImage}
                     />
                 </div>
+
+                {error && (
+                    <div className="bg-red-900/50 text-red-300 text-center p-3 rounded-md border border-red-500/50">
+                        <strong>{t('common.error')}:</strong> {error}
+                    </div>
+                )}
 
                 <BeautyStudioHistoryPanel
                     history={history}

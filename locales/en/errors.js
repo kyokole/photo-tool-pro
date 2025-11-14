@@ -5,6 +5,7 @@ export default {
     "generationCancelled": "Generation was cancelled.",
     "unknownError": "An unknown error occurred.",
     "generationFailed": "Generation failed: {{error}}",
+    "beautyGenerationFailed": "Beauty generation failed: {{error}}",
     "fileConversionError": "File conversion error.",
     "headshotGenerationFailed": "Headshot generation failed: {{error}}",
     "fileProcessingError": "File processing error.",

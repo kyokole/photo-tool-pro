@@ -101,6 +101,21 @@ export enum FeatureAction {
   YOGA_STUDIO = 'yoga_studio',
 }
 
+// Simplified types for Beauty Studio, just what's needed for prompt generation
+interface BeautyStyle {
+  id: string;
+  englishLabel: string;
+  promptInstruction?: string;
+}
+interface BeautySubFeature {
+  englishLabel: string;
+  promptInstruction?: string;
+}
+interface BeautyFeature {
+  englishLabel: string;
+  promptInstruction?: string;
+}
+
 // --- MERGED CONSTANTS from constants.ts ---
 const ASPECT_RATIO_MAP: { [key: string]: number } = {
     '2x3': 2 / 3,
@@ -302,6 +317,34 @@ const buildRestorationPrompt = (options: RestorationOptions): string => {
     return prompt;
 };
 
+// New prompt builder for Beauty Studio
+const buildBeautyPrompt = (tool: BeautyFeature, subFeature?: BeautySubFeature, style?: BeautyStyle): string => {
+    const baseInstruction = "The result should be realistic, high-quality, and seamlessly blended with the original photo. Only return the modified image.";
+    
+    const customPrompt = style?.promptInstruction || subFeature?.promptInstruction || tool?.promptInstruction;
+
+    if (customPrompt) {
+        let finalCustomPrompt = customPrompt;
+        if (style) {
+            finalCustomPrompt = finalCustomPrompt.replace('{{style}}', style.englishLabel);
+        }
+        if (subFeature) {
+            finalCustomPrompt = finalCustomPrompt.replace('{{sub_feature}}', subFeature.englishLabel);
+        }
+        if(tool) {
+            finalCustomPrompt = finalCustomPrompt.replace('{{tool}}', tool.englishLabel);
+        }
+        return `${finalCustomPrompt} ${baseInstruction}`;
+    } else {
+        let effectDescription = `a '${tool.englishLabel}' effect`;
+        if (subFeature && style && style.id !== 'none') {
+            effectDescription += `, specifically for the '${subFeature.englishLabel}' with the style '${style.englishLabel}'`;
+        }
+        return `You are an expert AI photo retouching artist. The user wants to apply ${effectDescription}. ${baseInstruction}`;
+    }
+};
+
+
 // --- END OF MERGED CODE ---
 
 // --- Firebase Admin Initialization ---
@@ -431,6 +474,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // --- End of VIP Status Check ---
 
         switch (action) {
+            case 'generateBeautyPhoto': {
+                if (!payload || !payload.baseImage || !payload.tool) {
+                    return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc thông tin công cụ.' });
+                }
+                const { baseImage, tool, subFeature, style } = payload;
+
+                const prompt = buildBeautyPrompt(tool, subFeature, style);
+                const imagePart: Part = { inlineData: { data: baseImage.split(',')[1], mimeType: baseImage.split(';')[0].split(':')[1] } };
+
+                const response = await models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [imagePart, { text: prompt }] },
+                    config: { responseModalities: [Modality.IMAGE] },
+                });
+
+                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) {
+                    throw new Error("API không trả về hình ảnh cho Beauty Studio.");
+                }
+                
+                const { data, mimeType } = resultPart.inlineData;
+                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+            }
+
             case 'generateVideoPrompt': {
                 if (!payload || !payload.userIdea || !payload.base64Image) {
                     return res.status(400).json({ error: 'Thiếu ý tưởng người dùng hoặc ảnh.' });
