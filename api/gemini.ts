@@ -938,6 +938,69 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
                 const finalMimeType = 'image/jpeg';
                 return res.status(200).json({ image: `data:${finalMimeType};base64,${data}` });
             }
+            
+            case 'generateVideoFromImage': {
+                if (!payload || !payload.base64Image || !payload.prompt) {
+                    return res.status(400).json({ error: 'Thiếu ảnh hoặc prompt để tạo video.' });
+                }
+
+                const { base64Image, prompt } = payload;
+                const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+                if (!apiKey) {
+                    throw new Error("API Key của máy chủ chưa được cấu hình.");
+                }
+
+                // Per Veo guidelines, create a new instance right before the call
+                const aiForVideo = new GoogleGenAI({ apiKey });
+
+                let operation = await aiForVideo.models.generateVideos({
+                    model: 'veo-3.1-fast-generate-preview',
+                    prompt: prompt,
+                    image: {
+                        imageBytes: base64Image,
+                        mimeType: 'image/png', // Assuming PNG as client doesn't send mimeType
+                    },
+                    config: {
+                        numberOfVideos: 1,
+                        resolution: '720p',
+                        aspectRatio: '9:16' // Defaulting to portrait
+                    }
+                });
+
+                // Poll for completion - this might time out on Vercel Hobby/Pro
+                while (!operation.done) {
+                    await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10s
+                    operation = await aiForVideo.operations.getVideosOperation({ operation: operation });
+                }
+                
+                if (operation.error) {
+                    throw new Error(`Lỗi tạo video: ${operation.error.message || JSON.stringify(operation.error)}`);
+                }
+
+                const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+
+                if (!downloadLink) {
+                    throw new Error("Không tìm thấy link tải video trong phản hồi của API.");
+                }
+                
+                // Fetch the video bytes from the generated URL
+                const videoResponse = await fetch(`${downloadLink}&key=${apiKey}`);
+                if (!videoResponse.ok) {
+                    const errorBody = await videoResponse.text();
+                    console.error("Lỗi khi tải video từ link:", errorBody);
+                    // This specific error is handled by the client to re-prompt for a key
+                    if (errorBody.includes("Requested entity was not found")) {
+                        throw new Error("Requested entity was not found.");
+                    }
+                    throw new Error(`Không thể tải video từ link được tạo. Status: ${videoResponse.status}`);
+                }
+                
+                const videoArrayBuffer = await videoResponse.arrayBuffer();
+                const videoBase64 = Buffer.from(videoArrayBuffer).toString('base64');
+                const videoUrl = `data:video/mp4;base64,${videoBase64}`;
+
+                return res.status(200).json({ videoUrl });
+            }
 
             default:
                 return res.status(400).json({ error: `Tính năng '${action}' chưa được triển khai trên backend.` });
