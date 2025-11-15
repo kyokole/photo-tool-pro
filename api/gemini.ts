@@ -4,7 +4,7 @@
 
 // FIX: Import Buffer from the 'buffer' module to resolve 'Cannot find name' errors.
 import { Buffer } from 'buffer';
-// FIX: Import 'Type' from '@google/genai' to resolve 'Cannot find name 'TYPE'' error.
+// FIX: Remove incorrect 'Blob' import and only use 'Part' for response data.
 import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
@@ -512,29 +512,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
                 const settings: SerializedFamilyStudioSettings = payload.settings;
                 const model = 'gemini-2.5-flash-image';
+                
+                if (!settings.faceConsistency) {
+                    const parts: Part[] = [];
+                    settings.members.forEach(member => parts.push(base64ToPart(member.photo)));
+                    const memberDescriptions = settings.members.map((member, index) => `- Person ${index + 1}: ${member.age}`).join('\n');
+                    const creativePrompt = `Tạo một bức ảnh nghệ thuật của một gia đình. Sử dụng các ảnh đã cho làm nguồn cảm hứng cho ngoại hình của các thành viên.\n${memberDescriptions}\nBối cảnh: ${settings.scene}\nTrang phục chung: ${settings.outfit}\nTạo dáng chung: ${settings.pose}\nYêu cầu thêm: ${settings.customPrompt || 'Tất cả mọi người đều trông tự nhiên và hạnh phúc.'}`;
+                    parts.push({ text: creativePrompt });
+                    const response = await models.generateContent({ model, contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
+                    const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                    if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("AI không thể tạo ảnh gia đình.");
+                    const { data, mimeType } = resultPart.inlineData;
+                    return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+                }
 
-                // --- STEP 1: Generate Scene Plate (Text-only) ---
+                // --- "GUIDED SEQUENTIAL RECONSTRUCTION" PIPELINE ---
+                // STEP 1: Generate Scene Plate with placeholder faces.
                 const memberDescriptionsForPlate = settings.members.map((member, index) => {
-                    let desc = `- Người ${index + 1}: Một người được mô tả là '${member.age}'`;
-                    if (member.bodyDescription) desc += `, với vóc dáng '${member.bodyDescription}'`;
-                    if (member.pose) desc += `, trong tư thế '${member.pose}'`;
-                    if (member.outfit) desc += `, mặc '${member.outfit}'`;
-                    desc += ". Khuôn mặt của họ phải chung chung, không có đặc điểm nhận dạng rõ ràng, giống như ma-nơ-canh hoặc được làm mờ.";
+                    let desc = `- Person ${index + 1}: a person described as '${member.age}'`;
+                    if (member.bodyDescription) desc += `, with a body described as '${member.bodyDescription}'`;
+                    if (member.pose) desc += `, in the pose '${member.pose}'`;
+                    if (member.outfit) desc += `, wearing '${member.outfit}'`;
+                    desc += ". Their face should be generic, featureless, like a mannequin, or blurred. It is a placeholder.";
                     return desc;
                 }).join('\n');
 
-                const platePrompt = `**NHIỆM VỤ: TẠO PHÔI CẢNH (SCENE PLATE)**
-Tạo một cảnh chụp ảnh siêu thực (photorealistic) với ${settings.members.length} người dựa trên mô tả sau.
-**QUAN TRỌNG NHẤT:** Những người trong ảnh này PHẢI có khuôn mặt chung chung, không có đặc điểm nhận dạng, như ma-nơ-canh hoặc được làm mờ. Đây là một phôi ảnh để ghép mặt sau này. KHÔNG được vẽ mặt người thật.
+                const platePrompt = `**TASK: CREATE SCENE PLATE**
+Create a photorealistic scene with ${settings.members.length} people based on the following descriptions.
+**MOST IMPORTANTLY:** The people in this image MUST have generic, featureless faces, like mannequins or blurred faces. This is a plate for later face compositing. DO NOT render realistic faces.
 
-**MÔ TẢ CẢNH:**
+**SCENE DESCRIPTION:**
 ${memberDescriptionsForPlate}
-- **Bối cảnh chung:** ${settings.scene}.
-- **Trang phục chung (nếu không có mô tả riêng):** ${settings.outfit}.
-- **Tạo dáng chung (nếu không có mô tả riêng):** ${settings.pose}.
-- **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người trông tự nhiên và hạnh phúc.'}.
-- **Tỷ lệ khung hình (Nghiêm ngặt):** ${settings.aspectRatio}.
-- **Chất lượng:** Chân thực như ảnh chụp, 8K, ánh sáng điện ảnh, màu sắc hài hòa.`;
+- **Overall Scene:** ${settings.scene}.
+- **Overall Outfit (if not specified individually):** ${settings.outfit}.
+- **Overall Pose (if not specified individually):** ${settings.pose}.
+- **Additional requirements:** ${settings.customPrompt || 'Everyone looks natural and happy.'}.
+- **Aspect Ratio (Strict):** ${settings.aspectRatio}.
+- **Quality:** Photorealistic, 8K, cinematic lighting, harmonious colors.`;
 
                 const plateResponse = await models.generateContent({
                     model,
@@ -542,52 +556,56 @@ ${memberDescriptionsForPlate}
                     config: { responseModalities: [Modality.IMAGE] }
                 });
 
-                let currentScenePlatePart = plateResponse.candidates?.[0]?.content?.parts?.[0];
-                if (!currentScenePlatePart?.inlineData?.data) {
-                    throw new Error("AI đã thất bại trong việc tạo ra phôi cảnh ban đầu. Vui lòng thử lại với mô tả đơn giản hơn.");
+                let updatedPlatePart: Part | undefined = plateResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!updatedPlatePart?.inlineData?.data) {
+                    throw new Error("AI failed to create the initial scene plate. Please try again with a simpler description.");
                 }
 
-                if (!settings.faceConsistency) {
-                     // If face consistency is off, just return the initial plate
-                    const { data, mimeType } = currentScenePlatePart.inlineData;
-                    return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
-                }
-
-                // --- STEP 2: Iterative Face Reconstruction Pipeline ---
+                // --- STEP 2: Sequentially replace faces ---
                 for (let i = 0; i < settings.members.length; i++) {
                     const member = settings.members[i];
-                    const faceReferencePart = base64ToPart(member.photo);
+                    
+                    const compositingParts: Part[] = [
+                        updatedPlatePart, // The current state of the image
+                        base64ToPart(member.photo) // The face to insert
+                    ];
+                    
+                    const compositingPrompt = `**TASK: FOCUSED INPAINTING - SEQUENTIAL FACE REPLACEMENT**
+You are given two images:
+- **Image 1:** The current canvas, a work-in-progress.
+- **Image 2:** A reference photo containing a specific person's face for identity.
 
-                    const reconstructionPrompt = `**NHIỆM VỤ KỸ THUẬT: TÁI TẠO KHUÔN MẶT**
-Bạn được cung cấp hai ảnh:
-1.  **Ảnh 1:** Phôi Cảnh hiện tại.
-2.  **Ảnh 2:** Ảnh tham chiếu NHẬN DẠNG khuôn mặt.
+**YOUR ONLY JOB:**
+1.  Find the placeholder person in Image 1 described as '${member.age}'.
+2.  Using the face from Image 2 as a **100% identity reference**, redraw **ONLY THE HEAD AND FACE AREA** of that placeholder person.
+3.  Blend the new head seamlessly onto the body in Image 1. Adjust lighting on the new face to match the scene in Image 1.
 
-**CHỈ THỊ:**
-- Tìm người trong **Ảnh 1** được mô tả là "${member.age}".
-- **TÁI TẠO** khuôn mặt của người đó để nó trở thành một **BẢN SAO HOÀN HẢO 1:1** của khuôn mặt trong **Ảnh 2**.
-- **QUY TẮC BẤT DI BẤT DỊCH:**
-    1.  **SAO CHÉP HOÀN HẢO:** Khuôn mặt mới phải giống hệt 100% với Ảnh 2. KHÔNG được thay đổi đường nét, biểu cảm hay nhận dạng.
-    2.  **HÒA TRỘN LIỀN MẠCH:** Chỉ điều chỉnh ánh sáng và màu sắc trên khuôn mặt được tái tạo để khớp với ánh sáng của Ảnh 1.
-    3.  **KHÔNG THAY ĐỔI GÌ KHÁC:** Giữ nguyên 100% bối cảnh, quần áo, cơ thể, tư thế, và các khuôn mặt khác đã được tạo trước đó từ Ảnh 1.
-- **ĐẦU RA:** Trả về toàn bộ Ảnh 1 đã được cập nhật với khuôn mặt mới.`;
+**CRITICAL RULES:**
+- **ABSOLUTE IDENTITY PRESERVATION:** The new face must be an identical copy of the face in Image 2.
+- **DO NOT TOUCH ANYTHING ELSE:** The background, clothing, other people, and any previously completed faces in Image 1 MUST remain completely unchanged. Your task is surgical. You are not regenerating the scene, you are only inpainting one head.
+- **OUTPUT:** Return the modified Image 1.`;
 
-                    const reconstructionResponse = await models.generateContent({
+                    compositingParts.push({ text: compositingPrompt });
+
+                    const compositeResponse = await models.generateContent({
                         model,
-                        contents: { parts: [currentScenePlatePart, faceReferencePart, { text: reconstructionPrompt }] },
+                        contents: { parts: compositingParts },
                         config: { responseModalities: [Modality.IMAGE] }
                     });
-                    
-                    const updatedPart = reconstructionResponse.candidates?.[0]?.content?.parts?.[0];
-                    if (!updatedPart?.inlineData?.data) {
-                        throw new Error(`AI thất bại ở bước tái tạo khuôn mặt cho Thành viên ${i + 1}.`);
+
+                    const newPart: Part | undefined = compositeResponse.candidates?.[0]?.content?.parts?.[0];
+                    if (!newPart?.inlineData?.data) {
+                        throw new Error(`AI failed during the face replacement step for member ${i + 1}.`);
                     }
-                    // The output of this step becomes the input for the next
-                    currentScenePlatePart = updatedPart;
+                    updatedPlatePart = newPart; // Update the plate for the next iteration
                 }
 
-                // After the loop, currentScenePlatePart is the final image
-                const { data, mimeType } = currentScenePlatePart.inlineData;
+                const finalPart = updatedPlatePart;
+                if (!finalPart?.inlineData?.data || !finalPart.inlineData.mimeType) {
+                    throw new Error("AI failed in the final face compositing step.");
+                }
+
+                const { data, mimeType } = finalPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             case 'generateBeautyPhoto': {
