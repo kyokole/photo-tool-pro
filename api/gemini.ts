@@ -514,12 +514,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const parts: Part[] = [];
                 
-                let compositionInstructions = 'Trong ảnh cuối cùng, hãy sắp xếp các thành viên một cách tự nhiên. ';
+                parts.push({ text: "BẠN LÀ CHUYÊN GIA GHÉP ẢNH. Nhiệm vụ của bạn là nhận diện chính xác từng người từ các ảnh tham chiếu được cung cấp, sau đó đặt họ vào một bối cảnh mới theo yêu cầu. Ưu tiên cao nhất là giữ lại 100% nhận dạng khuôn mặt." });
 
                 settings.members.forEach((member, index) => {
                     const personId = `[NGƯỜI_${index + 1}]`;
+                    parts.push({ text: `Đây là ảnh tham chiếu nhận dạng cho ${personId}:` });
                     parts.push(base64ToPart(member.photo));
-                    
+                });
+                
+                let compositionInstructions = 'Trong ảnh cuối cùng, hãy sắp xếp các thành viên một cách tự nhiên. ';
+                settings.members.forEach((member, index) => {
+                    const personId = `[NGƯỜI_${index + 1}]`;
                     let individualDesc = `${personId} là ${member.age.trim() || `Thành viên ${index + 1}`}.`;
                     if (member.bodyDescription) {
                         individualDesc += ` Vóc dáng: ${member.bodyDescription}.`;
@@ -532,43 +537,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                     compositionInstructions += individualDesc + ' ';
                 });
-                
-                const userRequest = `**YÊU CẦU BỐ CỤC VÀ PHONG CÁCH:**
-- **Bố cục:** ${compositionInstructions}
+
+                let finalInstruction = `**BÂY GIỜ, HÃY TẠO ẢNH MỚI:**
+- **Thành phần:** Bao gồm tất cả các nhân vật đã được xác định: ${settings.members.map((_, i) => `[NGƯỜI_${i+1}]`).join(', ')}.
+- **Bối cảnh:** ${settings.scene}.
 - **Trang phục chung (áp dụng nếu không có tùy chỉnh riêng):** ${settings.outfit}.
 - **Tạo dáng chung (áp dụng nếu không có tùy chỉnh riêng):** ${settings.pose}.
-- **Bối cảnh:** ${settings.scene}.
+- **Bố cục & Chi tiết:** ${compositionInstructions}
 - **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và vui vẻ.'}.
-- **Tỷ lệ ảnh:** ${settings.aspectRatio}.`;
-                
-                let fullPrompt: string;
-                if (settings.faceConsistency) {
-                    let identityRules = '';
-                    settings.members.forEach((member, index) => {
-                         const personId = `[NGƯỜI_${index + 1}]`;
-                         identityRules += `Ảnh ${index + 1} LÀ tham chiếu nhận dạng tuyệt đối cho ${personId}. Khuôn mặt của ${personId} trong ảnh cuối cùng PHẢI là một bản sao 1:1, giống hệt khuôn mặt trong ảnh ${index + 1}.\n`;
-                    });
-
-                    fullPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG CHO NHIỀU NGƯỜI**
-**MỤC TIÊU CHÍNH:** Tạo ra một bức ảnh trong đó khuôn mặt của MỌI người là một **BẢN SAO HOÀN HẢO, KHÔNG TÌ VẾT, GIỐNG HỆT** với các ảnh tham chiếu được cung cấp.
-**QUY TẮC GHIM ĐỊNH DANH (BẤT DI BẤT DỊCH):**
-${identityRules}
-**LUẬT BỔ SUNG:** KHÔNG được thay đổi cấu trúc khuôn mặt, các đường nét, hoặc biểu cảm. Sự giống nhau về khuôn mặt là ưu tiên cao nhất, quan trọng hơn mọi yêu cầu khác.
----
-${userRequest}
----
-**CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).
-**KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận bạn sẽ sao chép hoàn hảo khuôn mặt của TẤT CẢ [NGƯỜI_X] từ các ảnh tham chiếu tương ứng.`;
-                } else {
-                    fullPrompt = `**NHIỆM VỤ:** Tạo một bức ảnh gia đình nghệ thuật.
-- Sử dụng các ảnh đã cho làm tham chiếu cho các thành viên gia đình, diễn giải lại họ một cách nghệ thuật trong bối cảnh được yêu cầu.
----
-${userRequest}
----
+- **Tỷ lệ ảnh:** ${settings.aspectRatio}.
 **CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).`;
+
+                if (settings.faceConsistency) {
+                    finalInstruction += `\n**YÊU CẦU BẮT BUỘC:** Khuôn mặt của mỗi [NGƯỜI_X] PHẢI là bản sao 1:1, GIỐNG HỆT từ ảnh tham chiếu tương ứng. Đây là yêu cầu quan trọng nhất.`;
                 }
                 
-                parts.push({ text: fullPrompt });
+                parts.push({ text: finalInstruction });
 
                 const response = await models.generateContent({
                     model: 'gemini-2.5-flash-image',
