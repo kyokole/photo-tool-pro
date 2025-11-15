@@ -513,56 +513,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const settings: SerializedFamilyStudioSettings = payload.settings;
                 const model = 'gemini-2.5-flash-image';
 
-                // --- BƯỚC 1: TẠO PHÔI CẢNH ---
-                const sceneParts: Part[] = [];
-                // Cung cấp ảnh gốc để AI hiểu vóc dáng, nhưng yêu cầu nó không vẽ mặt
-                settings.members.forEach(member => {
-                    sceneParts.push(base64ToPart(member.photo));
-                });
-                
-                let scenePrompt = `Tạo một bức ảnh gia đình hoàn chỉnh.
-- **Bối cảnh:** ${settings.scene}.
-- **Trang phục chung:** ${settings.outfit}.
-- **Tạo dáng chung:** ${settings.pose}.
-- **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và vui vẻ.'}.
-- **Tỷ lệ ảnh:** ${settings.aspectRatio}.
-**CHỈ THỊ CỰC KỲ QUAN TRỌNG:** Tạo ra những người có vóc dáng phù hợp nhưng với khuôn mặt chung chung, bị làm mờ hoặc quay đi. KHÔNG cố gắng sao chép khuôn mặt gốc trong bước này. Mục tiêu là tạo ra một 'phôi ảnh' hoàn hảo về bố cục, trang phục và ánh sáng, sẵn sàng để ghép mặt sau.`;
+                // --- BƯỚC 1: TẠO PHÔI CẢNH (CHỈ DÙNG TEXT) ---
+                const memberDescriptions = settings.members.map((member, index) => {
+                    let desc = `- Người ${index + 1}: ${member.age}`;
+                    if (member.bodyDescription) desc += `, ${member.bodyDescription}`;
+                    if (member.outfit) desc += `, mặc ${member.outfit}`;
+                    if (member.pose) desc += `, tạo dáng ${member.pose}`;
+                    return desc;
+                }).join('\n');
 
-                sceneParts.push({ text: scenePrompt });
-                
+                const scenePromptText = `Tạo một bức ảnh gia đình gồm ${settings.members.length} người.
+**Mô tả các thành viên:**
+${memberDescriptions}
+
+**Bối cảnh chung:** ${settings.scene}.
+**Trang phục chung (nếu không có mô tả riêng):** ${settings.outfit}.
+**Tạo dáng chung (nếu không có mô tả riêng):** ${settings.pose}.
+**Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và vui vẻ.'}.
+**Tỷ lệ ảnh:** ${settings.aspectRatio}.
+
+**CHỈ THỊ CỰC KỲ QUAN TRỌNG:** Vẽ những người này với khuôn mặt bị làm mờ hoàn toàn, trống hoặc quay đi. KHÔNG ĐƯỢC VẼ MẶT. Mục tiêu là tạo ra một 'phôi ảnh' hoàn hảo về bố cục, vóc dáng, trang phục và ánh sáng, sẵn sàng để ghép mặt sau.`;
+
                 const sceneResponse = await models.generateContent({
                     model,
-                    contents: { parts: sceneParts },
+                    contents: { parts: [{ text: scenePromptText }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
                 
                 const sceneBlankPart = sceneResponse.candidates?.[0]?.content?.parts?.[0];
                 if (!sceneBlankPart?.inlineData?.data) {
-                    throw new Error("Bước 1 thất bại: AI không tạo được phôi cảnh.");
+                    throw new Error("Bước 1 thất bại: AI không tạo được phôi cảnh từ mô tả văn bản.");
                 }
                 
                 // --- BƯỚC 2: GHÉP VÀ HÒA TRỘN KHUÔN MẶT ---
                 const compositeParts: Part[] = [];
-                // Ảnh đầu tiên là phôi cảnh
-                compositeParts.push(sceneBlankPart);
-                
-                // Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc
-                settings.members.forEach(member => {
+                compositeParts.push(sceneBlankPart); // Phôi cảnh là ảnh đầu tiên
+                settings.members.forEach(member => { // Các ảnh mặt gốc theo sau
                     compositeParts.push(base64ToPart(member.photo));
                 });
 
                 let compositePrompt = `**NHIỆM VỤ KỸ THUẬT - KHÔNG SÁNG TẠO:** Đây là một nhiệm vụ ghép ảnh (compositing) chính xác.
-1.  **NGUỒN:** Ảnh đầu tiên là 'phôi ảnh' nền. Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc theo thứ tự (ảnh 2 là cho [NGƯỜI_1], ảnh 3 là cho [NGƯỜI_2], v.v.).
-2.  **HÀNH ĐỘNG:** Lấy **CHÍNH XÁC** từng khuôn mặt từ các ảnh tham chiếu tương ứng và ghép chúng vào các vị trí cơ thể trên 'phôi ảnh'.
+1.  **NGUỒN:** Ảnh đầu tiên là 'phôi ảnh' nền với các cơ thể không có mặt. Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc theo thứ tự (ảnh 2 là cho người đầu tiên, ảnh 3 là cho người thứ hai, v.v.).
+2.  **HÀNH ĐỘNG:** Lấy **CHÍNH XÁC 100%** từng khuôn mặt từ các ảnh tham chiếu tương ứng và ghép chúng vào các vị trí cơ thể trên 'phôi ảnh'.
 3.  **QUY TẮC BẤT BIẾN:**
-    - **KHÔNG THAY ĐỔI KHUÔN MẶT:** Không được thay đổi bất kỳ đặc điểm nào (mắt, mũi, miệng, cấu trúc xương) của khuôn mặt gốc. Phải giữ lại 100% nhận dạng.
+    - **KHÔNG THAY ĐỔI KHUÔN MẶT:** Không được thay đổi bất kỳ đặc điểm nào (mắt, mũi, miệng, cấu trúc xương) của khuôn mặt gốc. Phải giữ lại 100% nhận dạng. Đây là ưu tiên cao nhất.
     - **HÒA TRỘN (BLEND):** Nhiệm vụ duy nhất của bạn là hòa trộn liền mạch đường viền cổ, điều chỉnh tông màu da và ánh sáng trên khuôn mặt đã ghép để khớp một cách hoàn hảo với phần thân và bối cảnh từ 'phôi ảnh'.
 **ĐẦU RA:** Chỉ trả về hình ảnh cuối cùng đã được ghép hoàn chỉnh.`;
                 
-                if(!settings.faceConsistency){
+                if (!settings.faceConsistency) {
                     compositePrompt = `**NHIỆM VỤ SÁNG TẠO:** Đây là một nhiệm vụ ghép ảnh nghệ thuật.
-1.  **NGUỒN:** Ảnh đầu tiên là 'phôi ảnh' nền. Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc theo thứ tự (ảnh 2 là cho [NGƯỜI_1], ảnh 3 là cho [NGƯỜI_2], v.v.).
-2.  **HÀNH ĐỘNG:** Dựa vào các khuôn mặt từ ảnh tham chiếu, hãy vẽ lại chúng theo phong cách của 'phôi ảnh' nền, đặt chúng vào các vị trí cơ thể tương ứng.
+1.  **NGUỒN:** Ảnh đầu tiên là 'phôi ảnh' nền. Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc theo thứ tự (ảnh 2 là cho người đầu tiên, ảnh 3 là cho người thứ hai, v.v.).
+2.  **HÀNH ĐỘNG:** Dựa vào các khuôn mặt từ ảnh tham chiếu, hãy **vẽ lại chúng** theo phong cách của 'phôi ảnh' nền, đặt chúng vào các vị trí cơ thể tương ứng.
 3.  **QUY TẮC:** Bạn có quyền tự do sáng tạo để điều chỉnh đường nét khuôn mặt cho phù hợp với phong cách nghệ thuật tổng thể, nhưng vẫn phải giữ được nét nhận dạng cơ bản của từng người.
 **ĐẦU RA:** Chỉ trả về hình ảnh cuối cùng đã được ghép hoàn chỉnh.`;
                 }
