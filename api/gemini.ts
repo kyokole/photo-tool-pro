@@ -527,21 +527,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
                 }
 
-                // --- NEW "SURGICAL SEQUENTIAL INPAINTING" PIPELINE ---
-                // STEP 1: Generate Scene Plate with placeholder faces.
+                // --- DEFINITIVE SOLUTION: SURGICAL INPAINTING WITH GUIDED MASKING ---
+                // STEP 1: Generate Scene Plate with solid color masks for faces.
                 const memberDescriptionsForPlate = settings.members.map((member, index) => {
                     let desc = `- Person ${index + 1}: a person described as '${member.age}'`;
                     if (member.bodyDescription) desc += `, with a body described as '${member.bodyDescription}'`;
                     if (member.pose) desc += `, in the pose '${member.pose}'`;
                     if (member.outfit) desc += `, wearing '${member.outfit}'`;
-                    // Key instruction: face should be featureless
-                    desc += ". Their face should be featureless and generic, like a mannequin. This is a placeholder.";
+                    // Key instruction: the face MUST be a solid green mask.
+                    desc += ". CRITICALLY IMPORTANT: Their entire head/face area MUST be rendered as a solid, vibrant green color (#00FF00) with no features. This green area is a MASK for a later inpainting step.";
                     return desc;
                 }).join('\n');
 
-                const platePrompt = `**TASK: CREATE SCENE PLATE**
+                const platePrompt = `**TASK: CREATE SCENE PLATE WITH MASKS**
 Create a photorealistic scene with ${settings.members.length} people based on the following descriptions.
-**MOST IMPORTANTLY:** The people in this image MUST have generic, featureless faces, like mannequins or blurred faces. This is a plate for later face compositing. DO NOT render realistic faces.
+**MOST IMPORTANT RULE:** The head/face area of every person in this image MUST be a solid, featureless, vibrant green color (#00FF00). This is a technical requirement for a masking pipeline. DO NOT render any facial features.
 
 **SCENE DESCRIPTION:**
 ${memberDescriptionsForPlate}
@@ -560,40 +560,40 @@ ${memberDescriptionsForPlate}
 
                 let currentImagePart: Part | undefined = plateResponse.candidates?.[0]?.content?.parts?.[0];
                 if (!currentImagePart?.inlineData?.data) {
-                    throw new Error("AI failed to create the initial scene plate. Please try again with a simpler description.");
+                    throw new Error("AI failed to create the initial scene plate with face masks. The AI might be refusing to create masked faces. Please try a different scene description.");
                 }
 
-                // --- STEP 2: Sequentially replace faces with surgical prompts ---
+                // --- STEP 2: Sequentially inpaint faces into the green masks ---
                 for (let i = 0; i < settings.members.length; i++) {
                     const member = settings.members[i];
                     
                     const referenceFacePart = base64ToPart(member.photo);
                     
-                    // The prompt is now extremely specific for each step
-                    const surgicalPrompt = `**TASK: SURGICAL INPAINTING**
+                    // The prompt is now an explicit, technical inpainting command.
+                    const surgicalInpaintingPrompt = `**TASK: SURGICAL INPAINTING**
 You are given two images:
-- **Image 1 (Base Image):** A scene that may contain placeholder faces and/or already completed real faces.
+- **Image 1 (Base Image):** A scene containing one or more green masks (#00FF00). It may also contain previously rendered real faces.
 - **Image 2 (Reference Face):** A photo containing the face of the person to be added.
 
 **YOUR ONLY JOB:**
-1.  In the Base Image (Image 1), locate the placeholder person described as '${member.age}'.
-2.  Using the Reference Face (Image 2) as a **100% PERFECT IDENTITY SOURCE**, redraw **ONLY THE HEAD AND FACE AREA** of that placeholder person.
-3.  Seamlessly blend the new head onto the body, perfectly matching the scene's lighting, color temperature, and grain.
+1.  In the Base Image (Image 1), identify one of the remaining green mask areas.
+2.  Using the Reference Face (Image 2) as a **100% PERFECT IDENTITY SOURCE**, redraw **ONLY THE GREEN MASKED AREA** with the face from Image 2.
+3.  Seamlessly blend the new head into the scene, perfectly matching the scene's lighting, color temperature, and grain.
 
 **CRITICAL RULES:**
 - **ABSOLUTE IDENTITY PRESERVATION:** The new face must be an identical, photorealistic copy of the Reference Face.
-- **DO NOT CHANGE ANYTHING ELSE:** The background, clothing, and, most importantly, **ANY OTHER REAL FACES ALREADY PRESENT IN THE BASE IMAGE MUST REMAIN UNTOUCHED AND UNCHANGED.** Your task is surgical and highly localized.
-- **OUTPUT:** Return the complete, modified Base Image.`;
+- **DO NOT CHANGE ANYTHING ELSE:** The background, clothing, and, most importantly, **ANY OTHER REAL FACES ALREADY PRESENT IN THE BASE IMAGE MUST REMAIN UNTOUCHED AND UNCHANGED.** Your task is surgical and highly localized to the green mask.
+- **OUTPUT:** Return the complete, modified Base Image with one less green mask.`;
                     
                     const response = await models.generateContent({
                         model,
-                        contents: { parts: [currentImagePart, referenceFacePart, { text: surgicalPrompt }] },
+                        contents: { parts: [currentImagePart, referenceFacePart, { text: surgicalInpaintingPrompt }] },
                         config: { responseModalities: [Modality.IMAGE] }
                     });
 
                     const newPart: Part | undefined = response.candidates?.[0]?.content?.parts?.[0];
                     if (!newPart?.inlineData?.data) {
-                        throw new Error(`AI failed during the surgical inpainting step for member ${i + 1}. The AI might be unable to identify the placeholder. Try a more distinct description for each member.`);
+                        throw new Error(`AI failed during the surgical inpainting step for member ${i + 1}. The AI might be unable to perform the inpainting task correctly. Try simplifying the scene.`);
                     }
                     // Update the current image for the next loop iteration
                     currentImagePart = newPart; 
