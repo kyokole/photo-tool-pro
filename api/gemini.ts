@@ -527,92 +527,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
                 }
 
-                // --- NEW: 3-STEP PIPELINE WITH COLOR MARKERS ---
-                const colorMarkers = ['a bright solid red t-shirt', 'a bright solid blue t-shirt', 'a bright solid green t-shirt', 'a bright solid yellow t-shirt', 'a bright solid purple t-shirt', 'a bright solid orange t-shirt', 'a bright solid pink t-shirt', 'a bright solid cyan t-shirt', 'a bright solid lime t-shirt'];
-                if (settings.members.length > colorMarkers.length) {
-                    throw new Error(`Số lượng thành viên (${settings.members.length}) vượt quá số lượng màu đánh dấu có sẵn (${colorMarkers.length}).`);
-                }
+                // --- NEW: MASKED COMPOSITION PIPELINE ---
 
-                // STEP 1: Generate the base scene with placeholder bodies wearing unique colored shirts.
-                const memberDescriptionsForPlate = settings.members.map((member, index) => {
-                    const markerColor = colorMarkers[index];
-                    let desc = `- Người ${index + 1}: một người được mô tả là '${member.age}', mặc ${markerColor}`;
-                    if (member.bodyDescription) desc += `, có vóc dáng '${member.bodyDescription}'`;
-                    if (member.pose) desc += `, trong tư thế '${member.pose}'`;
-                    // Individual outfit is ignored in this step, color marker takes precedence.
-                    desc += ". Khuôn mặt của họ không quan trọng và nên là một khuôn mặt chung chung để giữ chỗ.";
-                    return desc;
-                }).join('\n');
-
-                const platePrompt = `**NHIỆM VỤ: TẠO ẢNH NỀN VỚI ĐIỂM ĐÁNH DẤU**
-Tạo một cảnh thực tế với ${settings.members.length} người.
-**QUAN TRỌNG:** Mỗi người phải mặc một trang phục có màu sắc độc nhất được chỉ định dưới đây. Các khuôn mặt chỉ là để giữ chỗ.
-
-**MÔ TẢ CẢNH:**
-${memberDescriptionsForPlate}
-- **Bối cảnh chung:** ${settings.scene}.
-- **Tạo dáng chung (nếu không chỉ định riêng):** ${settings.pose}.
-- **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và hạnh phúc.'}.
-- **Tỷ lệ khung hình (Nghiêm ngặt):** ${settings.aspectRatio}.
-- **Chất lượng:** Chân thực, 8K, ánh sáng điện ảnh.`;
-
+                // STEP 1: Generate background plate
+                const platePrompt = `Tạo một bức ảnh nền (background plate) thực tế, chất lượng cao của một '${settings.scene}'. Bức ảnh này PHẢI TRỐNG RỖNG, không có người hoặc động vật. Tập trung vào việc tạo ra một môi trường đẹp, có ánh sáng tốt. Tỷ lệ khung hình PHẢI là ${settings.aspectRatio}.`;
                 const plateResponse = await models.generateContent({
                     model,
                     contents: { parts: [{ text: platePrompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-
-                let currentImagePart: Part | undefined = plateResponse.candidates?.[0]?.content?.parts?.[0];
-                if (!currentImagePart?.inlineData?.data) {
-                    throw new Error("AI đã thất bại trong việc tạo ra cảnh nền ban đầu. Vui lòng thử một mô tả cảnh khác.");
+                const backgroundPart = plateResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!backgroundPart?.inlineData?.data) {
+                    throw new Error("AI đã thất bại trong việc tạo ra cảnh nền trống.");
                 }
 
-                // STEP 2: Sequentially reconstruct each face onto the generated plate using color markers.
-                for (let i = 0; i < settings.members.length; i++) {
-                    const member = settings.members[i];
-                    const markerColor = colorMarkers[i];
+                // STEP 2: Isolate each subject onto a green screen
+                const greenScreenSubjectParts: Part[] = [];
+                for (const member of settings.members) {
                     const referenceFacePart = base64ToPart(member.photo);
+                    const isolationPrompt = `Phân tích người trong ảnh được cung cấp. Nhiệm vụ duy nhất của bạn là vẽ lại chính xác người này, bao gồm cả quần áo và tư thế ban đầu của họ, trên một nền màu xanh lá cây đồng nhất, rực rỡ (#00FF00). Điều cực kỳ quan trọng là bạn phải BẢO TOÀN 100% khuôn mặt, nhận dạng và ngoại hình của họ. Không thay đổi bất cứ điều gì về người đó. Chỉ xuất ra hình ảnh.`;
                     
-                    const surgicalReconstructionPrompt = `**NHIỆM VỤ: TÁI TẠO KHUÔN MẶT THEO MÀU SẮC**
-Bạn được cung cấp hai hình ảnh: Ảnh 1 (Cảnh Nền) và Ảnh 2 (Khuôn Mặt Tham Chiếu).
-**CÔNG VIỆC DUY NHẤT CỦA BẠN:**
-1.  Trong Cảnh Nền, xác định người đang mặc **${markerColor}**.
-2.  Sử dụng Khuôn Mặt Tham Chiếu làm **NGUỒN NHẬN DẠNG CHÍNH XÁC 100%**, vẽ lại **CHỈ PHẦN ĐẦU VÀ KHUÔN MẶT** của người đó.
-3.  Hòa trộn phần đầu mới vào cơ thể của họ một cách liền mạch, khớp hoàn hảo với ánh sáng và màu sắc của cảnh.
-**QUY TẮC TỐI QUAN TRỌNG:**
-- **BẢO TOÀN NHẬN DẠNG TUYỆT ĐỐI:** Khuôn mặt mới phải là một bản sao y hệt của Khuôn Mặt Tham Chiếu.
-- **KHÔNG THAY ĐỔI BẤT CỨ THỨ GÌ KHÁC:** Giữ nguyên nền, các bộ phận cơ thể khác, và quan trọng nhất, **BẤT KỲ KHUÔN MẶT THẬT NÀO ĐÃ ĐƯỢC TÁI TẠO TRƯỚC ĐÓ PHẢI ĐƯỢC GIỮ NGUYÊN.**`;
-                    
-                    const response = await models.generateContent({
+                    const isolationResponse = await models.generateContent({
                         model,
-                        contents: { parts: [currentImagePart, referenceFacePart, { text: surgicalReconstructionPrompt }] },
+                        contents: { parts: [referenceFacePart, { text: isolationPrompt }] },
                         config: { responseModalities: [Modality.IMAGE] }
                     });
 
-                    const newPart: Part | undefined = response.candidates?.[0]?.content?.parts?.[0];
-                    if (!newPart?.inlineData?.data) {
-                        throw new Error(`AI thất bại ở bước tái tạo khuôn mặt cho thành viên ${i + 1} (màu ${markerColor}). AI có thể đã không vẽ đúng màu đánh dấu.`);
+                    const isolatedPart = isolationResponse.candidates?.[0]?.content?.parts?.[0];
+                    if (!isolatedPart?.inlineData?.data) {
+                        throw new Error(`AI đã thất bại trong việc tách nền thành viên: ${member.age}`);
                     }
-                    currentImagePart = newPart; 
+                    greenScreenSubjectParts.push(isolatedPart);
                 }
                 
-                // STEP 3: Final outfit correction.
-                const outfitCorrectionPrompt = `**NHIỆM VỤ: HOÀN THIỆN TRANG PHỤC**
-Đây là bước cuối cùng. Bức ảnh được cung cấp gần như hoàn hảo.
-**CÔNG VIỆC DUY NHẤT CỦA BẠN:**
-1.  **GIỮ NGUYÊN 100%** tất cả các khuôn mặt, bối cảnh, và bố cục của bức ảnh.
-2.  **CHỈ THAY ĐỔI** quần áo của những người trong ảnh để tất cả họ đều mặc trang phục phù hợp với mô tả: **"${settings.outfit}"**.
-**QUY TẮC:** Không được thay đổi bất kỳ chi tiết nào trên khuôn mặt. Chỉ chỉnh sửa quần áo.`;
+                // STEP 3: Compose the final image
+                const memberListPrompt = settings.members.map((m, i) => `- Ảnh ${i + 2}: Người ${i + 1} (${m.age})`).join('\n');
+
+                const compositionPrompt = `Bạn là một chuyên gia ghép ảnh chuyên nghiệp. Bạn được cung cấp nhiều hình ảnh:
+- Ảnh 1: Cảnh nền.
+${memberListPrompt}
+
+**NHIỆM VỤ:**
+1.  Lấy từng người từ các ảnh nền xanh của họ (Ảnh 2, 3, v.v.) và đặt họ một cách hoàn hảo vào cảnh nền (Ảnh 1).
+2.  Sắp xếp họ thành một bố cục gia đình tự nhiên dựa trên tư thế chung này: "${settings.pose}".
+3.  Thay đổi quần áo của TẤT CẢ mọi người để phù hợp với mô tả này: "${settings.outfit}".
+4.  QUAN TRỌNG: Hòa trộn họ vào cảnh một cách thực tế. Điều chỉnh ánh sáng, bóng đổ, phân loại màu sắc và tỷ lệ để họ trông như thể họ thực sự được chụp ở đó. Hình ảnh cuối cùng phải liền mạch và siêu thực.
+5.  **ƯU TIÊN TUYỆT ĐỐI:** BẢO TOÀN 100% khuôn mặt của mỗi người từ hình ảnh nền xanh tương ứng của họ. KHÔNG thay đổi khuôn mặt của họ.`;
 
                 const finalResponse = await models.generateContent({
                     model,
-                    contents: { parts: [currentImagePart, { text: outfitCorrectionPrompt }] },
+                    contents: { parts: [backgroundPart, ...greenScreenSubjectParts, { text: compositionPrompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
 
                 const finalPart = finalResponse.candidates?.[0]?.content?.parts?.[0];
                 if (!finalPart?.inlineData?.data || !finalPart.inlineData.mimeType) {
-                    throw new Error("AI đã thất bại ở bước hoàn thiện trang phục cuối cùng.");
+                    throw new Error("AI đã thất bại ở bước ghép ảnh cuối cùng.");
                 }
 
                 const { data, mimeType } = finalPart.inlineData;
