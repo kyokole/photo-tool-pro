@@ -80,6 +80,16 @@ const MemberUploader: React.FC<{
             </div>
              {isCustomizing && (
                 <div className="space-y-2 mt-2 animate-fade-in">
+                     <div>
+                        <label className="text-xs font-medium text-[var(--text-secondary)]">{t('familyStudio.bodyDescriptionLabel')}</label>
+                        <textarea
+                            value={member.bodyDescription || ''}
+                            onChange={(e) => onUpdate({ bodyDescription: e.target.value })}
+                            placeholder={t('familyStudio.bodyDescriptionPlaceholder')}
+                            rows={2}
+                            className="w-full bg-[var(--bg-interactive)] border border-[var(--border-color)] rounded-md px-2 py-1.5 text-sm mt-1 resize-y"
+                        />
+                    </div>
                     <div>
                         <label className="text-xs font-medium text-[var(--text-secondary)]">{t('familyStudio.individualOutfit')}</label>
                         <input

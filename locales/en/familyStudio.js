@@ -28,6 +28,8 @@ export default {
         "outfitPlaceholder": "e.g., Red dress",
         "individualPose": "Individual Pose",
         "posePlaceholder": "e.g., Smiling",
+        "bodyDescriptionLabel": "Body Description (optional)",
+        "bodyDescriptionPlaceholder": "e.g., Slim figure, slender arms",
         "customPromptTooltip": "Provide more detailed requests about lighting, mood, emotions, or additional objects/characters in the photo.",
         "aspectRatios": {
             "horizontal": "Horizontal (4:3)",

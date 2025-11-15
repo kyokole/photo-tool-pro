@@ -28,6 +28,8 @@ export default {
         "outfitPlaceholder": "VD: Váy đỏ",
         "individualPose": "Tạo dáng riêng",
         "posePlaceholder": "VD: Đang cười",
+        "bodyDescriptionLabel": "Mô tả vóc dáng (tùy chọn)",
+        "bodyDescriptionPlaceholder": "VD: Vóc dáng mảnh mai, bắp tay thon gọn",
         "customPromptTooltip": "Cung cấp các yêu cầu chi tiết hơn về ánh sáng, không khí, cảm xúc, hoặc các vật thể/nhân vật phụ trong ảnh.",
         "aspectRatios": {
             "horizontal": "Ngang (4:3)",

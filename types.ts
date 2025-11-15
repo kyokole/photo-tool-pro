@@ -349,6 +349,7 @@ export interface FamilyMember {
     id: string;
     photo: File | null;
     age: string;
+    bodyDescription?: string;
     outfit?: string;
     pose?: string;
 }
@@ -375,6 +376,7 @@ export interface SerializedFamilyMember {
         base64: string;
         mimeType: string;
     };
+    bodyDescription?: string;
     outfit?: string;
     pose?: string;
 }

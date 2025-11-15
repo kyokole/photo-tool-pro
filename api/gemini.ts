@@ -70,6 +70,7 @@ interface SerializedFamilyMember {
         base64: string;
         mimeType: string;
     };
+    bodyDescription?: string;
     outfit?: string;
     pose?: string;
 }
@@ -520,6 +521,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     parts.push(base64ToPart(member.photo));
                     
                     let individualDesc = `${personId} là ${member.age.trim() || `Thành viên ${index + 1}`}.`;
+                    if (member.bodyDescription) {
+                        individualDesc += ` Vóc dáng: ${member.bodyDescription}.`;
+                    }
                     if (member.outfit) {
                         individualDesc += ` Trang phục riêng: ${member.outfit}.`;
                     }
@@ -561,7 +565,7 @@ ${userRequest}
 ---
 ${userRequest}
 ---
-**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).`;
+**CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).`;
                 }
                 
                 parts.push({ text: fullPrompt });
