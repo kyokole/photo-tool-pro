@@ -527,68 +527,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
                 }
 
-                // --- NEW: DIGITAL SURGICAL COMPOSITING PIPELINE ---
+                // --- NEW: SEQUENTIAL RECONSTRUCTION PIPELINE ---
+                if (settings.members.length === 0) {
+                    throw new Error("Không có thành viên nào để tạo ảnh.");
+                }
 
-                // STEP 1: Generate the perfect background plate with placeholder heads.
-                const memberPlaceholders = settings.members.map((m, i) => {
-                    let desc = `- Người ${i + 1} (${m.age})`;
-                    if(m.bodyDescription) desc += `, vóc dáng: ${m.bodyDescription}`;
-                    if(m.pose) desc += `, tạo dáng riêng: ${m.pose}`;
-                    // Add individual outfit if specified, otherwise use common outfit
-                    const finalOutfit = m.outfit || settings.outfit;
-                    desc += `, mặc trang phục: '${finalOutfit}'.`;
-                    return desc;
-                }).join('\n');
+                const firstMember = settings.members[0];
+                const firstMemberOutfit = firstMember.outfit || settings.outfit;
                 
-                const platePrompt = `Tạo một bức ảnh siêu thực, chất lượng 8K.
+                // STEP 1: Generate the base image with the first person.
+                const firstPersonPrompt = `Tạo một bức ảnh siêu thực, chất lượng 8K.
 - Bối cảnh: ${settings.scene}.
-- Có ${settings.members.length} người trong ảnh, được sắp xếp theo bố cục gia đình tự nhiên theo kiểu tạo dáng chung này: "${settings.pose}".
-- Mô tả từng người:
-${memberPlaceholders}
-- **QUAN TRỌNG NHẤT:** Vẽ tất cả mọi người với đầu hoàn toàn trống rỗng (faceless, blank head), không có mắt, mũi, miệng hay tóc. Chỉ là một cái đầu trơn để giữ chỗ.
-- Ánh sáng điện ảnh, màu sắc hài hòa.
+- Có một người trong ảnh: ${firstMember.age}, vóc dáng ${firstMember.bodyDescription || 'bình thường'}.
+- Người đó đang mặc: "${firstMemberOutfit}".
+- Tạo dáng: "${firstMember.pose || settings.pose}".
+- **QUAN TRỌNG NHẤT:** Sử dụng ảnh tham chiếu được cung cấp để tái tạo 100% chính xác khuôn mặt của người đó.
 - Yêu cầu thêm: ${settings.customPrompt || 'Không khí vui vẻ, ấm áp.'}
 - Tỷ lệ khung hình PHẢI là ${settings.aspectRatio}.`;
 
-                const plateResponse = await models.generateContent({
+                const firstPersonResponse = await models.generateContent({
                     model,
-                    contents: { parts: [{ text: platePrompt }] },
+                    contents: { parts: [base64ToPart(firstMember.photo), { text: firstPersonPrompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                let currentImagePart = plateResponse.candidates?.[0]?.content?.parts?.[0];
+
+                let currentImagePart = firstPersonResponse.candidates?.[0]?.content?.parts?.[0];
                 if (!currentImagePart?.inlineData?.data) {
-                    throw new Error("AI đã thất bại trong việc tạo ảnh nền với đầu giữ chỗ.");
+                    throw new Error("AI đã thất bại trong việc tạo ảnh nền với người đầu tiên.");
                 }
 
-                // STEP 2 & 3: Sequentially perform "surgical" face transplants.
-                for (let i = 0; i < settings.members.length; i++) {
+                // STEP 2 (Iterative): Add subsequent members one by one.
+                for (let i = 1; i < settings.members.length; i++) {
                     const member = settings.members[i];
-                    const faceReferencePart = base64ToPart(member.photo);
+                    const memberReferencePart = base64ToPart(member.photo);
+                    const memberOutfit = member.outfit || settings.outfit;
+                    const memberPose = member.pose || settings.pose;
 
-                    const transplantPrompt = `**NHIỆM VỤ NGOẠI KHOA KỸ THUẬT SỐ**
-Bạn là chuyên gia ghép ảnh AI. Bạn được cung cấp hai ảnh:
-- **Ảnh 1 (Nền):** Một cảnh đã hoàn thiện với một người có đầu trống (placeholder).
-- **Ảnh 2 (Mặt):** Ảnh chân dung tham chiếu.
+                    const addMemberPrompt = `**NHIỆM VỤ THÊM NGƯỜI VÀO ẢNH**
+Bạn được cung cấp hai ảnh:
+- **Ảnh 1 (Cảnh nền):** Bức ảnh đã có sẵn người.
+- **Ảnh 2 (Tham chiếu):** Ảnh chân dung của người cần thêm vào.
 
 **YÊU CẦU DUY NHẤT VÀ TỐI THƯỢNG:**
-1.  Trong Ảnh 1, xác định người được mô tả là "${member.age}".
-2.  Lấy chính xác 100% khuôn mặt từ Ảnh 2.
-3.  **"Phẫu thuật"** thay thế cái đầu trống của người đó trong Ảnh 1 bằng khuôn mặt từ Ảnh 2.
-4.  Hòa trộn phần cổ, màu da và ánh sáng một cách liền mạch, siêu thực.
-5.  **KHÔNG THAY ĐỔI BẤT CỨ ĐIỀU GÌ KHÁC.** Giữ nguyên 100% phần còn lại của Ảnh 1 (bối cảnh, quần áo, cơ thể, ánh sáng).
-6.  Chỉ xuất ra hình ảnh đã được ghép mặt hoàn chỉnh.`;
+1.  **Thêm người** từ Ảnh 2 vào Ảnh 1. Người mới này được mô tả là: "${member.age}", vóc dáng "${member.bodyDescription || 'bình thường'}".
+2.  Họ nên đứng/ngồi một cách tự nhiên bên cạnh những người đã có trong ảnh.
+3.  Trang phục của người mới là: "${memberOutfit}".
+4.  Tạo dáng của người mới là: "${memberPose}".
+5.  **QUAN TRỌNG NHẤT:** Tái tạo 100% chính xác khuôn mặt của người mới từ Ảnh 2.
+6.  Hòa trộn người mới vào cảnh một cách liền mạch, khớp hoàn toàn với ánh sáng, bóng đổ, màu sắc và phong cách của Ảnh 1.
+7.  **KHÔNG THAY ĐỔI** những người đã có sẵn trong Ảnh 1.
+8.  Chỉ xuất ra hình ảnh cuối cùng đã có thêm người mới.`;
 
-                    const transplantResponse = await models.generateContent({
+                    const addMemberResponse = await models.generateContent({
                         model,
-                        contents: { parts: [currentImagePart, faceReferencePart, { text: transplantPrompt }] },
+                        contents: { parts: [currentImagePart, memberReferencePart, { text: addMemberPrompt }] },
                         config: { responseModalities: [Modality.IMAGE] }
                     });
-                    
-                    const nextImagePart = transplantResponse.candidates?.[0]?.content?.parts?.[0];
+
+                    const nextImagePart = addMemberResponse.candidates?.[0]?.content?.parts?.[0];
                     if (!nextImagePart?.inlineData?.data) {
-                        throw new Error(`AI đã thất bại trong bước ghép mặt cho thành viên: ${member.age}`);
+                        throw new Error(`AI đã thất bại trong bước thêm thành viên: ${member.age}`);
                     }
-                    currentImagePart = nextImagePart; // The result of this step becomes the input for the next
+                    currentImagePart = nextImagePart; // The result of this step becomes the input for the next.
                 }
 
                 const finalPart = currentImagePart;
