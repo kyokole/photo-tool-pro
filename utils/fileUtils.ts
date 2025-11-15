@@ -1,4 +1,4 @@
-import type { FilePart } from '../types';
+import type { FilePart, FamilyMember, SerializedFamilyMember } from '../types';
 
 const MAX_DIMENSION = 4096; // Max width or height for the image
 
@@ -88,3 +88,17 @@ export function fileToBase64(file: File): Promise<{ base64: string; mimeType: st
     }
   });
 }
+
+export const serializeFamilyMembers = async (members: FamilyMember[]): Promise<SerializedFamilyMember[]> => {
+    return Promise.all(members.map(async (member, index) => {
+        if (!member.photo) {
+            throw new Error(`Thành viên ${index + 1} thiếu ảnh.`);
+        }
+        const { base64, mimeType } = await fileToBase64(member.photo);
+        return {
+            id: member.id,
+            age: member.age,
+            photo: { base64, mimeType }
+        };
+    }));
+};

@@ -1,6 +1,6 @@
 // services/geminiService.ts
 import { getAuthInstance } from '../services/firebase';
-import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle } from '../types';
+import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings } from '../types';
 
 /**
  * A generic API client to communicate with our own Vercel Serverless Function backend.
@@ -81,6 +81,12 @@ export const performDocumentRestoration = async (imagePart: FilePart, options: D
 export const generateFashionPhoto = async (imagePart: FilePart, settings: FashionStudioSettings, signal?: AbortSignal): Promise<string> => {
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
     const { imageData } = await callBackendApi('generateFashionPhoto', { imagePart, settings });
+    return imageData;
+};
+
+// --- Family Studio ---
+export const generateFamilyPhoto = async (settings: SerializedFamilyStudioSettings): Promise<string> => {
+    const { imageData } = await callBackendApi('generateFamilyPhoto', { settings });
     return imageData;
 };
 

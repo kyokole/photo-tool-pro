@@ -52,6 +52,7 @@ interface SidebarProps {
   onFootballStudioClick: () => void;
   onFourSeasonsClick: () => void;
   onBeautyStudioClick: () => void;
+  onFamilyStudioClick: () => void;
   onAdminPanelClick: () => void;
   onPresetSelect: (settings: Partial<Settings>) => void;
   onUndo: () => void;
@@ -77,6 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onFootballStudioClick,
     onFourSeasonsClick,
     onBeautyStudioClick,
+    onFamilyStudioClick,
     onAdminPanelClick,
     onPresetSelect, 
     onUndo, 
@@ -284,6 +286,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                  <button onClick={onFootballStudioClick} className={getToolButtonClasses('football_studio')}>
                     <div className="w-5 h-5"><i className="fas fa-futbol"></i></div>
                     <span>{t('tools.footballStudio')}</span>
+                </button>
+                 <button onClick={onFamilyStudioClick} className={getToolButtonClasses('family_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-users"></i></div>
+                    <span>{t('tools.familyStudio')}</span>
                 </button>
                 <button onClick={onBeautyStudioClick} className={getToolButtonClasses('beauty_studio')}>
                     <div className="w-5 h-5"><i className="fas fa-gem"></i></div>

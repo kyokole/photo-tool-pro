@@ -25,7 +25,8 @@ export default {
     "creativeStudio": "AI Studio",
     "promptAnalyzer": "Image Analyzer",
     "fourSeasons": "Four Seasons Photo",
-    "beautyStudio": "Beauty Studio"
+    "beautyStudio": "Beauty Studio",
+    "familyStudio": "Family Photo Composite"
   },
   "utilities": {
     "guide": "User Guide",

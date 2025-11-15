@@ -2,7 +2,7 @@
 import React from 'react';
 import type { LayoutResult as CoreLayoutResult } from './utils/canvasUtils';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';
@@ -342,6 +342,49 @@ export interface BeautyFeature {
 export interface BeautyHistoryItem {
   id: string;
   imageDataUrl: string;
+}
+
+// --- NEW TYPES FOR FAMILY STUDIO ---
+export interface FamilyMember {
+    id: string;
+    photo: File | null;
+    age: string;
+    outfit?: string;
+    pose?: string;
+}
+
+export interface FamilyStudioSettings {
+    members: FamilyMember[];
+    scene: string;
+    outfit: string;
+    pose: string;
+    customPrompt: string;
+    aspectRatio: '4:3' | '16:9';
+}
+
+export interface FamilyStudioResult {
+    id: string;
+    imageUrl: string;
+}
+
+export interface SerializedFamilyMember {
+    id: string;
+    age: string;
+    photo: {
+        base64: string;
+        mimeType: string;
+    };
+    outfit?: string;
+    pose?: string;
+}
+
+export interface SerializedFamilyStudioSettings {
+    members: SerializedFamilyMember[];
+    scene: string;
+    outfit: string;
+    pose: string;
+    customPrompt: string;
+    aspectRatio: '4:3' | '16:9';
 }
 
 

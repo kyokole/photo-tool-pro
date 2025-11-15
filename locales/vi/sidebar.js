@@ -25,7 +25,8 @@ export default {
     "creativeStudio": "Studio AI",
     "promptAnalyzer": "Phân Tích Ảnh",
     "fourSeasons": "Ảnh 4 Mùa",
-    "beautyStudio": "Studio Làm Đẹp"
+    "beautyStudio": "Studio Làm Đẹp",
+    "familyStudio": "Ghép Ảnh Gia Đình"
   },
   "utilities": {
     "guide": "Hướng dẫn sử dụng",

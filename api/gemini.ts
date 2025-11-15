@@ -63,6 +63,24 @@ interface FashionStudioSettings {
   description: string;
   highQuality: boolean;
 }
+interface SerializedFamilyMember {
+    id: string;
+    age: string;
+    photo: {
+        base64: string;
+        mimeType: string;
+    };
+    outfit?: string;
+    pose?: string;
+}
+interface SerializedFamilyStudioSettings {
+    members: SerializedFamilyMember[];
+    scene: string;
+    outfit: string;
+    pose: string;
+    customPrompt: string;
+    aspectRatio: '4:3' | '16:9';
+}
 interface Scene {
   title: string;
   desc: string;
@@ -486,6 +504,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // --- End of VIP Status Check ---
 
         switch (action) {
+            case 'generateFamilyPhoto': {
+                if (!payload || !payload.settings) {
+                    return res.status(400).json({ error: 'Thiếu cài đặt cho ảnh gia đình.' });
+                }
+                const settings: SerializedFamilyStudioSettings = payload.settings;
+
+                const parts: Part[] = [];
+                let memberDescriptions = '';
+
+                settings.members.forEach((member, index) => {
+                    parts.push(base64ToPart(member.photo));
+                    let individualDesc = '';
+                    if (member.outfit) {
+                        individualDesc += ` Trang phục riêng: ${member.outfit}.`;
+                    }
+                    if (member.pose) {
+                        individualDesc += ` Tạo dáng riêng: ${member.pose}.`;
+                    }
+                    memberDescriptions += `- Ảnh ${index + 1} là tham chiếu nhận dạng cho: ${member.age.trim() || `Thành viên ${index + 1}`}.${individualDesc}\n`;
+                });
+                
+                const userRequest = `Tạo một bức ảnh gia đình với các thành viên sau:\n${memberDescriptions}
+**QUY TẮC CHUNG (áp dụng nếu không có tùy chỉnh riêng):**
+- **Trang phục chung:** Cả gia đình mặc ${settings.outfit}.
+- **Tạo dáng chung:** ${settings.pose}.
+
+**YÊU CẦU BỐI CẢNH VÀ PHONG CÁCH:**
+- **Bối cảnh:** ${settings.scene}.
+- **Yêu cầu thêm:** ${settings.customPrompt || 'Không có'}.
+- **Chất lượng:** Ảnh phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting). Mọi người đều trông tự nhiên và vui vẻ.
+- **Tỷ lệ ảnh:** ${settings.aspectRatio}.`;
+
+                const fullPrompt = createFinalPromptVn(userRequest, true);
+                parts.push({ text: fullPrompt });
+
+                const response = await models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
+
+                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) {
+                    throw new Error("API không trả về hình ảnh cho tính năng ghép ảnh gia đình.");
+                }
+                
+                const { data, mimeType } = resultPart.inlineData;
+                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+            }
             case 'generateBeautyPhoto': {
                 if (!payload || !payload.baseImage || !payload.tool) {
                     return res.status(400).json({ error: 'Thiếu ảnh gốc hoặc thông tin công cụ.' });
