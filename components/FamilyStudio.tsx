@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { FamilyMember, FamilyStudioSettings, FamilyStudioResult } from '../types';
-import { FAMILY_SCENES, FAMILY_OUTFITS, FAMILY_POSES, DEFAULT_FAMILY_STUDIO_SETTINGS } from '../constants/familyStudioConstants';
+import { FAMILY_SCENES, FAMILY_OUTFITS, FAMILY_POSES, DEFAULT_FAMILY_STUDIO_SETTINGS, FAMILY_ASPECT_RATIOS } from '../constants/familyStudioConstants';
 import { serializeFamilyMembers } from '../utils/fileUtils';
 import { generateFamilyPhoto } from '../services/geminiService';
 import { applyWatermark, dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
@@ -68,7 +68,7 @@ const MemberUploader: React.FC<{
                         id={`age-${member.id}`}
                         value={member.age}
                         onChange={(e) => onUpdate({ age: e.target.value })}
-                        placeholder="VD: Mẹ 35"
+                        placeholder={t('familyStudio.agePlaceholder')}
                         className="w-full bg-[var(--bg-interactive)] border border-[var(--border-color)] rounded-md px-2 py-1.5 text-sm mt-1"
                     />
                 </div>
@@ -257,8 +257,9 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                  <div>
                                     <label className="text-sm font-semibold block mb-2">{t('familyStudio.aspectRatioLabel')}</label>
                                     <select value={settings.aspectRatio} onChange={e => updateSettings({ aspectRatio: e.target.value as '4:3' | '16:9' })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
-                                        <option value="4:3">Ngang (4:3)</option>
-                                        <option value="16:9">Rộng (16:9)</option>
+                                        {FAMILY_ASPECT_RATIOS.map(ratio => (
+                                            <option key={ratio.value} value={ratio.value}>{t(ratio.labelKey)}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
