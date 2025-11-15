@@ -153,7 +153,7 @@ const HIDDEN_ADDONS: string = [
 
 // --- MERGED PROMPTS from _serverSidePrompts.ts ---
 const createFinalPromptVn = (userRequest: string, useFaceLock: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
-    const qualityBooster = "\n\n**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu tự nhiên và ánh sáng điện ảnh.";
+    const qualityBooster = "\n\n**CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu tự nhiên và ánh sáng điện ảnh.";
     
     if (!useFaceLock) {
         return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}${qualityBooster}`;
@@ -550,7 +550,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     });
 
                     fullPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG CHO NHIỀU NGƯỜI**
-**MỤC TIÊU CHÍNH:** Tạo ra một bức ảnh trong đó khuôn mặt của MỌI người là một **BẢN SAO HOÀN HẢO, GIỐNG HỆT** với các ảnh tham chiếu được cung cấp.
+**MỤC TIÊU CHÍNH:** Tạo ra một bức ảnh trong đó khuôn mặt của MỌI người là một **BẢN SAO HOÀN HẢO, KHÔNG TÌ VẾT, GIỐNG HỆT** với các ảnh tham chiếu được cung cấp.
 **QUY TẮC GHIM ĐỊNH DANH (BẤT DI BẤT DỊCH):**
 ${identityRules}
 **LUẬT BỔ SUNG:** KHÔNG được thay đổi cấu trúc khuôn mặt, các đường nét, hoặc biểu cảm. Sự giống nhau về khuôn mặt là ưu tiên cao nhất, quan trọng hơn mọi yêu cầu khác.
