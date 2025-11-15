@@ -153,7 +153,7 @@ const HIDDEN_ADDONS: string = [
 
 // --- MERGED PROMPTS from _serverSidePrompts.ts ---
 const createFinalPromptVn = (userRequest: string, useFaceLock: boolean, isCouple: boolean = false, gender1?: string, gender2?: string): string => {
-    const qualityBooster = "\n\n**CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu tự nhiên và ánh sáng điện ảnh.";
+    const qualityBooster = "\n\n**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu tự nhiên và ánh sáng điện ảnh.";
     
     if (!useFaceLock) {
         return `**NHIỆM VỤ:** Tạo một bức ảnh nghệ thuật, chất lượng cao dựa trên yêu cầu của người dùng.\n\n**YÊU CẦU (Tiếng Việt):** ${userRequest}${qualityBooster}`;
@@ -511,63 +511,76 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(400).json({ error: 'Thiếu cài đặt cho ảnh gia đình.' });
                 }
                 const settings: SerializedFamilyStudioSettings = payload.settings;
+                const model = 'gemini-2.5-flash-image';
 
-                const parts: Part[] = [];
-                
-                parts.push({ text: "BẠN LÀ MỘT CHUYÊN GIA GHÉP ẢNH AI. Nhiệm vụ của bạn là 'học' và ghi nhớ chính xác từng người từ các ảnh tham chiếu được cung cấp, sau đó đặt họ vào một bối cảnh mới theo yêu cầu. Ưu tiên cao nhất là giữ lại 100% nhận dạng khuôn mặt." });
-
-                // **STEP 1: TEACH THE AI**
-                settings.members.forEach((member, index) => {
-                    const personId = `[NGƯỜI_${index + 1}]`;
-                    parts.push({ text: `Đây là ảnh tham chiếu nhận dạng cho ${personId}:` });
-                    parts.push(base64ToPart(member.photo));
+                // --- BƯỚC 1: TẠO PHÔI CẢNH ---
+                const sceneParts: Part[] = [];
+                // Cung cấp ảnh gốc để AI hiểu vóc dáng, nhưng yêu cầu nó không vẽ mặt
+                settings.members.forEach(member => {
+                    sceneParts.push(base64ToPart(member.photo));
                 });
                 
-                // **STEP 2: GIVE THE COMMAND**
-                let compositionInstructions = 'Trong ảnh cuối cùng, hãy sắp xếp các thành viên một cách tự nhiên. ';
-                settings.members.forEach((member, index) => {
-                    const personId = `[NGƯỜI_${index + 1}]`;
-                    let individualDesc = `${personId} là ${member.age.trim() || `Thành viên ${index + 1}`}.`;
-                    if (member.bodyDescription) {
-                        individualDesc += ` Vóc dáng: ${member.bodyDescription}.`;
-                    }
-                    if (member.outfit) {
-                        individualDesc += ` Trang phục riêng: ${member.outfit}.`;
-                    }
-                    if (member.pose) {
-                        individualDesc += ` Tạo dáng riêng: ${member.pose}.`;
-                    }
-                    compositionInstructions += individualDesc + ' ';
-                });
-
-                let finalInstruction = `**BÂY GIỜ, HÃY TẠO ẢNH MỚI:**
-- **Thành phần:** Bao gồm tất cả các nhân vật đã được xác định: ${settings.members.map((_, i) => `[NGƯỜI_${i+1}]`).join(', ')}.
+                let scenePrompt = `Tạo một bức ảnh gia đình hoàn chỉnh.
 - **Bối cảnh:** ${settings.scene}.
-- **Trang phục chung (áp dụng nếu không có tùy chỉnh riêng):** ${settings.outfit}.
-- **Tạo dáng chung (áp dụng nếu không có tùy chỉnh riêng):** ${settings.pose}.
-- **Bố cục & Chi tiết:** ${compositionInstructions}
+- **Trang phục chung:** ${settings.outfit}.
+- **Tạo dáng chung:** ${settings.pose}.
 - **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và vui vẻ.'}.
 - **Tỷ lệ ảnh:** ${settings.aspectRatio}.
-**CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).`;
+**CHỈ THỊ CỰC KỲ QUAN TRỌNG:** Tạo ra những người có vóc dáng phù hợp nhưng với khuôn mặt chung chung, bị làm mờ hoặc quay đi. KHÔNG cố gắng sao chép khuôn mặt gốc trong bước này. Mục tiêu là tạo ra một 'phôi ảnh' hoàn hảo về bố cục, trang phục và ánh sáng, sẵn sàng để ghép mặt sau.`;
 
-                if (settings.faceConsistency) {
-                    finalInstruction += `\n**YÊU CẦU BẮT BUỘC:** Khuôn mặt của mỗi ${settings.members.map((_, i) => `[NGƯỜI_${i+1}]`).join(' và ')} PHẢI là bản sao 1:1, GIỐNG HỆT từ ảnh tham chiếu tương ứng. Đây là yêu cầu quan trọng nhất.`;
+                sceneParts.push({ text: scenePrompt });
+                
+                const sceneResponse = await models.generateContent({
+                    model,
+                    contents: { parts: sceneParts },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
+                
+                const sceneBlankPart = sceneResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!sceneBlankPart?.inlineData?.data) {
+                    throw new Error("Bước 1 thất bại: AI không tạo được phôi cảnh.");
                 }
                 
-                parts.push({ text: finalInstruction });
+                // --- BƯỚC 2: GHÉP VÀ HÒA TRỘN KHUÔN MẶT ---
+                const compositeParts: Part[] = [];
+                // Ảnh đầu tiên là phôi cảnh
+                compositeParts.push(sceneBlankPart);
+                
+                // Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc
+                settings.members.forEach(member => {
+                    compositeParts.push(base64ToPart(member.photo));
+                });
 
-                const response = await models.generateContent({
-                    model: 'gemini-2.5-flash-image',
-                    contents: { parts },
+                let compositePrompt = `**NHIỆM VỤ KỸ THUẬT - KHÔNG SÁNG TẠO:** Đây là một nhiệm vụ ghép ảnh (compositing) chính xác.
+1.  **NGUỒN:** Ảnh đầu tiên là 'phôi ảnh' nền. Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc theo thứ tự (ảnh 2 là cho [NGƯỜI_1], ảnh 3 là cho [NGƯỜI_2], v.v.).
+2.  **HÀNH ĐỘNG:** Lấy **CHÍNH XÁC** từng khuôn mặt từ các ảnh tham chiếu tương ứng và ghép chúng vào các vị trí cơ thể trên 'phôi ảnh'.
+3.  **QUY TẮC BẤT BIẾN:**
+    - **KHÔNG THAY ĐỔI KHUÔN MẶT:** Không được thay đổi bất kỳ đặc điểm nào (mắt, mũi, miệng, cấu trúc xương) của khuôn mặt gốc. Phải giữ lại 100% nhận dạng.
+    - **HÒA TRỘN (BLEND):** Nhiệm vụ duy nhất của bạn là hòa trộn liền mạch đường viền cổ, điều chỉnh tông màu da và ánh sáng trên khuôn mặt đã ghép để khớp một cách hoàn hảo với phần thân và bối cảnh từ 'phôi ảnh'.
+**ĐẦU RA:** Chỉ trả về hình ảnh cuối cùng đã được ghép hoàn chỉnh.`;
+                
+                if(!settings.faceConsistency){
+                    compositePrompt = `**NHIỆM VỤ SÁNG TẠO:** Đây là một nhiệm vụ ghép ảnh nghệ thuật.
+1.  **NGUỒN:** Ảnh đầu tiên là 'phôi ảnh' nền. Các ảnh tiếp theo là ảnh tham chiếu khuôn mặt gốc theo thứ tự (ảnh 2 là cho [NGƯỜI_1], ảnh 3 là cho [NGƯỜI_2], v.v.).
+2.  **HÀNH ĐỘNG:** Dựa vào các khuôn mặt từ ảnh tham chiếu, hãy vẽ lại chúng theo phong cách của 'phôi ảnh' nền, đặt chúng vào các vị trí cơ thể tương ứng.
+3.  **QUY TẮC:** Bạn có quyền tự do sáng tạo để điều chỉnh đường nét khuôn mặt cho phù hợp với phong cách nghệ thuật tổng thể, nhưng vẫn phải giữ được nét nhận dạng cơ bản của từng người.
+**ĐẦU RA:** Chỉ trả về hình ảnh cuối cùng đã được ghép hoàn chỉnh.`;
+                }
+
+                compositeParts.push({ text: compositePrompt });
+
+                const finalResponse = await models.generateContent({
+                    model,
+                    contents: { parts: compositeParts },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
 
-                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) {
-                    throw new Error("API không trả về hình ảnh cho tính năng ghép ảnh gia đình.");
+                const finalResultPart = finalResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!finalResultPart?.inlineData?.data || !finalResultPart.inlineData.mimeType) {
+                    throw new Error("Bước 2 thất bại: AI không ghép được khuôn mặt vào phôi cảnh.");
                 }
                 
-                const { data, mimeType } = resultPart.inlineData;
+                const { data, mimeType } = finalResultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             case 'generateBeautyPhoto': {
@@ -726,7 +739,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
                 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
@@ -740,7 +753,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
