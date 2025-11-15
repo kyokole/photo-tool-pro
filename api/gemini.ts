@@ -514,10 +514,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const model = 'gemini-2.5-flash-image';
                 
                 if (!settings.faceConsistency) {
-                    // Non-face consistency mode remains the same
+                    // Non-face consistency mode (original logic)
                     const parts: Part[] = [];
                     settings.members.forEach(member => parts.push(base64ToPart(member.photo)));
-                    const memberDescriptions = settings.members.map((member, index) => `- Person ${index + 1}: ${member.age}`).join('\n');
+                    const memberDescriptions = settings.members.map((member, index) => `- Người ${index + 1}: ${member.age}`).join('\n');
                     const creativePrompt = `Tạo một bức ảnh nghệ thuật của một gia đình. Sử dụng các ảnh đã cho làm nguồn cảm hứng cho ngoại hình của các thành viên.\n${memberDescriptions}\nBối cảnh: ${settings.scene}\nTrang phục chung: ${settings.outfit}\nTạo dáng chung: ${settings.pose}\nYêu cầu thêm: ${settings.customPrompt || 'Tất cả mọi người đều trông tự nhiên và hạnh phúc.'}`;
                     parts.push({ text: creativePrompt });
                     const response = await models.generateContent({ model, contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
@@ -527,29 +527,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
                 }
 
-                // --- DEDICATED FACE RECONSTRUCTION PIPELINE ---
+                // --- NEW: DEDICATED FACE RECONSTRUCTION PIPELINE ---
                 // STEP 1: Generate the base scene with placeholder bodies.
                 const memberDescriptionsForPlate = settings.members.map((member, index) => {
-                    let desc = `- Person ${index + 1}: a person described as '${member.age}'`;
-                    if (member.bodyDescription) desc += `, with a body described as '${member.bodyDescription}'`;
-                    if (member.pose) desc += `, in the pose '${member.pose}'`;
-                    if (member.outfit) desc += `, wearing '${member.outfit}'`;
-                    desc += ". Their face is not important and should be a generic placeholder.";
+                    let desc = `- Người ${index + 1}: một người được mô tả là '${member.age}'`;
+                    if (member.bodyDescription) desc += `, có vóc dáng '${member.bodyDescription}'`;
+                    if (member.pose) desc += `, trong tư thế '${member.pose}'`;
+                    if (member.outfit) desc += `, mặc '${member.outfit}'`;
+                    desc += ". Khuôn mặt của họ không quan trọng và nên là một khuôn mặt chung chung để giữ chỗ.";
                     return desc;
                 }).join('\n');
 
-                const platePrompt = `**TASK: CREATE SCENE PLATE**
-Create a photorealistic scene with ${settings.members.length} people based on the following descriptions.
-**IMPORTANT:** The faces are placeholders and will be replaced. Focus on creating a high-quality, coherent scene with correct bodies, outfits, and lighting.
+                const platePrompt = `**NHIỆM VỤ: TẠO ẢNH NỀN**
+Tạo một cảnh thực tế với ${settings.members.length} người dựa trên các mô tả sau.
+**QUAN TRỌNG:** Các khuôn mặt chỉ là để giữ chỗ và sẽ được thay thế sau. Hãy tập trung vào việc tạo ra một cảnh chất lượng cao, mạch lạc với thân hình, trang phục và ánh sáng chính xác.
 
-**SCENE DESCRIPTION:**
+**MÔ TẢ CẢNH:**
 ${memberDescriptionsForPlate}
-- **Overall Scene:** ${settings.scene}.
-- **Overall Outfit (if not specified individually):** ${settings.outfit}.
-- **Overall Pose (if not specified individually):** ${settings.pose}.
-- **Additional requirements:** ${settings.customPrompt || 'Everyone looks natural and happy.'}.
-- **Aspect Ratio (Strict):** ${settings.aspectRatio}.
-- **Quality:** Photorealistic, 8K, cinematic lighting, harmonious colors.`;
+- **Bối cảnh chung:** ${settings.scene}.
+- **Trang phục chung (nếu không chỉ định riêng):** ${settings.outfit}.
+- **Tạo dáng chung (nếu không chỉ định riêng):** ${settings.pose}.
+- **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và hạnh phúc.'}.
+- **Tỷ lệ khung hình (Nghiêm ngặt):** ${settings.aspectRatio}.
+- **Chất lượng:** Chân thực, 8K, ánh sáng điện ảnh, màu sắc hài hòa.`;
 
                 const plateResponse = await models.generateContent({
                     model,
@@ -559,7 +559,7 @@ ${memberDescriptionsForPlate}
 
                 let currentImagePart: Part | undefined = plateResponse.candidates?.[0]?.content?.parts?.[0];
                 if (!currentImagePart?.inlineData?.data) {
-                    throw new Error("AI failed to create the initial scene plate. Please try a different scene description.");
+                    throw new Error("AI đã thất bại trong việc tạo ra cảnh nền ban đầu. Vui lòng thử một mô tả cảnh khác.");
                 }
 
                 // --- STEP 2: Sequentially reconstruct each face onto the generated plate. ---
@@ -568,21 +568,20 @@ ${memberDescriptionsForPlate}
                     
                     const referenceFacePart = base64ToPart(member.photo);
                     
-                    // This prompt is a highly focused, surgical instruction for ONE person.
-                    const surgicalReconstructionPrompt = `**TASK: SURGICAL FACE RECONSTRUCTION (PERSON ${i + 1})**
-You are given two images:
-- **Image 1 (Base Scene):** A scene containing one or more people, possibly with placeholder faces or already reconstructed faces.
-- **Image 2 (Reference Face):** A photo of the person whose face you must reconstruct.
+                    const surgicalReconstructionPrompt = `**NHIỆM VỤ: TÁI TẠO KHUÔN MẶT CHÍNH XÁC (NGƯỜI ${i + 1})**
+Bạn được cung cấp hai hình ảnh:
+- **Ảnh 1 (Cảnh Nền):** Một cảnh chứa một hoặc nhiều người, có thể có khuôn mặt giữ chỗ hoặc các khuôn mặt đã được tái tạo.
+- **Ảnh 2 (Khuôn Mặt Tham Chiếu):** Một bức ảnh của người mà bạn phải tái tạo khuôn mặt.
 
-**YOUR ONLY JOB:**
-1.  In the Base Scene (Image 1), identify the person described as: **'${member.age}'**.
-2.  Using the Reference Face (Image 2) as a **100% PERFECT IDENTITY SOURCE**, redraw **ONLY THE HEAD AND FACE** of that specific person.
-3.  Seamlessly blend the new head onto their body in the scene, perfectly matching the scene's lighting, color temperature, and grain.
+**CÔNG VIỆC DUY NHẤT CỦA BẠN:**
+1.  Trong Cảnh Nền (Ảnh 1), xác định người được mô tả là: **'${member.age}'**.
+2.  Sử dụng Khuôn Mặt Tham Chiếu (Ảnh 2) làm **NGUỒN NHẬN DẠNG CHÍNH XÁC 100%**, vẽ lại **CHỈ PHẦN ĐẦU VÀ KHUÔN MẶT** của người cụ thể đó.
+3.  Hòa trộn phần đầu mới vào cơ thể của họ trong cảnh một cách liền mạch, khớp hoàn hảo với ánh sáng, nhiệt độ màu và độ nhiễu của cảnh.
 
-**CRITICAL RULES:**
-- **ABSOLUTE IDENTITY PRESERVATION:** The new face must be an identical, photorealistic copy of the Reference Face.
-- **DO NOT CHANGE ANYTHING ELSE:** The background, clothing, other people's bodies, and, most importantly, **ANY OTHER REAL FACES ALREADY RECONSTRUCTED IN THE BASE SCENE MUST REMAIN UNTOUCHED AND UNCHANGED.** Your task is surgical and highly localized.
-- **OUTPUT:** Return the complete, modified Base Scene.`;
+**QUY TẮC TỐI QUAN TRỌNG:**
+- **BẢO TOÀN NHẬN DẠNG TUYỆT ĐỐI:** Khuôn mặt mới phải là một bản sao y hệt, chân thực của Khuôn Mặt Tham Chiếu.
+- **KHÔNG THAY ĐỔI BẤT CỨ THỨ GÌ KHÁC:** Nền, quần áo, cơ thể của người khác, và quan trọng nhất, **BẤT KỲ KHUÔN MẶT THẬT NÀO ĐÃ ĐƯỢC TÁI TẠO TRƯỚC ĐÓ TRONG CẢNH NỀN PHẢI ĐƯỢC GIỮ NGUYÊN VÀ KHÔNG THAY ĐỔI.** Nhiệm vụ của bạn là cực kỳ chính xác và cục bộ.
+- **ĐẦU RA:** Trả về toàn bộ Cảnh Nền đã được sửa đổi.`;
                     
                     const response = await models.generateContent({
                         model,
@@ -592,15 +591,14 @@ You are given two images:
 
                     const newPart: Part | undefined = response.candidates?.[0]?.content?.parts?.[0];
                     if (!newPart?.inlineData?.data) {
-                        throw new Error(`AI failed during the face reconstruction step for member ${i + 1}. The AI might be unable to perform the task correctly. Try simplifying the scene.`);
+                        throw new Error(`AI đã thất bại trong bước tái tạo khuôn mặt cho thành viên ${i + 1}. AI có thể không thực hiện đúng tác vụ. Hãy thử đơn giản hóa bối cảnh.`);
                     }
-                    // Update the current image for the next loop iteration
                     currentImagePart = newPart; 
                 }
 
                 const finalPart = currentImagePart;
                 if (!finalPart?.inlineData?.data || !finalPart.inlineData.mimeType) {
-                    throw new Error("AI failed in the final step of the family photo generation.");
+                    throw new Error("AI đã thất bại ở bước cuối cùng của quá trình tạo ảnh gia đình.");
                 }
 
                 const { data, mimeType } = finalPart.inlineData;

@@ -98,7 +98,10 @@ export const serializeFamilyMembers = async (members: FamilyMember[]): Promise<S
         return {
             id: member.id,
             age: member.age,
-            photo: { base64, mimeType }
+            photo: { base64, mimeType },
+            bodyDescription: member.bodyDescription,
+            outfit: member.outfit,
+            pose: member.pose,
         };
     }));
 };
