@@ -512,87 +512,91 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
                 const settings: SerializedFamilyStudioSettings = payload.settings;
                 const model = 'gemini-2.5-flash-image';
-
-                // --- NEW ONE-STEP, ROLE-ASSIGNMENT METHOD ---
-                const parts: Part[] = [];
                 
-                // Add all identity images first
-                settings.members.forEach(member => {
-                    parts.push(base64ToPart(member.photo));
-                });
+                if (!settings.faceConsistency) {
+                    // Fallback to the simpler one-step method if face consistency is OFF
+                    const parts: Part[] = [];
+                    settings.members.forEach(member => parts.push(base64ToPart(member.photo)));
+                    const memberDescriptions = settings.members.map((member, index) => `- Person ${index + 1}: ${member.age}`).join('\n');
+                    const creativePrompt = `Tạo một bức ảnh nghệ thuật của một gia đình. Sử dụng các ảnh đã cho làm nguồn cảm hứng cho ngoại hình của các thành viên.\n${memberDescriptions}\nBối cảnh: ${settings.scene}\nTrang phục chung: ${settings.outfit}\nTạo dáng chung: ${settings.pose}\nYêu cầu thêm: ${settings.customPrompt || 'Tất cả mọi người đều trông tự nhiên và hạnh phúc.'}`;
+                    parts.push({ text: creativePrompt });
+                    const response = await models.generateContent({ model, contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
+                    const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                    if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("AI không thể tạo ảnh gia đình.");
+                    const { data, mimeType } = resultPart.inlineData;
+                    return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+                }
 
-                const memberDescriptions = settings.members.map((member, index) => {
-                    let desc = `- **Person ${index + 1}:** A person described as '${member.age}'`;
-                    if (member.bodyDescription) desc += `, with body shape described as '${member.bodyDescription}'`;
-                    if (member.outfit) desc += `, wearing '${member.outfit}'`;
-                    if (member.pose) desc += `, in a '${member.pose}' pose`;
+                // --- TECHNICAL COMPOSITING PIPELINE ---
+
+                // --- STEP 1: Generate Scene Plate (Text-only) ---
+                const memberDescriptionsForPlate = settings.members.map((member, index) => {
+                    let desc = `- Person ${index + 1}: Một người được mô tả là '${member.age}'`;
+                    if (member.bodyDescription) desc += `, với vóc dáng '${member.bodyDescription}'`;
+                    if (member.pose) desc += `, trong tư thế '${member.pose}'`;
+                    desc += ". Họ có một khuôn mặt chung chung, ưa nhìn, được chiếu sáng tốt nhưng hoàn toàn không có đặc điểm nhận dạng.";
                     return desc;
                 }).join('\n');
 
-                let scenePromptText = `**ULTIMATE DIRECTIVE: HYBRID IMAGE GENERATION**
+                const platePrompt = `**NHIỆM VỤ: TẠO PHÔI CẢNH**
+Tạo một cảnh chụp ảnh thực tế với ${settings.members.length} người dựa trên mô tả sau.
+**QUAN TRỌNG:** Những người trong ảnh này phải có khuôn mặt chung chung, dễ nhìn, được chiếu sáng tốt, nhưng hoàn toàn không có đặc điểm nhận dạng và không phải là người cụ thể. Đây là một phôi ảnh để ghép mặt sau này.
 
-**INPUT ASSETS (CRITICAL):**
-The images are provided in order. The first image is [IDENTITY 1], the second is [IDENTITY 2], and so on for all ${settings.members.length} members.
-- **[IDENTITY 1]:** This is the face reference for Person 1.
-- **[IDENTITY 2]:** This is the face reference for Person 2.
-(etc.)
+**MÔ TẢ CẢNH:**
+${memberDescriptionsForPlate}
+- **Bối cảnh chung:** ${settings.scene}.
+- **Trang phục chung (nếu không có mô tả riêng):** ${settings.outfit}.
+- **Tạo dáng chung (nếu không có mô tả riêng):** ${settings.pose}.
+- **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người trông tự nhiên và hạnh phúc.'}.
+- **Tỷ lệ khung hình (Nghiêm ngặt):** ${settings.aspectRatio}.
+- **Chất lượng:** Chân thực như ảnh chụp, 8K, ánh sáng điện ảnh.`;
 
-**CORE TASK:**
-Create a new, single, photorealistic image based on the SCENE DESCRIPTION below.
-
-**NON-NEGOTIABLE RULE: 100% IDENTITY PRESERVATION**
-For each person described in the scene, their face **MUST BE A PERFECT, FLAWLESS, 1:1 REPLICA** of the corresponding [IDENTITY] reference image.
-- **DO NOT** alter facial structure, features, or unique characteristics.
-- This rule is more important than any other part of the prompt. The scene and clothing are secondary to perfect face replication.
-
-**SCENE DESCRIPTION:**
-${memberDescriptions}
-- **Overall Scene:** ${settings.scene}.
-- **Overall Outfit (if not specified per person):** ${settings.outfit}.
-- **Overall Pose (if not specified per person):** ${settings.pose}.
-- **Additional Requests:** ${settings.customPrompt || 'Everyone looks natural and happy.'}.
-- **Final Aspect Ratio (Strict):** ${settings.aspectRatio}.
-- **Quality:** Photorealistic, 8K, cinematic lighting that matches the scene, but applied to the original faces without changing their features.
-
-**FINAL CHECK:** Your plan must prioritize: 1. Using the [IDENTITY] images ONLY for faces. 2. Replicating those faces EXACTLY. 3. Building the rest of the scene around them.`;
-
-                if (!settings.faceConsistency) {
-                    scenePromptText = `**CREATIVE IMAGE GENERATION**
-
-**INPUT ASSETS:**
-The images are provided in order. The first image is the reference for Person 1, the second for Person 2, and so on.
-
-**TASK:**
-Create a new, single, artistic image based on the SCENE DESCRIPTION below.
-
-**RULE: LIKENESS INSPIRATION**
-For each person in the scene, use the corresponding reference image as **inspiration** for their appearance. You should aim for a strong likeness, but you have creative freedom to adapt their features to match the overall artistic style of the image. The goal is a beautiful, harmonious picture, not a perfect replica.
-
-**SCENE DESCRIPTION:**
-${memberDescriptions}
-- **Overall Scene:** ${settings.scene}.
-- **Overall Outfit (if not specified per person):** ${settings.outfit}.
-- **Overall Pose (if not specified per person):** ${settings.pose}.
-- **Additional Requests:** ${settings.customPrompt || 'Everyone looks natural and happy.'}.
-- **Final Aspect Ratio (Strict):** ${settings.aspectRatio}.
-- **Quality:** Photorealistic, 8K, cinematic lighting.`;
-                }
-
-                parts.push({ text: scenePromptText });
-
-                const response = await models.generateContent({
+                const plateResponse = await models.generateContent({
                     model,
-                    contents: { parts },
+                    contents: { parts: [{ text: platePrompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
 
-                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) {
-                    throw new Error("AI đã thất bại trong việc tạo ra ảnh gia đình cuối cùng.");
+                const platePart = plateResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!platePart?.inlineData?.data) {
+                    throw new Error("AI đã thất bại trong việc tạo ra phôi cảnh ban đầu.");
+                }
+                let currentImageB64 = platePart.inlineData.data;
+                let currentMimeType = platePart.inlineData.mimeType;
+
+                // --- STEP 2: Iterative Face Compositing ---
+                for (let i = 0; i < settings.members.length; i++) {
+                    const member = settings.members[i];
+                    
+                    const mainImagePart: Part = { inlineData: { data: currentImageB64, mimeType: currentMimeType! } };
+                    const identityImagePart: Part = base64ToPart(member.photo);
+                    const personTargetDescription = member.age || `người thứ ${i + 1}`;
+
+                    const compositingPrompt = `**NHIỆM VỤ KỸ THUẬT: GHÉP MẶT (BƯỚC ${i + 1}/${settings.members.length})**
+**ƯU TIÊN 1:** Bạn được cung cấp hai ảnh. Ảnh 1 là cảnh chính. Ảnh 2 là ảnh tham chiếu nhận dạng.
+**CHỈ THỊ:** Nhiệm vụ DUY NHẤT của bạn là lấy khuôn mặt từ ảnh tham chiếu (Ảnh 2) và ghép một cách hoàn hảo vào người được mô tả là "${personTargetDescription}" trong cảnh chính (Ảnh 1).
+**QUY TẮC:**
+1.  **SAO CHÉP HOÀN HẢO:** Khuôn mặt mới phải là bản sao 100% giống hệt khuôn mặt tham chiếu. KHÔNG thay đổi các đường nét, biểu cảm hoặc nhận dạng.
+2.  **HÒA TRỘN LIỀN MẠCH:** Hòa trộn các cạnh của khuôn mặt mới một cách liền mạch với cổ và tóc. Chỉ điều chỉnh ánh sáng và màu sắc trên khuôn mặt được ghép để khớp với ánh sáng của cảnh.
+3.  **KHÔNG THAY ĐỔI GÌ KHÁC:** KHÔNG thay đổi nền, quần áo, cơ thể, tư thế hoặc bất kỳ khuôn mặt nào khác trong cảnh chính.
+4.  **ĐẦU RA:** Trả về toàn bộ cảnh chính đã được sửa đổi.`;
+                    
+                    const compositeResponse = await models.generateContent({
+                        model,
+                        contents: { parts: [mainImagePart, identityImagePart, { text: compositingPrompt }] },
+                        config: { responseModalities: [Modality.IMAGE] }
+                    });
+
+                    const compositePart = compositeResponse.candidates?.[0]?.content?.parts?.[0];
+                    if (!compositePart?.inlineData?.data) {
+                        throw new Error(`AI đã thất bại khi ghép mặt cho thành viên ${i + 1}.`);
+                    }
+
+                    currentImageB64 = compositePart.inlineData.data;
+                    currentMimeType = compositePart.inlineData.mimeType;
                 }
 
-                const { data, mimeType } = resultPart.inlineData;
-                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+                return res.status(200).json({ imageData: `data:${currentMimeType};base64,${currentImageB64}` });
             }
             case 'generateBeautyPhoto': {
                 if (!payload || !payload.baseImage || !payload.tool) {
@@ -750,7 +754,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
                 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
@@ -764,7 +768,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
