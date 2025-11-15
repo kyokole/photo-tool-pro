@@ -527,62 +527,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
                 }
 
-                // --- NEW: MASKED COMPOSITION PIPELINE ---
+                // --- NEW: DIGITAL SURGICAL COMPOSITING PIPELINE ---
 
-                // STEP 1: Generate background plate
-                const platePrompt = `Tạo một bức ảnh nền (background plate) thực tế, chất lượng cao của một '${settings.scene}'. Bức ảnh này PHẢI TRỐNG RỖNG, không có người hoặc động vật. Tập trung vào việc tạo ra một môi trường đẹp, có ánh sáng tốt. Tỷ lệ khung hình PHẢI là ${settings.aspectRatio}.`;
+                // STEP 1: Generate the perfect background plate with placeholder heads.
+                const memberPlaceholders = settings.members.map((m, i) => {
+                    let desc = `- Người ${i + 1} (${m.age})`;
+                    if(m.bodyDescription) desc += `, vóc dáng: ${m.bodyDescription}`;
+                    if(m.pose) desc += `, tạo dáng riêng: ${m.pose}`;
+                    // Add individual outfit if specified, otherwise use common outfit
+                    const finalOutfit = m.outfit || settings.outfit;
+                    desc += `, mặc trang phục: '${finalOutfit}'.`;
+                    return desc;
+                }).join('\n');
+                
+                const platePrompt = `Tạo một bức ảnh siêu thực, chất lượng 8K.
+- Bối cảnh: ${settings.scene}.
+- Có ${settings.members.length} người trong ảnh, được sắp xếp theo bố cục gia đình tự nhiên theo kiểu tạo dáng chung này: "${settings.pose}".
+- Mô tả từng người:
+${memberPlaceholders}
+- **QUAN TRỌNG NHẤT:** Vẽ tất cả mọi người với đầu hoàn toàn trống rỗng (faceless, blank head), không có mắt, mũi, miệng hay tóc. Chỉ là một cái đầu trơn để giữ chỗ.
+- Ánh sáng điện ảnh, màu sắc hài hòa.
+- Yêu cầu thêm: ${settings.customPrompt || 'Không khí vui vẻ, ấm áp.'}
+- Tỷ lệ khung hình PHẢI là ${settings.aspectRatio}.`;
+
                 const plateResponse = await models.generateContent({
                     model,
                     contents: { parts: [{ text: platePrompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                const backgroundPart = plateResponse.candidates?.[0]?.content?.parts?.[0];
-                if (!backgroundPart?.inlineData?.data) {
-                    throw new Error("AI đã thất bại trong việc tạo ra cảnh nền trống.");
+                let currentImagePart = plateResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!currentImagePart?.inlineData?.data) {
+                    throw new Error("AI đã thất bại trong việc tạo ảnh nền với đầu giữ chỗ.");
                 }
 
-                // STEP 2: Isolate each subject onto a green screen
-                const greenScreenSubjectParts: Part[] = [];
-                for (const member of settings.members) {
-                    const referenceFacePart = base64ToPart(member.photo);
-                    const isolationPrompt = `Phân tích người trong ảnh được cung cấp. Nhiệm vụ duy nhất của bạn là vẽ lại chính xác người này, bao gồm cả quần áo và tư thế ban đầu của họ, trên một nền màu xanh lá cây đồng nhất, rực rỡ (#00FF00). Điều cực kỳ quan trọng là bạn phải BẢO TOÀN 100% khuôn mặt, nhận dạng và ngoại hình của họ. Không thay đổi bất cứ điều gì về người đó. Chỉ xuất ra hình ảnh.`;
-                    
-                    const isolationResponse = await models.generateContent({
+                // STEP 2 & 3: Sequentially perform "surgical" face transplants.
+                for (let i = 0; i < settings.members.length; i++) {
+                    const member = settings.members[i];
+                    const faceReferencePart = base64ToPart(member.photo);
+
+                    const transplantPrompt = `**NHIỆM VỤ NGOẠI KHOA KỸ THUẬT SỐ**
+Bạn là chuyên gia ghép ảnh AI. Bạn được cung cấp hai ảnh:
+- **Ảnh 1 (Nền):** Một cảnh đã hoàn thiện với một người có đầu trống (placeholder).
+- **Ảnh 2 (Mặt):** Ảnh chân dung tham chiếu.
+
+**YÊU CẦU DUY NHẤT VÀ TỐI THƯỢNG:**
+1.  Trong Ảnh 1, xác định người được mô tả là "${member.age}".
+2.  Lấy chính xác 100% khuôn mặt từ Ảnh 2.
+3.  **"Phẫu thuật"** thay thế cái đầu trống của người đó trong Ảnh 1 bằng khuôn mặt từ Ảnh 2.
+4.  Hòa trộn phần cổ, màu da và ánh sáng một cách liền mạch, siêu thực.
+5.  **KHÔNG THAY ĐỔI BẤT CỨ ĐIỀU GÌ KHÁC.** Giữ nguyên 100% phần còn lại của Ảnh 1 (bối cảnh, quần áo, cơ thể, ánh sáng).
+6.  Chỉ xuất ra hình ảnh đã được ghép mặt hoàn chỉnh.`;
+
+                    const transplantResponse = await models.generateContent({
                         model,
-                        contents: { parts: [referenceFacePart, { text: isolationPrompt }] },
+                        contents: { parts: [currentImagePart, faceReferencePart, { text: transplantPrompt }] },
                         config: { responseModalities: [Modality.IMAGE] }
                     });
-
-                    const isolatedPart = isolationResponse.candidates?.[0]?.content?.parts?.[0];
-                    if (!isolatedPart?.inlineData?.data) {
-                        throw new Error(`AI đã thất bại trong việc tách nền thành viên: ${member.age}`);
+                    
+                    const nextImagePart = transplantResponse.candidates?.[0]?.content?.parts?.[0];
+                    if (!nextImagePart?.inlineData?.data) {
+                        throw new Error(`AI đã thất bại trong bước ghép mặt cho thành viên: ${member.age}`);
                     }
-                    greenScreenSubjectParts.push(isolatedPart);
+                    currentImagePart = nextImagePart; // The result of this step becomes the input for the next
                 }
-                
-                // STEP 3: Compose the final image
-                const memberListPrompt = settings.members.map((m, i) => `- Ảnh ${i + 2}: Người ${i + 1} (${m.age})`).join('\n');
 
-                const compositionPrompt = `Bạn là một chuyên gia ghép ảnh chuyên nghiệp. Bạn được cung cấp nhiều hình ảnh:
-- Ảnh 1: Cảnh nền.
-${memberListPrompt}
-
-**NHIỆM VỤ:**
-1.  Lấy từng người từ các ảnh nền xanh của họ (Ảnh 2, 3, v.v.) và đặt họ một cách hoàn hảo vào cảnh nền (Ảnh 1).
-2.  Sắp xếp họ thành một bố cục gia đình tự nhiên dựa trên tư thế chung này: "${settings.pose}".
-3.  Thay đổi quần áo của TẤT CẢ mọi người để phù hợp với mô tả này: "${settings.outfit}".
-4.  QUAN TRỌNG: Hòa trộn họ vào cảnh một cách thực tế. Điều chỉnh ánh sáng, bóng đổ, phân loại màu sắc và tỷ lệ để họ trông như thể họ thực sự được chụp ở đó. Hình ảnh cuối cùng phải liền mạch và siêu thực.
-5.  **ƯU TIÊN TUYỆT ĐỐI:** BẢO TOÀN 100% khuôn mặt của mỗi người từ hình ảnh nền xanh tương ứng của họ. KHÔNG thay đổi khuôn mặt của họ.`;
-
-                const finalResponse = await models.generateContent({
-                    model,
-                    contents: { parts: [backgroundPart, ...greenScreenSubjectParts, { text: compositionPrompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                });
-
-                const finalPart = finalResponse.candidates?.[0]?.content?.parts?.[0];
+                const finalPart = currentImagePart;
                 if (!finalPart?.inlineData?.data || !finalPart.inlineData.mimeType) {
-                    throw new Error("AI đã thất bại ở bước ghép ảnh cuối cùng.");
+                    throw new Error("AI đã thất bại ở bước hoàn thiện ảnh cuối cùng.");
                 }
 
                 const { data, mimeType } = finalPart.inlineData;
