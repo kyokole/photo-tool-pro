@@ -80,6 +80,7 @@ interface SerializedFamilyStudioSettings {
     pose: string;
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
+    faceConsistency: boolean;
 }
 interface Scene {
   title: string;
@@ -511,15 +512,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const settings: SerializedFamilyStudioSettings = payload.settings;
 
                 const parts: Part[] = [];
-                let identityRules = '';
+                
                 let compositionInstructions = 'Trong ảnh cuối cùng, hãy sắp xếp các thành viên một cách tự nhiên. ';
 
                 settings.members.forEach((member, index) => {
                     const personId = `[NGƯỜI_${index + 1}]`;
                     parts.push(base64ToPart(member.photo));
                     
-                    identityRules += `Ảnh ${index + 1} LÀ tham chiếu nhận dạng tuyệt đối cho ${personId}. Khuôn mặt của ${personId} trong ảnh cuối cùng PHẢI là một bản sao 1:1, giống hệt khuôn mặt trong ảnh ${index + 1}.\n`;
-
                     let individualDesc = `${personId} là ${member.age.trim() || `Thành viên ${index + 1}`}.`;
                     if (member.outfit) {
                         individualDesc += ` Trang phục riêng: ${member.outfit}.`;
@@ -538,19 +537,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 - **Yêu cầu thêm:** ${settings.customPrompt || 'Mọi người đều trông tự nhiên và vui vẻ.'}.
 - **Tỷ lệ ảnh:** ${settings.aspectRatio}.`;
                 
-                const fullPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG CHO NHIỀU NGƯỜI**
-**MỤC TIÊU CHÍNH:** Tạo ra một bức ảnh trong đó khuôn mặt của MỌI người là một **BẢN SAO HOÀN HẢO, GIỐNG HỆT** với các ảnh tham chiếu được cung cấp.
+                let fullPrompt: string;
+                if (settings.faceConsistency) {
+                    let identityRules = '';
+                    settings.members.forEach((member, index) => {
+                         const personId = `[NGƯỜI_${index + 1}]`;
+                         identityRules += `Ảnh ${index + 1} LÀ tham chiếu nhận dạng tuyệt đối cho ${personId}. Khuôn mặt của ${personId} trong ảnh cuối cùng PHẢI là một bản sao 1:1, giống hệt khuôn mặt trong ảnh ${index + 1}.\n`;
+                    });
 
+                    fullPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG CHO NHIỀU NGƯỜI**
+**MỤC TIÊU CHÍNH:** Tạo ra một bức ảnh trong đó khuôn mặt của MỌI người là một **BẢN SAO HOÀN HẢO, GIỐNG HỆT** với các ảnh tham chiếu được cung cấp.
 **QUY TẮC GHIM ĐỊNH DANH (BẤT DI BẤT DỊCH):**
 ${identityRules}
 **LUẬT BỔ SUNG:** KHÔNG được thay đổi cấu trúc khuôn mặt, các đường nét, hoặc biểu cảm. Sự giống nhau về khuôn mặt là ưu tiên cao nhất, quan trọng hơn mọi yêu cầu khác.
-
 ---
 ${userRequest}
 ---
-**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).
-
+**CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).
 **KIỂM TRA CUỐI CÙNG:** Trước khi tạo ảnh, hãy xác nhận bạn sẽ sao chép hoàn hảo khuôn mặt của TẤT CẢ [NGƯỜI_X] từ các ảnh tham chiếu tương ứng.`;
+                } else {
+                    fullPrompt = `**NHIỆM VỤ:** Tạo một bức ảnh gia đình nghệ thuật.
+- Sử dụng các ảnh đã cho làm tham chiếu cho các thành viên gia đình, diễn giải lại họ một cách nghệ thuật trong bối cảnh được yêu cầu.
+---
+${userRequest}
+---
+**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).`;
+                }
                 
                 parts.push({ text: fullPrompt });
 
@@ -738,7 +750,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });

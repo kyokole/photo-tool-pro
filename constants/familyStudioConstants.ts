@@ -58,4 +58,5 @@ export const DEFAULT_FAMILY_STUDIO_SETTINGS: FamilyStudioSettings = {
     pose: 'Đứng trang trọng',
     customPrompt: '',
     aspectRatio: '4:3',
+    faceConsistency: true,
 };

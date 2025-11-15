@@ -32,7 +32,9 @@ export default {
         "aspectRatios": {
             "horizontal": "Horizontal (4:3)",
             "wide": "Wide (16:9)"
-        }
+        },
+        "faceConsistencyLabel": "Face Consistency",
+        "faceConsistencyTooltip": "Prioritizes retaining 100% of the original faces from the uploaded photos, resulting in more realistic and authentic images. Disable this if you want the AI to creatively reinterpret the faces in an artistic style."
     },
     "familyStudioOptions": {
         "scenes": {

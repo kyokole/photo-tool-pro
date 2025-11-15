@@ -32,7 +32,9 @@ export default {
         "aspectRatios": {
             "horizontal": "Ngang (4:3)",
             "wide": "Rộng (16:9)"
-        }
+        },
+        "faceConsistencyLabel": "Bảo toàn Khuôn mặt (Face Consistency)",
+        "faceConsistencyTooltip": "Ưu tiên giữ lại 100% khuôn mặt gốc từ ảnh tải lên, giúp ảnh chân thực và giống thật hơn. Tắt tính năng này nếu bạn muốn AI 'sáng tạo' lại khuôn mặt theo phong cách nghệ thuật."
     },
     "familyStudioOptions": {
         "scenes": {

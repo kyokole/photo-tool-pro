@@ -262,6 +262,13 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                         ))}
                                     </select>
                                 </div>
+                                <div className="flex items-start space-x-3 p-3 rounded-lg bg-black/20 border border-[var(--border-color)]">
+                                    <input id="faceConsistency" type="checkbox" checked={settings.faceConsistency} onChange={e => updateSettings({ faceConsistency: e.target.checked })} className="form-checkbox mt-1" />
+                                    <div>
+                                        <label htmlFor="faceConsistency" className="font-semibold text-white">{t('familyStudio.faceConsistencyLabel')}</label>
+                                        <p className="text-xs text-[var(--text-secondary)]">{t('familyStudio.faceConsistencyTooltip')}</p>
+                                    </div>
+                                </div>
                                 <div>
                                     <label className="text-sm font-semibold block mb-2 flex items-center gap-2">
                                         {t('familyStudio.customPromptLabel')}

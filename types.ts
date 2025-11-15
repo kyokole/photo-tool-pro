@@ -360,6 +360,7 @@ export interface FamilyStudioSettings {
     pose: string;
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
+    faceConsistency: boolean;
 }
 
 export interface FamilyStudioResult {
@@ -385,6 +386,7 @@ export interface SerializedFamilyStudioSettings {
     pose: string;
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
+    faceConsistency: boolean;
 }
 
 
