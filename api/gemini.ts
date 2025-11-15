@@ -514,14 +514,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const parts: Part[] = [];
                 
-                parts.push({ text: "BẠN LÀ CHUYÊN GIA GHÉP ẢNH. Nhiệm vụ của bạn là nhận diện chính xác từng người từ các ảnh tham chiếu được cung cấp, sau đó đặt họ vào một bối cảnh mới theo yêu cầu. Ưu tiên cao nhất là giữ lại 100% nhận dạng khuôn mặt." });
+                parts.push({ text: "BẠN LÀ MỘT CHUYÊN GIA GHÉP ẢNH AI. Nhiệm vụ của bạn là 'học' và ghi nhớ chính xác từng người từ các ảnh tham chiếu được cung cấp, sau đó đặt họ vào một bối cảnh mới theo yêu cầu. Ưu tiên cao nhất là giữ lại 100% nhận dạng khuôn mặt." });
 
+                // **STEP 1: TEACH THE AI**
                 settings.members.forEach((member, index) => {
                     const personId = `[NGƯỜI_${index + 1}]`;
                     parts.push({ text: `Đây là ảnh tham chiếu nhận dạng cho ${personId}:` });
                     parts.push(base64ToPart(member.photo));
                 });
                 
+                // **STEP 2: GIVE THE COMMAND**
                 let compositionInstructions = 'Trong ảnh cuối cùng, hãy sắp xếp các thành viên một cách tự nhiên. ';
                 settings.members.forEach((member, index) => {
                     const personId = `[NGƯỜI_${index + 1}]`;
@@ -549,7 +551,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 **CHỈ THỊ CHẤT LƯỢỢNG:** Ảnh cuối cùng phải là một kiệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên và ánh sáng điện ảnh (cinematic lighting).`;
 
                 if (settings.faceConsistency) {
-                    finalInstruction += `\n**YÊU CẦU BẮT BUỘC:** Khuôn mặt của mỗi [NGƯỜI_X] PHẢI là bản sao 1:1, GIỐNG HỆT từ ảnh tham chiếu tương ứng. Đây là yêu cầu quan trọng nhất.`;
+                    finalInstruction += `\n**YÊU CẦU BẮT BUỘC:** Khuôn mặt của mỗi ${settings.members.map((_, i) => `[NGƯỜI_${i+1}]`).join(' và ')} PHẢI là bản sao 1:1, GIỐNG HỆT từ ảnh tham chiếu tương ứng. Đây là yêu cầu quan trọng nhất.`;
                 }
                 
                 parts.push({ text: finalInstruction });
