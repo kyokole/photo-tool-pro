@@ -512,91 +512,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
                 const settings: SerializedFamilyStudioSettings = payload.settings;
                 const model = 'gemini-2.5-flash-image';
+
+                // --- NEW: UNIFIED SINGLE-SHOT COMPOSITION ---
+
+                // Step 1: Assemble all image parts
+                const parts: Part[] = [];
+                settings.members.forEach(member => {
+                    parts.push(base64ToPart(member.photo));
+                });
+
+                // Step 2: Build the "Master Prompt"
+                let identityInstructions = '';
+                const memberDescriptions: string[] = [];
+                settings.members.forEach((member, index) => {
+                    const imageNumber = index + 1;
+                    let description = member.age;
+                    if (member.bodyDescription) {
+                        description += `, vóc dáng ${member.bodyDescription}`;
+                    }
+                    identityInstructions += `\n- **Ảnh ${imageNumber}:** Dùng làm tham chiếu nhận dạng TUYỆT ĐỐI cho "${description}".`;
+                    memberDescriptions.push(description);
+                });
+
+                const individualOutfitInstructions = settings.members
+                    .map((member, index) => member.outfit ? `- "${memberDescriptions[index]}" mặc "${member.outfit}".` : '')
+                    .filter(Boolean)
+                    .join('\n');
+
+                const individualPoseInstructions = settings.members
+                    .map((member, index) => member.pose ? `- "${memberDescriptions[index]}" tạo dáng "${member.pose}".` : '')
+                    .filter(Boolean)
+                    .join('\n');
+
+                const requestPrompt = `**BỐI CẢNH & BỐ CỤC:**
+- **Địa điểm:** ${settings.scene}.
+- **Trang phục chung:** ${settings.outfit}.
+${individualOutfitInstructions ? `- **Ghi đè trang phục riêng:**\n${individualOutfitInstructions}` : ''}
+- **Tạo dáng chung:** ${settings.pose}.
+${individualPoseInstructions ? `- **Ghi đè tạo dáng riêng:**\n${individualPoseInstructions}` : ''}
+- **Yêu cầu thêm:** ${settings.customPrompt || 'Tất cả mọi người đều trông tự nhiên và hạnh phúc.'}
+
+**CHỈ THỊ HÒA HỢP (QUAN TRỌNG NHẤT):**
+Tạo ra một bức ảnh DUY NHẤT, THỐNG NHẤT. Ánh sáng và bóng đổ phải nhất quán trên toàn bộ cảnh và trên tất cả mọi người. Phối cảnh, tỷ lệ và tông màu của mọi người phải hoàn toàn hòa hợp với hậu cảnh. Bức ảnh cuối cùng phải trông giống như được chụp trong một lần bấm máy duy nhất, không phải ảnh ghép.
+
+**Tỷ lệ khung hình cuối cùng BẮT BUỘC là ${settings.aspectRatio}.**`;
+
+                const finalPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG & BỐ CỤC TOÀN CẢNH**
+**MỤC TIÊU KÉP:**
+1.  **BẢO TOÀN NHẬN DẠNG:** Tạo ra một hình ảnh trong đó khuôn mặt của MỌI người là BẢN SAO HOÀN HẢO, GIỐNG HỆT với các ảnh tham chiếu nhận dạng tương ứng.
+2.  **BỐ CỤC TOÀN CẢNH:** Sáng tác toàn bộ bức ảnh trong MỘT lần duy nhất để đảm bảo tính chân thực và nhất quán.
+
+**QUY TẮC BẤT DI BẤT DỊCH:**
+1.  **NGUỒN NHẬN DẠNG (THEO THỨ TỰ):** ${identityInstructions}
+2.  **SAO CHÉP KHUÔN MẶT:** Khuôn mặt của mỗi người trong ảnh cuối cùng PHẢI LÀ BẢN SAO CHÍNH XÁC 1:1. KHÔNG thay đổi cấu trúc, đường nét, hoặc biểu cảm.
+3.  **THỰC HIỆN YÊU CẦU:** Thực hiện các yêu cầu bối cảnh và bố cục dưới đây, nhưng CHỈ SAU KHI đã thỏa mãn tất cả các quy tắc bảo toàn nhận dạng.
+---
+**YÊU CẦU CẢNH & BỐ CỤC:**
+${requestPrompt}
+---
+**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên.
+**KIỂM TRA CUỐI CÙNG:** Trước khi tạo, hãy xác nhận bạn sẽ sao chép hoàn hảo TẤT CẢ các khuôn mặt và sáng tác một cảnh thống nhất duy nhất.`;
                 
-                if (!settings.faceConsistency) {
-                    // Non-face consistency mode (original logic)
-                    const parts: Part[] = [];
-                    settings.members.forEach(member => parts.push(base64ToPart(member.photo)));
-                    const memberDescriptions = settings.members.map((member, index) => `- Người ${index + 1}: ${member.age}`).join('\n');
-                    const creativePrompt = `Tạo một bức ảnh nghệ thuật của một gia đình. Sử dụng các ảnh đã cho làm nguồn cảm hứng cho ngoại hình của các thành viên.\n${memberDescriptions}\nBối cảnh: ${settings.scene}\nTrang phục chung: ${settings.outfit}\nTạo dáng chung: ${settings.pose}\nYêu cầu thêm: ${settings.customPrompt || 'Tất cả mọi người đều trông tự nhiên và hạnh phúc.'}`;
-                    parts.push({ text: creativePrompt });
-                    const response = await models.generateContent({ model, contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
-                    const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                    if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("AI không thể tạo ảnh gia đình.");
-                    const { data, mimeType } = resultPart.inlineData;
-                    return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
-                }
+                parts.push({ text: settings.faceConsistency ? finalPrompt : requestPrompt });
 
-                // --- NEW: SEQUENTIAL RECONSTRUCTION PIPELINE ---
-                if (settings.members.length === 0) {
-                    throw new Error("Không có thành viên nào để tạo ảnh.");
-                }
-
-                const firstMember = settings.members[0];
-                const firstMemberOutfit = firstMember.outfit || settings.outfit;
-                
-                // STEP 1: Generate the base image with the first person.
-                const firstPersonPrompt = `Tạo một bức ảnh siêu thực, chất lượng 8K.
-- Bối cảnh: ${settings.scene}.
-- Có một người trong ảnh: ${firstMember.age}, vóc dáng ${firstMember.bodyDescription || 'bình thường'}.
-- Người đó đang mặc: "${firstMemberOutfit}".
-- Tạo dáng: "${firstMember.pose || settings.pose}".
-- **QUAN TRỌNG NHẤT:** Sử dụng ảnh tham chiếu được cung cấp để tái tạo 100% chính xác khuôn mặt của người đó.
-- Yêu cầu thêm: ${settings.customPrompt || 'Không khí vui vẻ, ấm áp.'}
-- Tỷ lệ khung hình PHẢI là ${settings.aspectRatio}.`;
-
-                const firstPersonResponse = await models.generateContent({
+                // Step 3: Make the single API call
+                const response = await models.generateContent({
                     model,
-                    contents: { parts: [base64ToPart(firstMember.photo), { text: firstPersonPrompt }] },
+                    contents: { parts },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
 
-                let currentImagePart = firstPersonResponse.candidates?.[0]?.content?.parts?.[0];
-                if (!currentImagePart?.inlineData?.data) {
-                    throw new Error("AI đã thất bại trong việc tạo ảnh nền với người đầu tiên.");
+                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) {
+                    throw new Error("AI đã thất bại trong việc tạo ảnh gia đình thống nhất.");
                 }
 
-                // STEP 2 (Iterative): Add subsequent members one by one.
-                for (let i = 1; i < settings.members.length; i++) {
-                    const member = settings.members[i];
-                    const memberReferencePart = base64ToPart(member.photo);
-                    const memberOutfit = member.outfit || settings.outfit;
-                    const memberPose = member.pose || settings.pose;
-
-                    const addMemberPrompt = `**NHIỆM VỤ THÊM NGƯỜI VÀO ẢNH**
-Bạn được cung cấp hai ảnh:
-- **Ảnh 1 (Cảnh nền):** Bức ảnh đã có sẵn người.
-- **Ảnh 2 (Tham chiếu):** Ảnh chân dung của người cần thêm vào.
-
-**YÊU CẦU DUY NHẤT VÀ TỐI THƯỢNG:**
-1.  **Thêm người** từ Ảnh 2 vào Ảnh 1. Người mới này được mô tả là: "${member.age}", vóc dáng "${member.bodyDescription || 'bình thường'}".
-2.  Họ nên đứng/ngồi một cách tự nhiên bên cạnh những người đã có trong ảnh.
-3.  Trang phục của người mới là: "${memberOutfit}".
-4.  Tạo dáng của người mới là: "${memberPose}".
-5.  **QUAN TRỌNG NHẤT:** Tái tạo 100% chính xác khuôn mặt của người mới từ Ảnh 2.
-6.  Hòa trộn người mới vào cảnh một cách liền mạch, khớp hoàn toàn với ánh sáng, bóng đổ, màu sắc và phong cách của Ảnh 1.
-7.  **KHÔNG THAY ĐỔI** những người đã có sẵn trong Ảnh 1.
-8.  Chỉ xuất ra hình ảnh cuối cùng đã có thêm người mới.`;
-
-                    const addMemberResponse = await models.generateContent({
-                        model,
-                        contents: { parts: [currentImagePart, memberReferencePart, { text: addMemberPrompt }] },
-                        config: { responseModalities: [Modality.IMAGE] }
-                    });
-
-                    const nextImagePart = addMemberResponse.candidates?.[0]?.content?.parts?.[0];
-                    if (!nextImagePart?.inlineData?.data) {
-                        throw new Error(`AI đã thất bại trong bước thêm thành viên: ${member.age}`);
-                    }
-                    currentImagePart = nextImagePart; // The result of this step becomes the input for the next.
-                }
-
-                const finalPart = currentImagePart;
-                if (!finalPart?.inlineData?.data || !finalPart.inlineData.mimeType) {
-                    throw new Error("AI đã thất bại ở bước hoàn thiện ảnh cuối cùng.");
-                }
-
-                const { data, mimeType } = finalPart.inlineData;
+                const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             case 'generateBeautyPhoto': {
@@ -755,7 +746,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
                 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
@@ -769,7 +760,7 @@ Example response format:
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
