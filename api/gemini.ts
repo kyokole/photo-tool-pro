@@ -514,6 +514,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const model = 'gemini-2.5-flash-image';
                 
                 if (!settings.faceConsistency) {
+                    // Non-face consistency mode remains the same
                     const parts: Part[] = [];
                     settings.members.forEach(member => parts.push(base64ToPart(member.photo)));
                     const memberDescriptions = settings.members.map((member, index) => `- Person ${index + 1}: ${member.age}`).join('\n');
@@ -526,14 +527,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
                 }
 
-                // --- "GUIDED SEQUENTIAL RECONSTRUCTION" PIPELINE ---
+                // --- NEW "SURGICAL SEQUENTIAL INPAINTING" PIPELINE ---
                 // STEP 1: Generate Scene Plate with placeholder faces.
                 const memberDescriptionsForPlate = settings.members.map((member, index) => {
                     let desc = `- Person ${index + 1}: a person described as '${member.age}'`;
                     if (member.bodyDescription) desc += `, with a body described as '${member.bodyDescription}'`;
                     if (member.pose) desc += `, in the pose '${member.pose}'`;
                     if (member.outfit) desc += `, wearing '${member.outfit}'`;
-                    desc += ". Their face should be generic, featureless, like a mannequin, or blurred. It is a placeholder.";
+                    // Key instruction: face should be featureless
+                    desc += ". Their face should be featureless and generic, like a mannequin. This is a placeholder.";
                     return desc;
                 }).join('\n');
 
@@ -556,53 +558,50 @@ ${memberDescriptionsForPlate}
                     config: { responseModalities: [Modality.IMAGE] }
                 });
 
-                let updatedPlatePart: Part | undefined = plateResponse.candidates?.[0]?.content?.parts?.[0];
-                if (!updatedPlatePart?.inlineData?.data) {
+                let currentImagePart: Part | undefined = plateResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!currentImagePart?.inlineData?.data) {
                     throw new Error("AI failed to create the initial scene plate. Please try again with a simpler description.");
                 }
 
-                // --- STEP 2: Sequentially replace faces ---
+                // --- STEP 2: Sequentially replace faces with surgical prompts ---
                 for (let i = 0; i < settings.members.length; i++) {
                     const member = settings.members[i];
                     
-                    const compositingParts: Part[] = [
-                        updatedPlatePart, // The current state of the image
-                        base64ToPart(member.photo) // The face to insert
-                    ];
+                    const referenceFacePart = base64ToPart(member.photo);
                     
-                    const compositingPrompt = `**TASK: FOCUSED INPAINTING - SEQUENTIAL FACE REPLACEMENT**
+                    // The prompt is now extremely specific for each step
+                    const surgicalPrompt = `**TASK: SURGICAL INPAINTING**
 You are given two images:
-- **Image 1:** The current canvas, a work-in-progress.
-- **Image 2:** A reference photo containing a specific person's face for identity.
+- **Image 1 (Base Image):** A scene that may contain placeholder faces and/or already completed real faces.
+- **Image 2 (Reference Face):** A photo containing the face of the person to be added.
 
 **YOUR ONLY JOB:**
-1.  Find the placeholder person in Image 1 described as '${member.age}'.
-2.  Using the face from Image 2 as a **100% identity reference**, redraw **ONLY THE HEAD AND FACE AREA** of that placeholder person.
-3.  Blend the new head seamlessly onto the body in Image 1. Adjust lighting on the new face to match the scene in Image 1.
+1.  In the Base Image (Image 1), locate the placeholder person described as '${member.age}'.
+2.  Using the Reference Face (Image 2) as a **100% PERFECT IDENTITY SOURCE**, redraw **ONLY THE HEAD AND FACE AREA** of that placeholder person.
+3.  Seamlessly blend the new head onto the body, perfectly matching the scene's lighting, color temperature, and grain.
 
 **CRITICAL RULES:**
-- **ABSOLUTE IDENTITY PRESERVATION:** The new face must be an identical copy of the face in Image 2.
-- **DO NOT TOUCH ANYTHING ELSE:** The background, clothing, other people, and any previously completed faces in Image 1 MUST remain completely unchanged. Your task is surgical. You are not regenerating the scene, you are only inpainting one head.
-- **OUTPUT:** Return the modified Image 1.`;
-
-                    compositingParts.push({ text: compositingPrompt });
-
-                    const compositeResponse = await models.generateContent({
+- **ABSOLUTE IDENTITY PRESERVATION:** The new face must be an identical, photorealistic copy of the Reference Face.
+- **DO NOT CHANGE ANYTHING ELSE:** The background, clothing, and, most importantly, **ANY OTHER REAL FACES ALREADY PRESENT IN THE BASE IMAGE MUST REMAIN UNTOUCHED AND UNCHANGED.** Your task is surgical and highly localized.
+- **OUTPUT:** Return the complete, modified Base Image.`;
+                    
+                    const response = await models.generateContent({
                         model,
-                        contents: { parts: compositingParts },
+                        contents: { parts: [currentImagePart, referenceFacePart, { text: surgicalPrompt }] },
                         config: { responseModalities: [Modality.IMAGE] }
                     });
 
-                    const newPart: Part | undefined = compositeResponse.candidates?.[0]?.content?.parts?.[0];
+                    const newPart: Part | undefined = response.candidates?.[0]?.content?.parts?.[0];
                     if (!newPart?.inlineData?.data) {
-                        throw new Error(`AI failed during the face replacement step for member ${i + 1}.`);
+                        throw new Error(`AI failed during the surgical inpainting step for member ${i + 1}. The AI might be unable to identify the placeholder. Try a more distinct description for each member.`);
                     }
-                    updatedPlatePart = newPart; // Update the plate for the next iteration
+                    // Update the current image for the next loop iteration
+                    currentImagePart = newPart; 
                 }
 
-                const finalPart = updatedPlatePart;
+                const finalPart = currentImagePart;
                 if (!finalPart?.inlineData?.data || !finalPart.inlineData.mimeType) {
-                    throw new Error("AI failed in the final face compositing step.");
+                    throw new Error("AI failed in the final step of the family photo generation.");
                 }
 
                 const { data, mimeType } = finalPart.inlineData;
