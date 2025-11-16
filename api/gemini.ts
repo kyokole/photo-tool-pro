@@ -551,11 +551,14 @@ ${individualPoseInstructions ? `- **Ghi đè tạo dáng riêng:**\n${individual
                     compositionParts.push({ text: compositionPrompt });
 
                     const compositionResponse = await models.generateContent({ model, contents: { parts: compositionParts }, config: { responseModalities: [Modality.IMAGE] } });
-                    let compositionImagePart = compositionResponse.candidates?.[0]?.content?.parts?.[0];
-                    if (!compositionImagePart?.inlineData?.data) throw new Error("Bước 1: AI thất bại trong việc tạo bố cục cảnh.");
+                    const compositionImagePart = compositionResponse.candidates?.[0]?.content?.parts?.[0];
+                    
+                    if (!compositionImagePart?.inlineData) {
+                        throw new Error("Bước 1: AI thất bại trong việc tạo bố cục cảnh ban đầu.");
+                    }
 
                     // STEP 2: Iteratively refine each face
-                    let currentImagePart = compositionImagePart;
+                    let currentImagePart: Part = compositionImagePart;
                     for (let i = 0; i < settings.members.length; i++) {
                         const member = settings.members[i];
                         const memberDescription = memberDescriptions[i];
@@ -572,13 +575,15 @@ ${individualPoseInstructions ? `- **Ghi đè tạo dáng riêng:**\n${individual
                         });
                         
                         const refinedPart = refinementResponse.candidates?.[0]?.content?.parts?.[0];
-                        if (!refinedPart?.inlineData?.data) {
+                        if (refinedPart?.inlineData) {
+                             currentImagePart = refinedPart;
+                        } else {
                             console.warn(`Bước 2: AI thất bại trong việc tinh chỉnh khuôn mặt cho thành viên ${i + 1}. Sử dụng kết quả của bước trước.`);
                             continue; // Continue with the previous image if a step fails
                         }
-                        currentImagePart = refinedPart;
                     }
                     
+                    // The check at the start of the block and the update logic ensure currentImagePart.inlineData is valid here.
                     return res.status(200).json({ imageData: `data:${currentImagePart.inlineData.mimeType};base64,${currentImagePart.inlineData.data}` });
                 }
             }
