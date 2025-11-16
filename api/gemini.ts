@@ -513,15 +513,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const settings: SerializedFamilyStudioSettings = payload.settings;
                 const model = 'gemini-2.5-flash-image';
 
-                // --- NEW: UNIFIED SINGLE-SHOT COMPOSITION ---
-
-                // Step 1: Assemble all image parts
                 const parts: Part[] = [];
                 settings.members.forEach(member => {
                     parts.push(base64ToPart(member.photo));
                 });
 
-                // Step 2: Build the "Master Prompt"
                 let identityInstructions = '';
                 const memberDescriptions: string[] = [];
                 settings.members.forEach((member, index) => {
@@ -557,7 +553,7 @@ Tạo ra một bức ảnh DUY NHẤT, THỐNG NHẤT. Ánh sáng và bóng đ�
 
 **Tỷ lệ khung hình cuối cùng BẮT BUỘC là ${settings.aspectRatio}.**`;
 
-                const finalPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG & BỐ CỤC TOÀN CẢNH**
+                const faceConsistencyPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG & BỐ CỤC TOÀN CẢNH**
 **MỤC TIÊU KÉP:**
 1.  **BẢO TOÀN NHẬN DẠNG:** Tạo ra một hình ảnh trong đó khuôn mặt của MỌI người là BẢN SAO HOÀN HẢO, GIỐNG HỆT với các ảnh tham chiếu nhận dạng tương ứng.
 2.  **BỐ CỤC TOÀN CẢNH:** Sáng tác toàn bộ bức ảnh trong MỘT lần duy nhất để đảm bảo tính chân thực và nhất quán.
@@ -573,9 +569,8 @@ ${requestPrompt}
 **CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên.
 **KIỂM TRA CUỐI CÙNG:** Trước khi tạo, hãy xác nhận bạn sẽ sao chép hoàn hảo TẤT CẢ các khuôn mặt và sáng tác một cảnh thống nhất duy nhất.`;
                 
-                parts.push({ text: settings.faceConsistency ? finalPrompt : requestPrompt });
+                parts.push({ text: settings.faceConsistency ? faceConsistencyPrompt : requestPrompt });
 
-                // Step 3: Make the single API call
                 const response = await models.generateContent({
                     model,
                     contents: { parts },

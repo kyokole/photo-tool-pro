@@ -159,6 +159,7 @@ export default {
             "superhero_family": "Superhero Family Costumes",
             "fairytale_costumes": "Fairytale/Fantasy Costumes",
             "wizarding_world": "Wizarding World Attire",
+            "pirate_costumes": "Pirate Costumes",
             "astronaut_costumes": "Astronaut Costumes",
             "cyberpunk_future": "Futuristic/Cyberpunk Outfits",
             "rock_n_roll_style": "Rock 'n' Roll Style",
@@ -170,8 +171,7 @@ export default {
             "cooking_together": "Cooking/Baking Together Outfits",
             "gardening_outfits": "Gardening Outfits",
             "preppy_style": "Preppy Style (American School)",
-            "streetwear_style": "Streetwear Style (Oversized & Sneakers)",
-            "pirate_costumes": "Pirate Costumes"
+            "streetwear_style": "Streetwear Style (Oversized & Sneakers)"
         },
         "poses": {
             "formal_standing": "Formal Standing",
