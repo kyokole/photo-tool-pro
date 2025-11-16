@@ -579,12 +579,11 @@ ${individualPoseInstructions ? `- **Ghi đè tạo dáng riêng:**\n${individual
                              currentImagePart = refinedPart;
                         } else {
                             console.warn(`Bước 2: AI thất bại trong việc tinh chỉnh khuôn mặt cho thành viên ${i + 1}. Sử dụng kết quả của bước trước.`);
-                            continue; // Continue with the previous image if a step fails
                         }
                     }
                     
                     // The check at the start of the block and the update logic ensure currentImagePart.inlineData is valid here.
-                    return res.status(200).json({ imageData: `data:${currentImagePart.inlineData.mimeType};base64,${currentImagePart.inlineData.data}` });
+                    return res.status(200).json({ imageData: `data:${currentImagePart.inlineData!.mimeType};base64,${currentImagePart.inlineData!.data}` });
                 }
             }
             case 'generateBeautyPhoto': {
