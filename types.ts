@@ -391,6 +391,5 @@ export interface SerializedFamilyStudioSettings {
     faceConsistency: boolean;
 }
 
-
 // Re-export for use in other components if needed
 export type LayoutResult = CoreLayoutResult;

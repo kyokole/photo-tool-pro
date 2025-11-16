@@ -280,8 +280,8 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                         onChange={e => updateSettings({ faceConsistency: e.target.checked })} 
                                         className="form-checkbox mt-1" 
                                     />
-                                    <div>
-                                        <label htmlFor="faceConsistency" className="font-semibold text-white">{t('familyStudio.faceConsistencyLabel')}</label>
+                                    <div className="group relative">
+                                        <label htmlFor="faceConsistency" className="font-semibold text-white cursor-pointer">{t('familyStudio.faceConsistencyLabel')}</label>
                                         <p className="text-xs text-[var(--text-secondary)]">{t('familyStudio.faceConsistencyTooltip')}</p>
                                     </div>
                                 </div>
