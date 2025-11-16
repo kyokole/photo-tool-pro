@@ -546,9 +546,10 @@ ${individualPoseInstructions ? `- **Ghi đè tạo dáng riêng:**\n${individual
                 } else {
                     // --- Multi-step Generation for Face Consistency ---
                     // STEP 1: Generate composition with placeholder figures
-                    const compositionPrompt = `Tạo một bức ảnh gia đình với bố cục hoàn chỉnh, trong đó các nhân vật chỉ là những hình mẫu (placeholders) có hình dáng và vị trí tương tự với các mô tả sau: ${memberDescriptions.join(', ')}. KHÔNG cần giữ lại khuôn mặt gốc ở bước này, chỉ tập trung vào việc tạo ra một cảnh tổng thể đẹp, hài hòa, và chân thực.\n---\n${requestPrompt}`;
-                    const compositionParts: Part[] = settings.members.map(m => base64ToPart(m.photo));
-                    compositionParts.push({ text: compositionPrompt });
+                    const compositionPrompt = `Tạo một bức ảnh gia đình với bố cục hoàn chỉnh có chính xác ${settings.members.length} người. Các nhân vật chỉ là những hình mẫu (placeholders) có hình dáng và vị trí tương tự với các mô tả sau: ${memberDescriptions.join(', ')}. KHÔNG cần giữ lại khuôn mặt gốc ở bước này, chỉ tập trung vào việc tạo ra một cảnh tổng thể đẹp, hài hòa, và chân thực.\n---\n${requestPrompt}`;
+                    // CRITICAL FIX: Do NOT send member photos in this step to avoid confusing the AI.
+                    // Only send the text prompt to generate a layout with placeholders.
+                    const compositionParts: Part[] = [{ text: compositionPrompt }];
 
                     const compositionResponse = await models.generateContent({ model, contents: { parts: compositionParts }, config: { responseModalities: [Modality.IMAGE] } });
                     const compositionImagePart = compositionResponse.candidates?.[0]?.content?.parts?.[0];
