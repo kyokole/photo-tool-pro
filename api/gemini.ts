@@ -1,7 +1,12 @@
+// FIX: Removed triple-slash directive for 'node' as it causes errors in environments where @types/node is not present (like the testing environment).
+// The 'Buffer' type is declared as 'any' below as a fallback.
+// Fallback cho môi trường không có @types/node (Google AI Studio, editor).
+declare const Buffer: any;
+
 // /api/gemini.ts
 // This is a Vercel Serverless Function that acts as a secure backend proxy.
 // It has been made self-contained to prevent Vercel bundling issues.
-import { Buffer } from 'node:buffer';
+// NOTE: Use global Buffer from Node, do NOT import from 'node:buffer' to avoid generic type conflicts.
 // FIX: Remove incorrect 'Blob' import and only use 'Part' for response data.
 import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -723,7 +728,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     const refFacePart = base64ToPart(member.photo);
                     const memberDescription = `${member.age}${member.bodyDescription ? ', ' + member.bodyDescription : ''}`;
             
-                    let bestPatchFullImageBuffer: Buffer | null = null;
+                    let bestPatchFullImageBuffer: any = null;
                     let bestScore = -1.0;
                     
                     for (let i = 0; i < FAMILY_MAX_REFINES; i++) {
@@ -753,7 +758,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
             
                         if (currentScore > bestScore) {
                             bestScore = currentScore;
-                            bestPatchFullImageBuffer = inpaintedImageBuffer as Buffer;
+                            bestPatchFullImageBuffer = inpaintedImageBuffer;
                         }
             
                         if (bestScore >= FAMILY_SIM_THRESHOLD) {
