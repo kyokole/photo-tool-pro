@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+// FIX: Correctly import React and its hooks (useState, useMemo, useCallback, useRef) from the 'react' package to resolve multiple import and reference errors.
+import React from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
-import type { FamilyMember, FamilyStudioSettings, FamilyStudioResult } from '../types';
+import type { FamilyMember, FamilyStudioSettings, FamilyStudioResult, ROI, SerializedFamilyStudioSettings } from '../types';
 import { FAMILY_SCENES, FAMILY_OUTFITS, FAMILY_POSES, DEFAULT_FAMILY_STUDIO_SETTINGS, FAMILY_ASPECT_RATIOS } from '../constants/familyStudioConstants';
 import { serializeFamilyMembers } from '../utils/fileUtils';
-import { generateFamilyPhoto } from '../services/geminiService';
+import { generateFamilyPhoto_3_Pass } from '../services/geminiService';
 import { applyWatermark, dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
 
 interface FamilyStudioProps {
@@ -123,62 +125,110 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
     const [result, setResult] = useState<FamilyStudioResult | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [progressMessage, setProgressMessage] = useState<string>('');
 
+    const dragItem = useRef<number | null>(null);
+    const dragOverItem = useRef<number | null>(null);
+    
+    // ✅ Chuẩn hoá updateSettings
     const updateSettings = (update: Partial<FamilyStudioSettings>) => {
-        setSettings(prev => ({ ...prev, ...update }));
+      setSettings(prev => ({ ...prev, ...update }));
     };
 
+    // ✅ Thêm thành viên
     const addMember = () => {
-        if (settings.members.length >= 9) {
-            alert(t('familyStudio.maxMembersReached'));
-            return;
-        }
-        const newMember: FamilyMember = { id: `member_${Date.now()}`, photo: null, age: '' };
-        updateSettings({ members: [...settings.members, newMember] });
+      if (settings.members.length >= 9) {
+        alert(t('familyStudio.maxMembersReached'));
+        return;
+      }
+      const newMember: FamilyMember = { id: `member_${Date.now()}`, photo: null, age: '' };
+      setSettings(prev => ({ ...prev, members: [...prev.members, newMember] }));
     };
 
+    // ✅ Xoá thành viên
     const removeMember = (id: string) => {
-        if (settings.members.length <= 2) {
-            alert(t('familyStudio.minMembersRequired'));
-            return;
-        }
-        updateSettings({ members: settings.members.filter(m => m.id !== id) });
+      if (settings.members.length <= 2) {
+        alert(t('familyStudio.minMembersRequired'));
+        return;
+      }
+      setSettings(prev => ({ ...prev, members: prev.members.filter(m => m.id !== id) }));
     };
 
+    // ✅ Cập nhật 1 member
     const updateMember = (id: string, update: Partial<FamilyMember>) => {
-        updateSettings({ members: settings.members.map(m => m.id === id ? { ...m, ...update } : m) });
+      setSettings(prev => ({
+        ...prev,
+        members: prev.members.map(m =>
+          m.id === id ? { ...m, ...update } : m
+        ),
+      }));
     };
+
+    // ✅ DnD handlers
+    const handleDragStart = (index: number) => (dragItem.current = index);
+    const handleDragEnter = (index: number) => (dragOverItem.current = index);
+    const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+
+    const handleDragEnd = () => {
+      if (dragItem.current === null || dragOverItem.current === null) return;
+      if (dragItem.current === dragOverItem.current) { 
+          dragItem.current = null;
+          dragOverItem.current = null;
+          return; 
+      }
+
+      setSettings(prev => {
+        const newMembers = [...prev.members];
+        const draggedItemContent = newMembers.splice(dragItem.current!, 1)[0];
+        newMembers.splice(dragOverItem.current!, 0, draggedItemContent);
+        dragItem.current = null;
+        dragOverItem.current = null;
+        return { ...prev, members: newMembers };
+      });
+    };
+
+    const calculateRois = (members: FamilyMember[], aspectRatio: '4:3' | '16:9'): ROI[] => {
+        const rois: ROI[] = [];
+        const ar = aspectRatio === '16:9' ? 16 / 9 : 4 / 3;
+
+        const roiWPct = Math.min(0.24, 0.72 / Math.max(1, members.length));
+        const roiHPct = (roiWPct * 1.20) / ar;
+        const yPct = 0.20; 
+        const spacing = 1 / (members.length + 1);
+
+        members.forEach((m, i) => {
+            const cx = spacing * (i + 1);
+            rois.push({ memberId: m.id, xPct: Math.max(0, cx - roiWPct / 2), yPct, wPct: roiWPct, hPct: roiHPct });
+        });
+        return rois;
+    };
+
 
     const handleGenerate = useCallback(async () => {
-        if (settings.members.length < 2) {
-            setError(t('familyStudio.minMembersRequired'));
-            return;
-        }
-        if (settings.members.some(m => !m.photo)) {
-            setError(t('errors.uploadRequired'));
-            return;
-        }
-        
-        setIsLoading(true);
-        setError(null);
-        setResult(null);
+        if (settings.members.length < 2) { setError(t('familyStudio.minMembersRequired')); return; }
+        if (settings.members.some(m => !m.photo)) { setError(t('errors.uploadRequired')); return; }
 
+        setIsLoading(true); setError(null); setResult(null);
         try {
+            const rois = calculateRois(settings.members, settings.aspectRatio);
             const serializedMembers = await serializeFamilyMembers(settings.members);
-            const payload = { ...settings, members: serializedMembers };
 
-            const imageDataFromServer = await generateFamilyPhoto(payload);
-            
-            const finalImage = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
-            
-            setResult({ id: `family-${Date.now()}`, imageUrl: finalImage });
+            const settingsPayload: SerializedFamilyStudioSettings = {
+                ...settings,
+                members: serializedMembers,
+                rois,
+            };
 
+            const { imageData, similarityScores } =
+            await generateFamilyPhoto_3_Pass(settingsPayload, setProgressMessage);
+
+            const finalImage = !isVip ? await applyWatermark(imageData) : imageData;
+            setResult({ id: `family-${Date.now()}`, imageUrl: finalImage, similarityScores });
         } catch (err) {
-            console.error("Family photo generation failed:", err);
-            const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
-            setError(t('errors.generationFailed', { error: displayMessage }));
+            console.error(err);
+            setError(t('errors.generationFailed', { error: err instanceof Error ? err.message : t('errors.unknownError') }));
         } finally {
-            setIsLoading(false);
+            setIsLoading(false); setProgressMessage('');
         }
     }, [settings, t, isVip]);
 
@@ -229,13 +279,22 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                             <h3 className="text-lg font-bold mb-3">{t('familyStudio.membersTitle')}</h3>
                             <div className="space-y-3">
                                 {settings.members.map((member, index) => (
-                                    <MemberUploader
+                                    <div
                                         key={member.id}
-                                        member={member}
-                                        onUpdate={(update) => updateMember(member.id, update)}
-                                        onRemove={() => removeMember(member.id)}
-                                        memberNumber={index + 1}
-                                    />
+                                        draggable
+                                        onDragStart={() => handleDragStart(index)}
+                                        onDragEnter={() => handleDragEnter(index)}
+                                        onDragEnd={handleDragEnd}
+                                        onDragOver={handleDragOver}
+                                        className="cursor-move"
+                                    >
+                                        <MemberUploader
+                                            member={member}
+                                            onUpdate={(update) => updateMember(member.id, update)}
+                                            onRemove={() => removeMember(member.id)}
+                                            memberNumber={index + 1}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                             <button onClick={addMember} className="w-full mt-3 text-sm py-2 border-2 border-dashed border-[var(--border-color)] rounded-lg hover:border-[var(--accent-cyan)] hover:text-[var(--accent-cyan)] transition-colors">
@@ -280,8 +339,8 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                         onChange={e => updateSettings({ faceConsistency: e.target.checked })} 
                                         className="form-checkbox mt-1" 
                                     />
-                                    <div className="group relative">
-                                        <label htmlFor="faceConsistency" className="font-semibold text-white cursor-pointer">{t('familyStudio.faceConsistencyLabel')}</label>
+                                    <div>
+                                        <label htmlFor="faceConsistency" className="font-semibold text-white">{t('familyStudio.faceConsistencyLabel')}</label>
                                         <p className="text-xs text-[var(--text-secondary)]">{t('familyStudio.faceConsistencyTooltip')}</p>
                                     </div>
                                 </div>
@@ -308,7 +367,7 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    {t('familyStudio.generating')}
+                                    {progressMessage || t('familyStudio.generating')}
                                 </>
                             ) : (
                                 <><i className="fas fa-users mr-2"></i> {t('familyStudio.generateButton')}</>
@@ -322,15 +381,33 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                     {isLoading ? (
                         <div className="text-center p-8">
                              <svg className="animate-spin h-10 w-10 text-[var(--accent-blue)] mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            <p className="mt-4 text-[var(--text-secondary)] animate-pulse">{t('familyStudio.generating')}</p>
+                            <p className="mt-4 text-[var(--text-secondary)] animate-pulse">{progressMessage || t('familyStudio.generating')}</p>
                         </div>
                     ) : result ? (
                         <div className="group relative w-full h-full rounded-lg overflow-hidden">
                             <img src={result.imageUrl} alt="Generated family photo" className="object-contain w-full h-full animate-fade-in" />
-                            <div className="absolute inset-0 bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <button onClick={handleDownload} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
                                     <i className="fas fa-download mr-2"></i> {t('familyStudio.download')}
                                 </button>
+                                {result.similarityScores && (
+                                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm p-2 rounded-md text-xs text-white">
+                                        <h5 className="font-bold mb-1">{t('resultCard.similarityScore')}:</h5>
+                                        {result.similarityScores.map(s => {
+                                             const member = settings.members.find(m => m.id === s.memberId);
+                                             const score = Math.max(0, s.score); // Clamp score
+                                             const scoreColor = score >= 0.85 ? 'text-green-400' : score >= 0.75 ? 'text-yellow-400' : 'text-red-400';
+                                             return (
+                                                <p key={s.memberId}>
+                                                    {member?.age || t('familyStudio.member')}:{' '}
+                                                    <span className={`font-bold ${scoreColor}`}>
+                                                        {(score * 100).toFixed(1)}%
+                                                    </span>
+                                                </p>
+                                             )
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (

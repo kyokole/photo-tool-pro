@@ -367,7 +367,18 @@ export interface FamilyStudioSettings {
 export interface FamilyStudioResult {
     id: string;
     imageUrl: string;
+    similarityScores?: { memberId: string, score: number }[];
 }
+
+
+export interface ROI {
+    memberId: string;
+    xPct: number;
+    yPct: number;
+    wPct: number;
+    hPct: number;
+}
+
 
 export interface SerializedFamilyMember {
     id: string;
@@ -389,7 +400,9 @@ export interface SerializedFamilyStudioSettings {
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
     faceConsistency: boolean;
+    rois: ROI[];
 }
+
 
 // Re-export for use in other components if needed
 export type LayoutResult = CoreLayoutResult;

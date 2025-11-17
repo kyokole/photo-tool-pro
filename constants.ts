@@ -1,5 +1,7 @@
 import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle } from './types';
 
+export * from './constants/familyStudioConstants';
+
 export const DEFAULT_SETTINGS: Settings = {
   aspectRatio: '3x4',
   outfit: {

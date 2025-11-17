@@ -63,6 +63,11 @@ interface FashionStudioSettings {
   description: string;
   highQuality: boolean;
 }
+
+// Tách bạch ROI theo % và ROI pixel
+interface ROIPercentage { memberId: string; xPct: number; yPct: number; wPct: number; hPct: number; }
+interface ROIAbsolute   { memberId: string; x: number; y: number; w: number; h: number; }
+
 interface SerializedFamilyMember {
     id: string;
     age: string;
@@ -74,15 +79,19 @@ interface SerializedFamilyMember {
     outfit?: string;
     pose?: string;
 }
+
+// Hợp đồng FE -> BE: rois là phần trăm
 interface SerializedFamilyStudioSettings {
-    members: SerializedFamilyMember[];
-    scene: string;
-    outfit: string;
-    pose: string;
-    customPrompt: string;
-    aspectRatio: '4:3' | '16:9';
-    faceConsistency: boolean;
+  members: SerializedFamilyMember[];
+  scene: string;
+  outfit: string;
+  pose: string;
+  customPrompt: string;
+  aspectRatio: '4:3' | '16:9';
+  faceConsistency: boolean;
+  rois: ROIPercentage[];
 }
+
 interface Scene {
   title: string;
   desc: string;
@@ -472,6 +481,107 @@ const getAi = () => {
     return new GoogleGenAI({ apiKey });
 };
 
+const normalizeAndClampRois = (roisPct: ROIPercentage[], baseW: number, baseH: number): ROIAbsolute[] => {
+  return roisPct.map(r => {
+    let x = Math.round(r.xPct * baseW);
+    let y = Math.round(r.yPct * baseH);
+    let w = Math.round(r.wPct * baseW);
+    let h = Math.round(r.hPct * baseH);
+    // clamp biên
+    x = Math.max(0, Math.min(x, baseW - 1));
+    y = Math.max(0, Math.min(y, baseH - 1));
+    w = Math.max(1, Math.min(w, baseW - x));
+    h = Math.max(1, Math.min(h, baseH - y));
+    return { memberId: r.memberId, x, y, w, h };
+  });
+};
+
+const makeFeatherMaskBuffer = async (baseW: number, baseH: number, roi: ROIAbsolute, feather: number): Promise<Buffer> => {
+  const rectSvg = Buffer.from(`<svg><rect x="0" y="0" width="${roi.w}" height="${roi.h}" fill="white"/></svg>`);
+  const patch = await sharp(rectSvg).png().toBuffer();
+  const patchFeather = await sharp(patch).blur(feather / 2).toBuffer();
+  return await sharp({ create: { width: baseW, height: baseH, channels: 1, background: { r:0,g:0,b:0,alpha:1 } } })
+    .composite([{ input: patchFeather, left: roi.x, top: roi.y }])
+    .png().toBuffer();
+};
+
+
+const geminiReplaceFacePatch = async (
+    ai: GoogleGenAI,
+    refFacePart: Part,
+    baseImagePart: Part,
+    maskPart: Part,
+    memberDescription: string
+): Promise<string> => { // returns base64
+    const inpaintPrompt = `[ROLE]
+You are an expert facial inpainting and identity-preservation system.
+
+[INPUTS]
+(1) Reference Face – identity to preserve 100%.
+(2) Base Image – scene to edit.
+(3) White Mask – editable area; do not touch pixels outside.
+
+[TARGET SUBJECT]
+'${memberDescription}' (age/body notes if any).
+
+[HARD CONSTRAINTS – IDENTITY MICRO-CONSTRAINTS]
+- Eyes: iris hue/value, sclera exposure, eyelid crease, canthus angle.
+- Nose: dorsum, alar base width, tip rotation/projection, nostril shape.
+- Lips: vermilion thickness, Cupid’s bow, philtrum columns, commissure angle.
+- Midface & Skin: nasolabial fold depth, malar prominence, preserve pores/micro-contrast.
+- Hairline & Eyebrows: exact hairline contour, brow arch; do not redraw density.
+- Pose tolerance ≤ 2° (yaw/pitch/roll) to fit ROI. Match white balance, key/fill ratio.
+- ABSOLUTE: No change outside the white mask.
+
+[OUTPUT]
+Return image only (no text), seamlessly blended; lighting and WB match Base Image.`;
+    
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [refFacePart, baseImagePart, maskPart, { text: inpaintPrompt }] },
+        config: { responseModalities: [Modality.IMAGE] }
+    });
+
+    const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+    if (!resultPart?.inlineData?.data) {
+        throw new Error("Face inpainting failed to return an image.");
+    }
+    return resultPart.inlineData.data;
+};
+
+const geminiIdentityScore = async (
+    ai: GoogleGenAI,
+    refFacePart: Part,
+    generatedFacePart: Part
+): Promise<number> => {
+    const prompt = `Critically compare Image#1 (reference face) vs Image#2 (generated face). 
+Return ONLY valid JSON: {"similarity_score": float 0..1}. Strong match >= 0.85.`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts: [refFacePart, generatedFacePart, { text: prompt }] },
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    similarity_score: { type: Type.NUMBER }
+                }
+            }
+        }
+    });
+
+    try {
+        const jsonStr = (response.text ?? '{}').trim();
+        const result = JSON.parse(jsonStr);
+        return result.similarity_score || 0;
+    } catch (e) {
+        console.error("Failed to parse similarity score JSON:", response.text, e);
+        return 0; // Return a low score on parse failure
+    }
+};
+
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         if (req.method !== 'POST') {
@@ -506,6 +616,163 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // --- End of VIP Status Check ---
 
         switch (action) {
+            case 'generateFamilyPhoto_3_Pass': {
+                const FAMILY_SIM_THRESHOLD = Number(process.env.FAMILY_SIM_THRESHOLD ?? 0.85);
+                const FAMILY_MAX_REFINES = Number(process.env.FAMILY_MAX_REFINES ?? 3);
+
+                if (!payload || !payload.settings) {
+                    return res.status(400).json({ error: 'Missing settings for 3-pass family photo generation.' });
+                }
+                const settings: SerializedFamilyStudioSettings = payload.settings;
+            
+                // --- Pass 1: Generate Base Scene ---
+                const memberPlaceholders = settings.members.map(m => `'${m.age}'`).join(', ');
+                const baseScenePrompt = `Create a realistic, high-quality photograph with an aspect ratio of ${settings.aspectRatio}.
+- **Scene:** ${settings.scene}.
+- **Content:** The scene should contain ${settings.members.length} people: ${memberPlaceholders}.
+- **Arrangement:** They are posed together in a style described as "${settings.pose}".
+- **Outfits:** They are all wearing outfits matching the style "${settings.outfit}".
+- **CRITICAL:** Do NOT generate detailed faces. Instead, render blurred, generic, or featureless placeholders for the faces. The focus is on the composition, lighting, and scene, not the identities.
+- **Additional details:** ${settings.customPrompt || 'Create a warm and happy atmosphere.'}`;
+                
+                const baseSceneResponse = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [{ text: baseScenePrompt }] },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
+                
+                const baseScenePart = baseSceneResponse.candidates?.[0]?.content?.parts?.[0];
+                if (!baseScenePart?.inlineData?.data) {
+                    throw new Error("Pass 1 Failed: Could not generate the base scene.");
+                }
+            
+                let currentImageBuffer = Buffer.from(baseScenePart.inlineData.data, 'base64');
+                const { width: baseW, height: baseH } = await sharp(currentImageBuffer).metadata();
+                if (!baseW || !baseH) {
+                    throw new Error("Pass 1 Failed: Could not read dimensions of the base scene.");
+                }
+
+                // --- Pass 1.5: Detect ROIs from the generated scene ---
+                const roiDetectionPrompt = `Analyze the provided image. It contains ${settings.members.length} people with blurred or placeholder faces. Your task is to identify the bounding box for each of these placeholder faces.
+Return ONLY a valid JSON array where each object represents a face and has the following keys: "xPct", "yPct", "wPct", "hPct". These values must be percentages (0.0 to 1.0) of the total image width and height.
+The array should be sorted by the x-coordinate of the faces, from left to right.
+Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"xPct": 0.6, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}]`;
+
+                const roiDetectionSchema = {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            xPct: { type: Type.NUMBER },
+                            yPct: { type: Type.NUMBER },
+                            wPct: { type: Type.NUMBER },
+                            hPct: { type: Type.NUMBER },
+                        },
+                        required: ["xPct", "yPct", "wPct", "hPct"],
+                    }
+                };
+
+                const detectedRoisResponse = await ai.models.generateContent({
+                    model: 'gemini-2.5-pro',
+                    contents: { parts: [baseScenePart, { text: roiDetectionPrompt }] },
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: roiDetectionSchema
+                    }
+                });
+
+                let detectedRoisPct: ROIPercentage[];
+                try {
+                    const jsonStr = (detectedRoisResponse.text ?? '[]').trim();
+                    const parsedRois = JSON.parse(jsonStr);
+                    if (Array.isArray(parsedRois) && parsedRois.length === settings.members.length) {
+                        detectedRoisPct = parsedRois.map((roi, index) => ({
+                            ...roi,
+                            memberId: settings.members[index].id
+                        }));
+                        console.log("Successfully detected ROIs from base scene.");
+                    } else {
+                        throw new Error(`Expected ${settings.members.length} ROIs, but detected ${parsedRois.length}.`);
+                    }
+                } catch(e) {
+                    console.warn("Failed to detect ROIs from base scene, falling back to frontend-provided ROIs.", e);
+                    detectedRoisPct = settings.rois; // Fallback to frontend calculation
+                }
+                
+                const absRois: ROIAbsolute[] = normalizeAndClampRois(detectedRoisPct ?? settings.rois, baseW, baseH);
+                
+                const similarityScores: { memberId: string, score: number }[] = [];
+                
+                // --- Pass 2 & 3: Inpaint & Refine Loop ---
+                for (const member of settings.members) {
+                    const roi = absRois.find(r => r.memberId === member.id);
+                    if (!roi) {
+                        console.warn(`No ROI found for member ${member.id}, skipping.`);
+                        similarityScores.push({ memberId: member.id, score: 0.0 });
+                        continue;
+                    }
+            
+                    const refFacePart = base64ToPart(member.photo);
+                    const memberDescription = `${member.age}${member.bodyDescription ? ', ' + member.bodyDescription : ''}`;
+            
+                    let bestPatchFullImageBuffer: Buffer | null = null;
+                    let bestScore = -1.0;
+                    
+                    for (let i = 0; i < FAMILY_MAX_REFINES; i++) {
+                        const feather = Math.round(Math.min(roi.w, roi.h) * 0.08);
+                        const maskBuffer = await makeFeatherMaskBuffer(baseW, baseH, roi, feather);
+                        const maskPart: Part = { inlineData: { data: maskBuffer.toString('base64'), mimeType: 'image/png' } };
+                        const baseImagePart: Part = { inlineData: { data: currentImageBuffer.toString('base64'), mimeType: 'image/png' } };
+            
+                        // Pass 2: Inpaint
+                        const inpaintedImageBase64 = await geminiReplaceFacePatch(ai, refFacePart, baseImagePart, maskPart, memberDescription);
+                        const inpaintedImageBuffer = Buffer.from(inpaintedImageBase64, 'base64');
+            
+                        // Create a smaller, centered ROI for scoring to focus only on the face
+                        const scoringRoi: ROIAbsolute = {
+                            memberId: roi.memberId,
+                            w: Math.round(roi.w * 0.7),
+                            h: Math.round(roi.h * 0.7),
+                            x: roi.x + Math.round((roi.w - roi.w * 0.7) / 2),
+                            y: roi.y + Math.round((roi.h - roi.h * 0.7) / 2),
+                        };
+
+                        const generatedPatchBuffer = await sharp(inpaintedImageBuffer).extract({ left: scoringRoi.x, top: scoringRoi.y, width: scoringRoi.w, height: scoringRoi.h }).toBuffer();
+                        const generatedPatchPart: Part = { inlineData: { data: generatedPatchBuffer.toString('base64'), mimeType: 'image/png' } };
+            
+                        // Pass 3: Score
+                        const currentScore = await geminiIdentityScore(ai, refFacePart, generatedPatchPart);
+            
+                        if (currentScore > bestScore) {
+                            bestScore = currentScore;
+                            bestPatchFullImageBuffer = inpaintedImageBuffer;
+                        }
+            
+                        if (bestScore >= FAMILY_SIM_THRESHOLD) {
+                            break;
+                        }
+                    }
+            
+                    if (bestPatchFullImageBuffer) {
+                        currentImageBuffer = await sharp(currentImageBuffer)
+                            .composite([{ input: bestPatchFullImageBuffer, left: 0, top: 0, blend: 'over' }])
+                            .toBuffer();
+                    }
+                    
+                    similarityScores.push({ memberId: member.id, score: Math.max(0, bestScore) });
+                }
+            
+                // --- Finalize ---
+                const finalPngBuffer = await sharp(currentImageBuffer).png().toBuffer(); // FINAL PNG CONVERSION
+                const finalImageData = finalPngBuffer.toString('base64');
+                const finalMimeType = 'image/png';
+                
+                return res.status(200).json({
+                    imageData: `data:${finalMimeType};base64,${finalImageData}`,
+                    similarityScores
+                });
+            }
+            // LEGACY 1-PASS METHOD: Kept for A/B testing or fallback.
             case 'generateFamilyPhoto': {
                 if (!payload || !payload.settings) {
                     return res.status(400).json({ error: 'Thiếu cài đặt cho ảnh gia đình.' });
@@ -513,14 +780,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const settings: SerializedFamilyStudioSettings = payload.settings;
                 const model = 'gemini-2.5-flash-image';
 
-                // --- Shared Prompt Logic ---
-                const memberDescriptions: string[] = settings.members.map(member => {
-                    let description = member.age;
-                    if (member.bodyDescription) description += `, vóc dáng ${member.bodyDescription}`;
-                    return description;
+                const parts: Part[] = [];
+                settings.members.forEach(member => {
+                    parts.push(base64ToPart(member.photo));
                 });
-                const individualOutfitInstructions = settings.members.map((m, i) => m.outfit ? `- "${memberDescriptions[i]}" mặc "${m.outfit}".` : '').filter(Boolean).join('\n');
-                const individualPoseInstructions = settings.members.map((m, i) => m.pose ? `- "${memberDescriptions[i]}" tạo dáng "${m.pose}".` : '').filter(Boolean).join('\n');
+
+                let identityInstructions = '';
+                const memberDescriptions: string[] = [];
+                settings.members.forEach((member, index) => {
+                    const imageNumber = index + 1;
+                    let description = member.age;
+                    if (member.bodyDescription) {
+                        description += `, vóc dáng ${member.bodyDescription}`;
+                    }
+                    identityInstructions += `\n- **Ảnh ${imageNumber}:** Dùng làm tham chiếu nhận dạng TUYỆT ĐỐI cho "${description}".`;
+                    memberDescriptions.push(description);
+                });
+
+                const individualOutfitInstructions = settings.members
+                    .map((member, index) => member.outfit ? `- "${memberDescriptions[index]}" mặc "${member.outfit}".` : '')
+                    .filter(Boolean)
+                    .join('\n');
+
+                const individualPoseInstructions = settings.members
+                    .map((member, index) => member.pose ? `- "${memberDescriptions[index]}" tạo dáng "${member.pose}".` : '')
+                    .filter(Boolean)
+                    .join('\n');
+
                 const requestPrompt = `**BỐI CẢNH & BỐ CỤC:**
 - **Địa điểm:** ${settings.scene}.
 - **Trang phục chung:** ${settings.outfit}.
@@ -528,64 +814,43 @@ ${individualOutfitInstructions ? `- **Ghi đè trang phục riêng:**\n${individ
 - **Tạo dáng chung:** ${settings.pose}.
 ${individualPoseInstructions ? `- **Ghi đè tạo dáng riêng:**\n${individualPoseInstructions}` : ''}
 - **Yêu cầu thêm:** ${settings.customPrompt || 'Tất cả mọi người đều trông tự nhiên và hạnh phúc.'}
-- **CHỈ THỊ HÒA HỢP (QUAN TRỌNG NHẤT):** Tạo ra một bức ảnh DUY NHẤT, THỐNG NHẤT. Ánh sáng, bóng đổ, phối cảnh, tỷ lệ và tông màu của mọi người phải hoàn toàn hòa hợp với hậu cảnh. Bức ảnh cuối cùng phải trông giống như được chụp trong một lần bấm máy duy nhất.
-- **Tỷ lệ khung hình cuối cùng BẮT BUỘC là ${settings.aspectRatio}.**
-- **CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên.`;
 
-                if (!settings.faceConsistency) {
-                    // --- Single-step Generation ---
-                    const parts: Part[] = settings.members.map(member => base64ToPart(member.photo));
-                    const identityInstructions = settings.members.map((m, i) => `- **Ảnh ${i + 1}:** Dùng làm tham chiếu nhận dạng TUYỆT ĐỐI cho "${memberDescriptions[i]}".`).join('\n');
-                    const faceConsistencyPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG & BỐ CỤC TOÀN CẢNH**\n**NGUỒN NHẬN DẠNG:** ${identityInstructions}\nSAO CHÉP HOÀN HẢO TẤT CẢ các khuôn mặt và sáng tác một cảnh thống nhất duy nhất.\n---\n${requestPrompt}`;
-                    parts.push({ text: faceConsistencyPrompt });
-                    
-                    const response = await models.generateContent({ model, contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
-                    const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                    if (!resultPart?.inlineData?.data) throw new Error("AI thất bại trong việc tạo ảnh gia đình thống nhất.");
-                    return res.status(200).json({ imageData: `data:${resultPart.inlineData.mimeType};base64,${resultPart.inlineData.data}` });
-                } else {
-                    // --- Multi-step Generation for Face Consistency ---
-                    // STEP 1: Generate composition with placeholder figures
-                    const compositionPrompt = `Tạo một bức ảnh gia đình với bố cục hoàn chỉnh có chính xác ${settings.members.length} người. Các nhân vật chỉ là những hình mẫu (placeholders) có hình dáng và vị trí tương tự với các mô tả sau: ${memberDescriptions.join(', ')}. KHÔNG cần giữ lại khuôn mặt gốc ở bước này, chỉ tập trung vào việc tạo ra một cảnh tổng thể đẹp, hài hòa, và chân thực.\n---\n${requestPrompt}`;
-                    // CRITICAL FIX: Do NOT send member photos in this step to avoid confusing the AI.
-                    // Only send the text prompt to generate a layout with placeholders.
-                    const compositionParts: Part[] = [{ text: compositionPrompt }];
+**CHỈ THỊ HÒA HỢP (QUAN TRỌNG NHẤT):**
+Tạo ra một bức ảnh DUY NHẤT, THỐNG NHẤT. Ánh sáng và bóng đổ phải nhất quán trên toàn bộ cảnh và trên tất cả mọi người. Phối cảnh, tỷ lệ và tông màu của mọi người phải hoàn toàn hòa hợp với hậu cảnh. Bức ảnh cuối cùng phải trông giống như được chụp trong một lần bấm máy duy nhất, không phải ảnh ghép.
 
-                    const compositionResponse = await models.generateContent({ model, contents: { parts: compositionParts }, config: { responseModalities: [Modality.IMAGE] } });
-                    const compositionImagePart = compositionResponse.candidates?.[0]?.content?.parts?.[0];
-                    
-                    if (!compositionImagePart?.inlineData) {
-                        throw new Error("Bước 1: AI thất bại trong việc tạo bố cục cảnh ban đầu.");
-                    }
+**Tỷ lệ khung hình cuối cùng BẮT BUỘC là ${settings.aspectRatio}.**`;
 
-                    // STEP 2: Iteratively refine each face
-                    let currentImagePart: Part = compositionImagePart;
-                    for (let i = 0; i < settings.members.length; i++) {
-                        const member = settings.members[i];
-                        const memberDescription = memberDescriptions[i];
-                        const faceRefinementPrompt = `**NHIỆM VỤ CỰC KỲ TẬP TRUNG:**
-- **Ảnh 1 (Cảnh nền):** Bức ảnh tổng thể cần chỉnh sửa.
-- **Ảnh 2 (Tham chiếu khuôn mặt):** Khuôn mặt của "${memberDescription}".
-- **Hành động:** Tìm người trong Ảnh 1 trông giống "${memberDescription}" nhất. Nhiệm vụ duy nhất của bạn là THAY THẾ HOÀN TOÀN khuôn mặt của người đó bằng khuôn mặt từ Ảnh 2. Khuôn mặt mới phải GIỐNG HỆT 100% tham chiếu.
-- **CẤM:** KHÔNG được thay đổi bất cứ thứ gì khác: không thay đổi tư thế, quần áo, ánh sáng, hậu cảnh, hay những người khác trong ảnh. Chỉ sửa duy nhất khuôn mặt đó.`;
+                const faceConsistencyPrompt = `**CHỈ THỊ TỐI THƯỢỢNG: BẢO TOÀN NHẬN DẠNG & BỐ CỤC TOÀN CẢNH**
+**MỤC TIÊU KÉP:**
+1.  **BẢO TOÀN NHẬN DẠNG:** Tạo ra một hình ảnh trong đó khuôn mặt của MỌI người là BẢN SAO HOÀN HẢO, GIỐNG HỆT với các ảnh tham chiếu nhận dạng tương ứng.
+2.  **BỐ CỤC TOÀN CẢNH:** Sáng tác toàn bộ bức ảnh trong MỘT lần duy nhất để đảm bảo tính chân thực và nhất quán.
 
-                        const refinementResponse = await models.generateContent({
-                            model,
-                            contents: { parts: [currentImagePart, base64ToPart(member.photo), { text: faceRefinementPrompt }] },
-                            config: { responseModalities: [Modality.IMAGE] }
-                        });
-                        
-                        const refinedPart = refinementResponse.candidates?.[0]?.content?.parts?.[0];
-                        if (refinedPart?.inlineData) {
-                             currentImagePart = refinedPart;
-                        } else {
-                            console.warn(`Bước 2: AI thất bại trong việc tinh chỉnh khuôn mặt cho thành viên ${i + 1}. Sử dụng kết quả của bước trước.`);
-                        }
-                    }
-                    
-                    // The check at the start of the block and the update logic ensure currentImagePart.inlineData is valid here.
-                    return res.status(200).json({ imageData: `data:${currentImagePart.inlineData!.mimeType};base64,${currentImagePart.inlineData!.data}` });
+**QUY TẮC BẤT DI BẤT DỊCH:**
+1.  **NGUỒN NHẬN DẠNG (THEO THỨ TỰ):** ${identityInstructions}
+2.  **SAO CHÉP KHUÔN MẶT:** Khuôn mặt của mỗi người trong ảnh cuối cùng PHẢI LÀ BẢN SAO CHÍNH XÁC 1:1. KHÔNG thay đổi cấu trúc, đường nét, hoặc biểu cảm.
+3.  **THỰC HIỆN YÊU CẦU:** Thực hiện các yêu cầu bối cảnh và bố cục dưới đây, nhưng CHỈ SAU KHI đã thỏa mãn tất cả các quy tắc bảo toàn nhận dạng.
+---
+**YÊU CẦU CẢNH & BỐ CỤC:**
+${requestPrompt}
+---
+**CHỈ THỊ CHẤT LƯỢNG:** Ảnh cuối cùng phải là một tuyệt tác siêu thực (photorealistic masterpiece), chất lượng 8K, với các chi tiết siêu nét (hyper-detailed), kết cấu da tự nhiên.
+**KIỂM TRA CUỐI CÙNG:** Trước khi tạo, hãy xác nhận bạn sẽ sao chép hoàn hảo TẤT CẢ các khuôn mặt và sáng tác một cảnh thống nhất duy nhất.`;
+                
+                parts.push({ text: settings.faceConsistency ? faceConsistencyPrompt : requestPrompt });
+
+                const response = await models.generateContent({
+                    model,
+                    contents: { parts },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
+
+                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) {
+                    throw new Error("AI đã thất bại trong việc tạo ảnh gia đình thống nhất.");
                 }
+
+                const { data, mimeType } = resultPart.inlineData;
+                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
             case 'generateBeautyPhoto': {
                 if (!payload || !payload.baseImage || !payload.tool) {
@@ -822,7 +1087,7 @@ Example response format:
                 const imagePart = base64ToPart(settings.sourceImage);
                 const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
+                if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });

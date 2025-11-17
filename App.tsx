@@ -1309,7 +1309,7 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-            {(originalImage || history.length > 0) && !isGenerating && (
+            {history.length > 0 && !isGenerating && (
                 <HistoryPanel
                     originalImage={originalImage}
                     history={history}

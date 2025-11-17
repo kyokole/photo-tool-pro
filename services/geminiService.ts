@@ -85,10 +85,25 @@ export const generateFashionPhoto = async (imagePart: FilePart, settings: Fashio
 };
 
 // --- Family Studio ---
-export const generateFamilyPhoto = async (settings: SerializedFamilyStudioSettings): Promise<string> => {
+// This is the legacy 1-pass method. Kept for A/B testing or fallback.
+export const generateFamilyPhoto = async (settings: Omit<SerializedFamilyStudioSettings, 'rois'>, setProgress: (message: string) => void): Promise<string> => {
+    setProgress('Đang gửi yêu cầu tạo ảnh gia đình...');
     const { imageData } = await callBackendApi('generateFamilyPhoto', { settings });
     return imageData;
 };
+
+// This is the new 3-pass method as per the user's specification.
+export const generateFamilyPhoto_3_Pass = async (
+    settings: SerializedFamilyStudioSettings,
+    setProgressMessage: (message: string) => void
+): Promise<{ imageData: string, similarityScores: { memberId: string, score: number }[] }> => {
+    // Polling could be implemented here to get progress updates from the server,
+    // but for now, we just pass a simple initial message.
+    setProgressMessage('Đang khởi tạo quy trình tạo ảnh 3 bước...');
+    const result = await callBackendApi('generateFamilyPhoto_3_Pass', { settings });
+    return result;
+};
+
 
 // --- Beauty Studio ---
 export const generateBeautyPhoto = async (
