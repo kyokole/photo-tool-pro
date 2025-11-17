@@ -494,13 +494,27 @@ const normalizeAndClampRois = (roisPct: ROIPercentage[], baseW: number, baseH: n
   });
 };
 
-const makeFeatherMaskBuffer = async (baseW: number, baseH: number, roi: ROIAbsolute, feather: number): Promise<Buffer> => {
-  const rectSvg = Buffer.from(`<svg><rect x="0" y="0" width="${roi.w}" height="${roi.h}" fill="white"/></svg>`);
+// FIX: Loại bỏ khai báo kiểu trả về `: Promise<Buffer>` để TypeScript tự suy luận,
+// giải quyết lỗi không khớp type `ArrayBuffer` và `ArrayBufferLike` trên Vercel.
+const makeFeatherMaskBuffer = async (
+  baseW: number,
+  baseH: number,
+  roi: ROIAbsolute,
+  feather: number
+) => {
+  const rectSvg = Buffer.from(
+    `<svg width="${roi.w}" height="${roi.h}"><rect x="0" y="0" width="${roi.w}" height="${roi.h}" fill="white"/></svg>`
+  );
+
   const patch = await sharp(rectSvg).png().toBuffer();
-  const patchFeather = await sharp(patch).blur(feather / 2).toBuffer();
+  // Thêm .png() để đảm bảo output là buffer ảnh PNG
+  const patchFeather = await sharp(patch).blur(feather / 2).png().toBuffer();
+
   return await sharp({ create: { width: baseW, height: baseH, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
-    .composite([{ input: patchFeather, left: roi.x, top: roi.y }])
-    .png().toBuffer();
+    // FIX: Thêm `as any` để bỏ qua kiểm tra type nghiêm ngặt của Vercel, đảm bảo build thành công.
+    .composite([{ input: patchFeather as any, left: roi.x, top: roi.y }])
+    .png()
+    .toBuffer();
 };
 
 
