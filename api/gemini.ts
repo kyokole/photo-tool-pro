@@ -494,8 +494,6 @@ const normalizeAndClampRois = (roisPct: ROIPercentage[], baseW: number, baseH: n
   });
 };
 
-// FIX: Loại bỏ khai báo kiểu trả về `: Promise<Buffer>` để TypeScript tự suy luận,
-// giải quyết lỗi không khớp type `ArrayBuffer` và `ArrayBufferLike` trên Vercel.
 const makeFeatherMaskBuffer = async (
   baseW: number,
   baseH: number,
@@ -507,11 +505,9 @@ const makeFeatherMaskBuffer = async (
   );
 
   const patch = await sharp(rectSvg).png().toBuffer();
-  // Thêm .png() để đảm bảo output là buffer ảnh PNG
   const patchFeather = await sharp(patch).blur(feather / 2).png().toBuffer();
 
   return await sharp({ create: { width: baseW, height: baseH, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
-    // FIX: Thêm `as any` để bỏ qua kiểm tra type nghiêm ngặt của Vercel, đảm bảo build thành công.
     .composite([{ input: patchFeather as any, left: roi.x, top: roi.y }])
     .png()
     .toBuffer();
@@ -727,7 +723,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     const refFacePart = base64ToPart(member.photo);
                     const memberDescription = `${member.age}${member.bodyDescription ? ', ' + member.bodyDescription : ''}`;
             
-                    let bestPatchFullImageBuffer: Uint8Array | null = null;
+                    let bestPatchFullImageBuffer: Buffer | null = null;
                     let bestScore = -1.0;
                     
                     for (let i = 0; i < FAMILY_MAX_REFINES; i++) {
@@ -757,7 +753,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
             
                         if (currentScore > bestScore) {
                             bestScore = currentScore;
-                            bestPatchFullImageBuffer = inpaintedImageBuffer;
+                            bestPatchFullImageBuffer = inpaintedImageBuffer as Buffer;
                         }
             
                         if (bestScore >= FAMILY_SIM_THRESHOLD) {
@@ -767,7 +763,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
             
                     if (bestPatchFullImageBuffer) {
                         currentImageBuffer = await sharp(currentImageBuffer)
-                            .composite([{ input: bestPatchFullImageBuffer, left: 0, top: 0, blend: 'over' }])
+                            .composite([{ input: bestPatchFullImageBuffer as any, left: 0, top: 0, blend: 'over' }])
                             .toBuffer();
                     }
                     
@@ -1467,7 +1463,7 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
                 }
                 
                 const videoArrayBuffer = await videoResponse.arrayBuffer();
-                const videoBase64 = Buffer.from(videoArrayBuffer).toString('base64');
+                const videoBase64 = Buffer.from(videoArrayBuffer as ArrayBuffer).toString('base64');
                 const videoUrl = `data:video/mp4;base64,${videoBase64}`;
 
                 return res.status(200).json({ videoUrl });
