@@ -1,10 +1,7 @@
 // /api/gemini.ts
 // This is a Vercel Serverless Function that acts as a secure backend proxy.
 // It has been made self-contained to prevent Vercel bundling issues.
-
-// FIX: Removed the failing triple-slash directive for 'node' types and instead imported 'Buffer' directly from the built-in 'buffer' module. This resolves all 'Cannot find name Buffer' and 'Cannot find type definition file for node' errors within the Vercel serverless function.
-import { Buffer } from 'buffer';
-
+import { Buffer } from 'node:buffer';
 // FIX: Remove incorrect 'Blob' import and only use 'Part' for response data.
 import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
