@@ -713,7 +713,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     const refFacePart = base64ToPart(member.photo);
                     const memberDescription = `${member.age}${member.bodyDescription ? ', ' + member.bodyDescription : ''}`;
             
-                    let bestPatchFullImageBuffer: Buffer | null = null;
+                    let bestPatchFullImageBuffer: Uint8Array | null = null;
                     let bestScore = -1.0;
                     
                     for (let i = 0; i < FAMILY_MAX_REFINES; i++) {
