@@ -2,7 +2,7 @@
 // This is a Vercel Serverless Function that acts as a secure backend proxy.
 // It has been made self-contained to prevent Vercel bundling issues.
 
-// FIX: Import Buffer from the 'buffer' module to resolve 'Cannot find name' errors.
+// FIX: Import Buffer to resolve 'Cannot find name 'Buffer'' errors.
 import { Buffer } from 'buffer';
 // FIX: Remove incorrect 'Blob' import and only use 'Part' for response data.
 import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
@@ -500,7 +500,7 @@ const makeFeatherMaskBuffer = async (baseW: number, baseH: number, roi: ROIAbsol
   const rectSvg = Buffer.from(`<svg><rect x="0" y="0" width="${roi.w}" height="${roi.h}" fill="white"/></svg>`);
   const patch = await sharp(rectSvg).png().toBuffer();
   const patchFeather = await sharp(patch).blur(feather / 2).toBuffer();
-  return await sharp({ create: { width: baseW, height: baseH, channels: 1, background: { r:0,g:0,b:0,alpha:1 } } })
+  return await sharp({ create: { width: baseW, height: baseH, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
     .composite([{ input: patchFeather, left: roi.x, top: roi.y }])
     .png().toBuffer();
 };
