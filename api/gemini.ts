@@ -822,9 +822,10 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                             .toBuffer();
                         
                         const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
-                        const hardSwapMask = await sharp({
-                            create: { width: roi.w, height: roi.h, channels: 1, background: 255 }
-                        }).blur(feather / 2).png().toBuffer();
+                        const hardSwapMask = await sharp(
+                            Buffer.alloc(roi.w * roi.h, 255),
+                            { raw: { width: roi.w, height: roi.h, channels: 1 } }
+                        ).blur(feather / 2).png().toBuffer();
             
                         const faceWithAlpha = await sharp(refFaceCropped)
                             .composite([{ input: hardSwapMask, blend: 'dest-in' }])
