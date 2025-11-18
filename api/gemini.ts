@@ -823,7 +823,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                         
                         const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
                         const hardSwapMask = await sharp({
-                            create: { width: roi.w, height: roi.h, channels: 1, background: 'white' }
+                            create: { width: roi.w, height: roi.h, channels: 1, background: 255 }
                         }).blur(feather / 2).png().toBuffer();
             
                         const faceWithAlpha = await sharp(refFaceCropped)
