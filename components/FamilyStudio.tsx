@@ -224,9 +224,14 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
 
             const finalImage = !isVip ? await applyWatermark(imageData) : imageData;
             setResult({ id: `family-${Date.now()}`, imageUrl: finalImage, similarityScores });
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setError(t('errors.generationFailed', { error: err instanceof Error ? err.message : t('errors.unknownError') }));
+            const msg = err?.error?.message ?? err?.message ?? (typeof err === 'string' ? err : '');
+            if (err?.error?.code === 503 || (msg && msg.toLowerCase().includes('overloaded'))) {
+                setError(t('errors.generationOverloaded'));
+            } else {
+                setError(t('errors.generationFailed', { error: msg || 'Lỗi không xác định từ máy chủ.' }));
+            }
         } finally {
             setIsLoading(false); setProgressMessage('');
         }
@@ -413,7 +418,7 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                     ) : (
                         <div className="text-center p-8 text-gray-500">
                             {error ? (
-                                <p className="text-red-400">{error}</p>
+                                <p className="text-red-400 max-w-md">{error}</p>
                             ) : (
                                 <>
                                     <i className="fas fa-image fa-4x mb-4"></i>

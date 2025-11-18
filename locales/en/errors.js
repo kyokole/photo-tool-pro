@@ -5,6 +5,7 @@ export default {
     "generationCancelled": "Generation was cancelled.",
     "unknownError": "An unknown error occurred.",
     "generationFailed": "Generation failed: {{error}}",
+    "generationOverloaded": "The AI system is currently overloaded due to high user traffic. The image could not be generated – please try again in a moment.",
     "beautyGenerationFailed": "Beauty generation failed: {{error}}",
     "fileConversionError": "File conversion error.",
     "headshotGenerationFailed": "Headshot generation failed: {{error}}",

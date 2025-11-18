@@ -5,6 +5,7 @@ export default {
     "generationCancelled": "Quá trình tạo ảnh đã bị hủy.",
     "unknownError": "Đã xảy ra lỗi không xác định.",
     "generationFailed": "Tạo ảnh thất bại: {{error}}",
+    "generationOverloaded": "Hệ thống AI đang quá tải do lượng người dùng lớn. Ảnh chưa tạo được – bạn vui lòng thử lại sau một lúc.",
     "beautyGenerationFailed": "Tạo ảnh làm đẹp thất bại: {{error}}",
     "fileConversionError": "Lỗi chuyển đổi tệp.",
     "headshotGenerationFailed": "Tạo ảnh headshot thất bại: {{error}}",

@@ -8,7 +8,8 @@ declare const Buffer: any;
 // It has been made self-contained to prevent Vercel bundling issues.
 // NOTE: Use global Buffer from Node, do NOT import from 'node:buffer' to avoid generic type conflicts.
 // FIX: Remove incorrect 'Blob' import and only use 'Part' for response data.
-import { GoogleGenAI, Modality, Part, Type } from '@google/genai';
+// FIX: Import GenerateContentResponse to correctly type Gemini API responses.
+import { GoogleGenAI, Modality, Part, Type, GenerateContentResponse } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import type { ServiceAccount } from 'firebase-admin';
@@ -519,6 +520,42 @@ const makeFeatherMaskBuffer = async (
 };
 
 
+async function callGeminiWithRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  initialDelayMs = 1200
+): Promise<T> {
+  let delay = initialDelayMs;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      // The error object structure from the Gemini SDK might vary.
+      // We need to robustly check for the status code and message.
+      const status = err?.status || err?.response?.status;
+      const message = (err?.message || err?.toString() || '').toLowerCase();
+      const isOverloaded = status === 503 || message.includes('model is overloaded') || message.includes('service unavailable');
+
+      if (!isOverloaded || attempt === maxRetries) {
+        // Not an overload error, or we've run out of retries, so re-throw.
+        throw err;
+      }
+
+      console.warn(
+        `[Gemini][${label}] 503 overloaded, retry attempt ${attempt}/${maxRetries} after ${delay}ms`
+      );
+      await new Promise((r) => setTimeout(r, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+
+  // This line should theoretically not be reached.
+  throw new Error(`[Gemini][${label}] Unexpected retry loop exit`);
+}
+
+
 const geminiReplaceFacePatch = async (
     ai: GoogleGenAI,
     refFacePart: Part,
@@ -549,11 +586,13 @@ You are an expert facial inpainting and identity-preservation system.
 [OUTPUT]
 Return image only (no text), seamlessly blended; lighting and WB match Base Image.`;
     
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: { parts: [refFacePart, baseImagePart, maskPart, { text: inpaintPrompt }] },
-        config: { responseModalities: [Modality.IMAGE] }
-    });
+    const response: GenerateContentResponse = await callGeminiWithRetry<GenerateContentResponse>('family_pass2_inpaint', () => 
+        ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [refFacePart, baseImagePart, maskPart, { text: inpaintPrompt }] },
+            config: { responseModalities: [Modality.IMAGE] }
+        })
+    );
 
     const resultPart = response.candidates?.[0]?.content?.parts?.[0];
     if (!resultPart?.inlineData?.data) {
@@ -570,19 +609,21 @@ const geminiIdentityScore = async (
     const prompt = `Critically compare Image#1 (reference face) vs Image#2 (generated face). 
 Return ONLY valid JSON: {"similarity_score": float 0..1}. Strong match >= 0.85.`;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: { parts: [refFacePart, generatedFacePart, { text: prompt }] },
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    similarity_score: { type: Type.NUMBER }
+    const response: GenerateContentResponse = await callGeminiWithRetry<GenerateContentResponse>('family_pass3_identity_score', () =>
+        ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: { parts: [refFacePart, generatedFacePart, { text: prompt }] },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        similarity_score: { type: Type.NUMBER }
+                    }
                 }
             }
-        }
-    });
+        })
+    );
 
     try {
         const jsonStr = (response.text ?? '{}').trim();
@@ -648,11 +689,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 - **CRITICAL:** Do NOT generate detailed faces. Instead, render blurred, generic, or featureless placeholders for the faces. The focus is on the composition, lighting, and scene, not the identities.
 - **Additional details:** ${settings.customPrompt || 'Create a warm and happy atmosphere.'}`;
                 
-                const baseSceneResponse = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash-image',
-                    contents: { parts: [{ text: baseScenePrompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                });
+                const baseSceneResponse: GenerateContentResponse = await callGeminiWithRetry<GenerateContentResponse>('family_pass1_base_scene', () =>
+                    ai.models.generateContent({
+                        model: 'gemini-2.5-flash-image',
+                        contents: { parts: [{ text: baseScenePrompt }] },
+                        config: { responseModalities: [Modality.IMAGE] }
+                    })
+                );
                 
                 const baseScenePart = baseSceneResponse.candidates?.[0]?.content?.parts?.[0];
                 if (!baseScenePart?.inlineData?.data) {
@@ -685,14 +728,16 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     }
                 };
 
-                const detectedRoisResponse = await ai.models.generateContent({
-                    model: 'gemini-2.5-pro',
-                    contents: { parts: [baseScenePart, { text: roiDetectionPrompt }] },
-                    config: {
-                        responseMimeType: "application/json",
-                        responseSchema: roiDetectionSchema
-                    }
-                });
+                const detectedRoisResponse: GenerateContentResponse = await callGeminiWithRetry<GenerateContentResponse>('family_pass1_5_detect_roi', () => 
+                    ai.models.generateContent({
+                        model: 'gemini-2.5-pro',
+                        contents: { parts: [baseScenePart, { text: roiDetectionPrompt }] },
+                        config: {
+                            responseMimeType: "application/json",
+                            responseSchema: roiDetectionSchema
+                        }
+                    })
+                );
 
                 let detectedRoisPct: ROIPercentage[];
                 try {
@@ -851,7 +896,7 @@ ${requestPrompt}
                 
                 parts.push({ text: settings.faceConsistency ? faceConsistencyPrompt : requestPrompt });
 
-                const response = await models.generateContent({
+                const response: GenerateContentResponse = await models.generateContent({
                     model,
                     contents: { parts },
                     config: { responseModalities: [Modality.IMAGE] }
@@ -874,7 +919,7 @@ ${requestPrompt}
                 const prompt = buildBeautyPrompt(tool, subFeature, style);
                 const imagePart: Part = { inlineData: { data: baseImage.split(',')[1], mimeType: baseImage.split(';')[0].split(':')[1] } };
 
-                const response = await models.generateContent({
+                const response: GenerateContentResponse = await models.generateContent({
                     model: 'gemini-2.5-flash-image',
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] },
@@ -913,7 +958,7 @@ Example response format:
   "vietnamesePrompt": "Một video 4K siêu thực về một người đứng trên vách đá lộng gió, mái tóc bay trong gió, ánh sáng điện ảnh vào giờ vàng, những con sóng đại dương hùng vĩ vỗ vào bên dưới."
 }`;
 
-                const response = await models.generateContent({
+                const response: GenerateContentResponse = await models.generateContent({
                     model: 'gemini-2.5-pro',
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: {
@@ -953,7 +998,7 @@ Example response format:
                 parts.push({ text: fullPrompt });
 
                 // 3. Call Gemini to get padded image
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
                 
@@ -972,7 +1017,7 @@ Example response format:
                 const { imagePart, prompt } = payload;
 
                 const fullPrompt = createFinalPromptEn(prompt, true);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
                 
@@ -987,7 +1032,7 @@ Example response format:
                 const requestPrompt = buildRestorationPrompt(options);
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 
-                const response = await models.generateContent({
+                const response: GenerateContentResponse = await models.generateContent({
                     model: 'gemini-2.5-flash-image',
                     contents: { parts: [imagePart, { text: fullPrompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
@@ -1019,7 +1064,7 @@ Example response format:
                 requestPrompt += `${highQualityPrompt}Tỉ lệ khung: ${aspectRatio}. Không chữ, không logo, không viền, không watermark.`
                 
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
                 
@@ -1033,7 +1078,7 @@ Example response format:
 
                 const requestPrompt = `Bối cảnh: "${scene.title} - ${scene.desc}". Người trong ảnh phải mặc trang phục phù hợp với bối cảnh. Chi tiết tùy chỉnh: ${customDescription.trim() !== '' ? `Thêm các chi tiết sau: "${customDescription}".` : 'Không có chi tiết tùy chỉnh.'} Máy ảnh & Ống kính: Mô phỏng ảnh chụp bằng Canon EOS R5, ống kính 85mm f/1.8. Ánh sáng: Ánh sáng điện ảnh, hậu cảnh xóa phông (bokeh). Lấy nét: Lấy nét cực sắc vào mắt. Tỷ lệ khung hình: BẮT BUỘC là ${aspectRatio}.`;
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
@@ -1051,7 +1096,7 @@ Example response format:
                     ? `${BASE_PROMPT_INSTRUCTION}\n\n${FACE_LOCK_INSTRUCTION}${languageInstruction}` 
                     : `${BASE_PROMPT_INSTRUCTION}${languageInstruction}`;
 
-                const response = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart] }, config: { systemInstruction } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart] }, config: { systemInstruction } });
                 return res.status(200).json({ prompt: (response.text ?? '').trim() });
             }
 
@@ -1061,7 +1106,7 @@ Example response format:
                 
                 const imagePart = { inlineData: { data: base64Image, mimeType } };
                 const prompt = "Analyze the image and identify the main, most prominent piece of clothing the person is wearing. Respond with ONLY the name of the clothing in lowercase Vietnamese. For example: 'áo dài', 'vest', 'áo sơ mi'. Do not add any other words, punctuation, or explanations.";
-                const response = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart, { text: prompt }] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [imagePart, { text: prompt }] } });
                 return res.status(200).json({ outfit: (response.text ?? '').trim() });
             }
 
@@ -1072,7 +1117,7 @@ Example response format:
                 const imagePart = { inlineData: { data: base64Image, mimeType: inputMimeType } };
                 const requestPrompt = `Nhiệm vụ DUY NHẤT của bạn là thay đổi trang phục. Trang phục mới: "${newOutfitPrompt}". Trang phục mới phải trông hoàn toàn thực tế và hòa quyện liền mạch với cổ và vai của người. Ánh sáng trên quần áo mới phải hoàn toàn khớp với ánh sáng hiện có trong ảnh. KHÔNG thay đổi tỉ lệ hay cắt ảnh.`;
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) throw new Error("API không trả về hình ảnh.");
 
@@ -1098,7 +1143,7 @@ Example response format:
 
                 const fullPrompt = createFinalPromptVn(requestPrompt, true);
                 const imagePart = base64ToPart(settings.sourceImage);
-                const response = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
+                const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
 
@@ -1312,7 +1357,7 @@ Example response format:
                 let successfulImages: string[] = [];
                 results.forEach(r => {
                     if (r.status === 'fulfilled') {
-                        const part = r.value.candidates?.[0]?.content?.parts?.[0];
+                        const part = (r.value as GenerateContentResponse).candidates?.[0]?.content?.parts?.[0];
                         if (part?.inlineData?.data) {
                             successfulImages.push(part.inlineData.data);
                         }
@@ -1323,7 +1368,7 @@ Example response format:
             }
 
             case 'getHotTrends': {
-                 const response = await models.generateContent({
+                 const response: GenerateContentResponse = await models.generateContent({
                     model: 'gemini-2.5-flash',
                     contents: `Đóng vai một chuyên gia xu hướng mạng xã hội. Tìm kiếm trên web các xu hướng nhiếp ảnh và chỉnh sửa hình ảnh trực quan mới nhất và phổ biến nhất trên các nền tảng như TikTok, Instagram và Pinterest. Lập một danh sách gồm 25 xu hướng đa dạng và sáng tạo có thể áp dụng cho ảnh của một người. Đặt một cái tên ngắn gọn, hấp dẫn cho mỗi xu hướng bằng tiếng Việt. Chỉ trả về một mảng JSON hợp lệ chứa các chuỗi, trong đó mỗi chuỗi là một tên xu hướng. Không bao gồm các dấu ngoặc kép markdown (\`\`\`json), giải thích hoặc bất kỳ văn bản nào khác ngoài mảng JSON.`,
                     config: { tools: [{googleSearch: {}}] }
@@ -1377,7 +1422,7 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
                     }
                 };
 
-                const response = await models.generateContent({
+                const response: GenerateContentResponse = await models.generateContent({
                     model: 'gemini-2.5-pro',
                     contents: { parts: parts },
                     config: {
@@ -1487,17 +1532,19 @@ Nội dung tham khảo: Diễn giả: ${speaker}, Trang phục: ${outfit}, Hành
             errorMessage = error.message;
         }
         
-        let errorStringForSearch = '';
-        try {
-            errorStringForSearch = JSON.stringify(error);
-        } catch {
-            errorStringForSearch = String(error);
+        // Use a more robust check for overload errors
+        const errorString = (error.message || JSON.stringify(error) || '').toLowerCase();
+        if (error?.status === 503 || errorString.includes('model is overloaded') || errorString.includes('service unavailable')) {
+            statusCode = 503;
+            errorMessage = "The model is overloaded. Please try again later.";
+            // Return a structured error that the frontend can parse
+            return res.status(statusCode).json({ error: { code: 503, message: errorMessage, status: 'UNAVAILABLE' } });
         }
 
-        if (errorStringForSearch.includes('429') || errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit')) {
+        if (errorString.includes('429') || errorString.includes('resource_exhausted') || errorString.includes('rate limit')) {
             statusCode = 429;
             errorMessage = "Bạn đã vượt quá hạn ngạch sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên.";
-        } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid') || error.message.includes('GEMINI_API_KEY')) {
+        } else if (errorString.includes('api_key_invalid') || errorString.includes('api key not valid') || error.message.includes('GEMINI_API_KEY')) {
             errorMessage = "API Key của máy chủ không hợp lệ hoặc bị thiếu. Vui lòng liên hệ quản trị viên.";
             statusCode = 500;
         } else if (error instanceof TypeError) {
