@@ -581,7 +581,7 @@ You are an expert facial inpainting and identity-preservation system.
 - Midface & Skin: nasolabial fold depth, malar prominence, preserve pores/micro-contrast.
 - Hairline & Eyebrows: exact hairline contour, brow arch; do not redraw density.
 - Pose tolerance ≤ 2° (yaw/pitch/roll) to fit ROI. Match white balance, key/fill ratio.
-- ABSOLUTE: No change outside the white mask.
+- ABSOLUTE: No change outside the white mask. Do NOT change jawline, chin length, or facial width. Preserve eye distance and nose–mouth vertical proportions exactly.
 
 [OUTPUT]
 Return image only (no text), seamlessly blended; lighting and WB match Base Image.`;
@@ -773,11 +773,11 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     const refFacePart = base64ToPart(member.photo);
                     const memberDescription = `${member.age}${member.bodyDescription ? ', ' + member.bodyDescription : ''}`;
             
-                    let bestPatchFullImageBuffer: any = null;
+                    let bestPatchFullImageBuffer: any | null = null;
                     let bestScore = -1.0;
                     
                     for (let i = 0; i < FAMILY_MAX_REFINES; i++) {
-                        const feather = Math.round(Math.min(roi.w, roi.h) * 0.08);
+                        const feather = Math.round(Math.min(roi.w, roi.h) * 0.18);
                         const maskBuffer = await makeFeatherMaskBuffer(baseW, baseH, roi, feather);
                         const maskPart: Part = { inlineData: { data: maskBuffer.toString('base64'), mimeType: 'image/png' } };
                         const baseImagePart: Part = { inlineData: { data: currentImageBuffer.toString('base64'), mimeType: 'image/png' } };
@@ -807,13 +807,31 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                         }
             
                         if (bestScore >= FAMILY_SIM_THRESHOLD) {
-                            break;
+                            break; // Early exit if we have a great match
                         }
                     }
             
-                    if (bestPatchFullImageBuffer) {
+                    if (bestScore >= FAMILY_SIM_THRESHOLD && bestPatchFullImageBuffer) {
+                        // High score: use the well-blended inpaint result
+                        currentImageBuffer = bestPatchFullImageBuffer;
+                    } else {
+                        // Low score: fallback to hard-swap for guaranteed identity
+                        console.warn(`Low similarity score (${bestScore}) for member ${member.id}. Falling back to hard-swap.`);
+                        const refFaceCropped = await sharp(Buffer.from(member.photo.base64, 'base64'))
+                            .resize(roi.w, roi.h)
+                            .toBuffer();
+                        
+                        const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
+                        const hardSwapMask = await sharp({
+                            create: { width: roi.w, height: roi.h, channels: 1, background: 'white' }
+                        }).blur(feather / 2).png().toBuffer();
+            
+                        const faceWithAlpha = await sharp(refFaceCropped)
+                            .composite([{ input: hardSwapMask, blend: 'dest-in' }])
+                            .png().toBuffer();
+                        
                         currentImageBuffer = await sharp(currentImageBuffer)
-                            .composite([{ input: bestPatchFullImageBuffer as any, left: 0, top: 0, blend: 'over' }])
+                            .composite([{ input: faceWithAlpha, left: roi.x, top: roi.y }])
                             .toBuffer();
                     }
                     
@@ -821,7 +839,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                 }
             
                 // --- Finalize ---
-                const finalPngBuffer = await sharp(currentImageBuffer).png().toBuffer(); // FINAL PNG CONVERSION
+                const finalPngBuffer = await sharp(currentImageBuffer).png().toBuffer();
                 const finalImageData = finalPngBuffer.toString('base64');
                 const finalMimeType = 'image/png';
                 
