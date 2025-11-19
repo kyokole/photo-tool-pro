@@ -506,6 +506,11 @@ const makeFeatherMaskBuffer = async (
   roi: ROIAbsolute,
   feather: number
 ) => {
+  // REPLACE the sharp({ create: ... }) with Buffer.alloc()
+  // Creating a blank transparent image using raw buffer first
+  // 4 channels (RGBA), width * height pixels
+  const blankBuffer = Buffer.alloc(baseW * baseH * 4, 0); 
+  
   const rectSvg = Buffer.from(
     `<svg width="${roi.w}" height="${roi.h}"><rect x="0" y="0" width="${roi.w}" height="${roi.h}" fill="white"/></svg>`
   );
@@ -513,7 +518,14 @@ const makeFeatherMaskBuffer = async (
   const patch = await sharp(rectSvg).png().toBuffer();
   const patchFeather = await sharp(patch).blur(feather / 2).png().toBuffer();
 
-  return await sharp({ create: { width: baseW, height: baseH, channels: 4, background: { r:0,g:0,b:0,alpha:0 } } })
+  // Load the blank buffer into sharp, treating it as raw pixel data
+  return await sharp(blankBuffer, {
+      raw: {
+        width: baseW,
+        height: baseH,
+        channels: 4
+      }
+    })
     .composite([{ input: patchFeather as any, left: roi.x, top: roi.y }])
     .png()
     .toBuffer();
@@ -701,6 +713,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (!baseScenePart?.inlineData?.data) {
                     throw new Error("Pass 1 Failed: Could not generate the base scene.");
                 }
+
+                // PATCH: expose Pass 1 image
+                const pass1_base64 = baseScenePart.inlineData.data;
             
                 let currentImageBuffer = Buffer.from(baseScenePart.inlineData.data, 'base64');
                 const { width: baseW, height: baseH } = await sharp(currentImageBuffer).metadata();
@@ -756,6 +771,9 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     console.warn("Failed to detect ROIs from base scene, falling back to frontend-provided ROIs.", e);
                     detectedRoisPct = settings.rois; // Fallback to frontend calculation
                 }
+
+                // PATCH: expose ROI detection JSON
+                const roiDebugJson = detectedRoisPct;
                 
                 const absRois: ROIAbsolute[] = normalizeAndClampRois(detectedRoisPct ?? settings.rois, baseW, baseH);
                 
@@ -781,10 +799,22 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                         const maskBuffer = await makeFeatherMaskBuffer(baseW, baseH, roi, feather);
                         const maskPart: Part = { inlineData: { data: maskBuffer.toString('base64'), mimeType: 'image/png' } };
                         const baseImagePart: Part = { inlineData: { data: currentImageBuffer.toString('base64'), mimeType: 'image/png' } };
-            
+                        
+                        // PATCH: keep mask for debugging
+                        const debugMaskBase64 = maskBuffer.toString('base64');
+
                         // Pass 2: Inpaint
                         const inpaintedImageBase64 = await geminiReplaceFacePatch(ai, refFacePart, baseImagePart, maskPart, memberDescription);
                         const inpaintedImageBuffer = Buffer.from(inpaintedImageBase64, 'base64');
+
+                        // PATCH: store pass2 result per iteration
+                        if (!(member as any).debugPass2) (member as any).debugPass2 = [];
+                        (member as any).debugPass2.push({
+                            iteration: i,
+                            roi,
+                            maskBase64: debugMaskBase64,
+                            imageBase64: inpaintedImageBase64
+                        });
             
                         // Create a smaller, centered ROI for scoring to focus only on the face
                         const scoringRoi: ROIAbsolute = {
@@ -822,6 +852,7 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                             .toBuffer();
                         
                         const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
+                        // FIX: Use Buffer.alloc for mask creation instead of sharp({create}) to avoid type issues
                         const hardSwapMask = await sharp(
                             Buffer.alloc(roi.w * roi.h, 255),
                             { raw: { width: roi.w, height: roi.h, channels: 1 } }
@@ -845,8 +876,17 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                 const finalMimeType = 'image/png';
                 
                 return res.status(200).json({
-                    imageData: `data:${finalMimeType};base64,${finalImageData}`,
-                    similarityScores
+                    imageData: `data:${finalMimeType};base64,${finalImageData}`, // Keep for legacy FE
+                    finalImage: `data:${finalMimeType};base64,${finalImageData}`, // Explicit key
+                    similarityScores,
+                    debug: {
+                        pass1: pass1_base64,
+                        roiJson: roiDebugJson,
+                        pass2: settings.members.map(m => ({
+                            memberId: m.id,
+                            debug: (m as any).debugPass2 || []
+                        }))
+                    }
                 });
             }
             // LEGACY 1-PASS METHOD: Kept for A/B testing or fallback.

@@ -1,3 +1,4 @@
+
 // services/geminiService.ts
 import { getAuthInstance } from '../services/firebase';
 import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings } from '../types';
@@ -96,7 +97,7 @@ export const generateFamilyPhoto = async (settings: Omit<SerializedFamilyStudioS
 export const generateFamilyPhoto_3_Pass = async (
     settings: SerializedFamilyStudioSettings,
     setProgressMessage: (message: string) => void
-): Promise<{ imageData: string, similarityScores: { memberId: string, score: number }[] }> => {
+): Promise<{ imageData: string, similarityScores: { memberId: string, score: number }[], debug?: any }> => {
     // Polling could be implemented here to get progress updates from the server,
     // but for now, we just pass a simple initial message.
     setProgressMessage('Đang khởi tạo quy trình tạo ảnh 3 bước...');

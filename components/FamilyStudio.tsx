@@ -1,3 +1,4 @@
+
 // FIX: Correctly import React and its hooks (useState, useMemo, useCallback, useRef) from the 'react' package to resolve multiple import and reference errors.
 import React from 'react';
 import { useState, useMemo, useCallback, useRef } from 'react';
@@ -14,6 +15,78 @@ interface FamilyStudioProps {
     setTheme: (theme: string) => void;
     isVip: boolean;
 }
+
+// Helper for base64 display
+const b64Src = (b64: string) => `data:image/png;base64,${b64}`;
+
+const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']> }> = ({ debugData }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="mt-6 text-xs text-gray-500 hover:text-white underline w-full text-center">
+                🛠️ Show Debug Info (Pass 1, ROI, Masks)
+            </button>
+        );
+    }
+
+    return (
+        <div className="mt-6 w-full bg-black/80 p-4 rounded-lg text-xs text-left text-gray-300 font-mono overflow-hidden border border-gray-700">
+            <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                <h3 className="font-bold text-yellow-400 text-sm">DEBUG INSPECTOR</h3>
+                <button onClick={() => setIsOpen(false)} className="text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-900/30">Close</button>
+            </div>
+
+            {/* Pass 1 */}
+            <div className="mb-6">
+                <h4 className="font-bold text-blue-400 mb-2">PASS 1: Base Scene (Generated)</h4>
+                <div className="w-full max-w-xs bg-gray-900 rounded border border-gray-700 overflow-hidden">
+                    <img src={b64Src(debugData.pass1)} alt="Pass 1" className="w-full h-auto opacity-90 hover:opacity-100" />
+                </div>
+            </div>
+
+            {/* ROI */}
+            <div className="mb-6">
+                <h4 className="font-bold text-green-400 mb-2">PASS 1.5: ROI Detection (JSON)</h4>
+                <pre className="bg-gray-900 p-3 rounded overflow-x-auto border border-gray-700 text-green-200">
+                    {JSON.stringify(debugData.roiJson, null, 2)}
+                </pre>
+            </div>
+
+            {/* Pass 2 Loop */}
+            <div>
+                <h4 className="font-bold text-pink-400 mb-2">PASS 2 & 3: Inpaint & Refine Loops</h4>
+                <div className="space-y-6">
+                    {debugData.pass2.map((member, idx) => (
+                        <div key={idx} className="bg-gray-900/50 p-3 rounded border border-gray-700">
+                            <p className="font-bold text-white mb-3 border-b border-gray-700/50 pb-1">Member ID: <span className="text-cyan-300">{member.memberId}</span></p>
+                            <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-thin">
+                                {member.debug.map((iter, i) => (
+                                    <div key={i} className="flex-shrink-0 w-48 flex flex-col gap-2 bg-black/40 p-2 rounded">
+                                        <div className="text-[10px] text-center text-gray-400 font-bold bg-gray-800 rounded py-0.5">Iteration #{iter.iteration}</div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] text-center text-gray-500 mb-1">Mask</span>
+                                                <img src={b64Src(iter.maskBase64)} className="w-full aspect-auto border border-gray-600 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-gray-700" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[9px] text-center text-gray-500 mb-1">Result</span>
+                                                <img src={b64Src(iter.imageBase64)} className="w-full aspect-auto border border-gray-600" />
+                                            </div>
+                                        </div>
+                                        <div className="text-[9px] text-gray-500 bg-gray-800 p-1.5 rounded truncate font-mono" title={`x:${iter.roi.x}, y:${iter.roi.y}, w:${iter.roi.w}, h:${iter.roi.h}`}>
+                                            ROI: x{iter.roi.x}, y{iter.roi.y}, w{iter.roi.w}, h{iter.roi.h}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const MemberUploader: React.FC<{
     member: FamilyMember;
@@ -219,11 +292,11 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                 rois,
             };
 
-            const { imageData, similarityScores } =
+            const { imageData, similarityScores, debug } =
             await generateFamilyPhoto_3_Pass(settingsPayload, setProgressMessage);
 
             const finalImage = !isVip ? await applyWatermark(imageData) : imageData;
-            setResult({ id: `family-${Date.now()}`, imageUrl: finalImage, similarityScores });
+            setResult({ id: `family-${Date.now()}`, imageUrl: finalImage, similarityScores, debug });
         } catch (err: any) {
             console.error(err);
             const msg = err?.error?.message ?? err?.message ?? (typeof err === 'string' ? err : '');
@@ -389,31 +462,34 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                             <p className="mt-4 text-[var(--text-secondary)] animate-pulse">{progressMessage || t('familyStudio.generating')}</p>
                         </div>
                     ) : result ? (
-                        <div className="group relative w-full h-full rounded-lg overflow-hidden">
-                            <img src={result.imageUrl} alt="Generated family photo" className="object-contain w-full h-full animate-fade-in" />
-                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <button onClick={handleDownload} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
-                                    <i className="fas fa-download mr-2"></i> {t('familyStudio.download')}
-                                </button>
-                                {result.similarityScores && (
-                                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm p-2 rounded-md text-xs text-white">
-                                        <h5 className="font-bold mb-1">{t('resultCard.similarityScore')}:</h5>
-                                        {result.similarityScores.map(s => {
-                                             const member = settings.members.find(m => m.id === s.memberId);
-                                             const score = Math.max(0, s.score); // Clamp score
-                                             const scoreColor = score >= 0.85 ? 'text-green-400' : score >= 0.75 ? 'text-yellow-400' : 'text-red-400';
-                                             return (
-                                                <p key={s.memberId}>
-                                                    {member?.age || t('familyStudio.member')}:{' '}
-                                                    <span className={`font-bold ${scoreColor}`}>
-                                                        {(score * 100).toFixed(1)}%
-                                                    </span>
-                                                </p>
-                                             )
-                                        })}
-                                    </div>
-                                )}
+                        <div className="w-full h-full flex flex-col items-center">
+                            <div className="group relative w-full h-auto max-h-[70vh] rounded-lg overflow-hidden flex-shrink-0">
+                                <img src={result.imageUrl} alt="Generated family photo" className="w-full h-full object-contain animate-fade-in" />
+                                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <button onClick={handleDownload} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
+                                        <i className="fas fa-download mr-2"></i> {t('familyStudio.download')}
+                                    </button>
+                                    {result.similarityScores && (
+                                        <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm p-2 rounded-md text-xs text-white">
+                                            <h5 className="font-bold mb-1">{t('resultCard.similarityScore')}:</h5>
+                                            {result.similarityScores.map(s => {
+                                                const member = settings.members.find(m => m.id === s.memberId);
+                                                const score = Math.max(0, s.score); // Clamp score
+                                                const scoreColor = score >= 0.85 ? 'text-green-400' : score >= 0.75 ? 'text-yellow-400' : 'text-red-400';
+                                                return (
+                                                    <p key={s.memberId}>
+                                                        {member?.age || t('familyStudio.member')}:{' '}
+                                                        <span className={`font-bold ${scoreColor}`}>
+                                                            {(score * 100).toFixed(1)}%
+                                                        </span>
+                                                    </p>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            {result.debug && <DebugPanel debugData={result.debug} />}
                         </div>
                     ) : (
                         <div className="text-center p-8 text-gray-500">

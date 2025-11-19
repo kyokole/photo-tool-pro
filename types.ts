@@ -1,3 +1,4 @@
+
 // FIX: Import React to provide the 'React' namespace for React.ReactNode.
 import React from 'react';
 import type { LayoutResult as CoreLayoutResult } from './utils/canvasUtils';
@@ -368,6 +369,19 @@ export interface FamilyStudioResult {
     id: string;
     imageUrl: string;
     similarityScores?: { memberId: string, score: number }[];
+    debug?: {
+        pass1: string; // raw base64
+        roiJson: ROI[];
+        pass2: {
+            memberId: string;
+            debug: {
+                iteration: number;
+                roi: any;
+                maskBase64: string;
+                imageBase64: string;
+            }[];
+        }[];
+    };
 }
 
 
