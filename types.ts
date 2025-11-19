@@ -365,32 +365,34 @@ export interface FamilyStudioSettings {
     faceConsistency: boolean;
 }
 
-export interface FamilyStudioResult {
-    id: string;
-    imageUrl: string;
-    similarityScores?: { memberId: string, score: number }[];
-    debug?: {
-        pass1: string; // raw base64
-        roiJson: ROI[];
-        pass2: {
-            memberId: string;
-            debug: {
-                iteration: number;
-                roi: any;
-                maskBase64: string;
-                imageBase64: string;
-            }[];
-        }[];
-    };
-}
-
-
 export interface ROI {
     memberId: string;
     xPct: number;
     yPct: number;
     wPct: number;
     hPct: number;
+}
+
+// DEBUG INFO STRUCTURE
+export interface DebugInfo {
+    pass1: string; // base64 of pass 1 image
+    roiJson: ROI[]; // Detected ROIs
+    pass2: {
+        memberId: string;
+        debug: {
+            iteration: number;
+            roi: any;
+            maskBase64: string;
+            imageBase64: string;
+        }[];
+    }[];
+}
+
+export interface FamilyStudioResult {
+    id: string;
+    imageUrl: string;
+    similarityScores?: { memberId: string, score: number }[];
+    debug?: DebugInfo;
 }
 
 

@@ -487,10 +487,18 @@ const getAi = () => {
 
 const normalizeAndClampRois = (roisPct: ROIPercentage[], baseW: number, baseH: number): ROIAbsolute[] => {
   return roisPct.map(r => {
-    let x = Math.round(r.xPct * baseW);
-    let y = Math.round(r.yPct * baseH);
-    let w = Math.round(r.wPct * baseW);
-    let h = Math.round(r.hPct * baseH);
+    // SMART EXPANSION: Expand ROI slightly (40%) to ensure face is fully covered
+    const scale = 1.4;
+    const wPct = r.wPct * scale;
+    const hPct = r.hPct * scale;
+    const xPct = r.xPct - (wPct - r.wPct) / 2;
+    const yPct = r.yPct - (hPct - r.hPct) / 2;
+
+    let x = Math.round(xPct * baseW);
+    let y = Math.round(yPct * baseH);
+    let w = Math.round(wPct * baseW);
+    let h = Math.round(hPct * baseH);
+
     // clamp biên
     x = Math.max(0, Math.min(x, baseW - 1));
     y = Math.max(0, Math.min(y, baseH - 1));
@@ -692,14 +700,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const settings: SerializedFamilyStudioSettings = payload.settings;
             
                 // --- Pass 1: Generate Base Scene ---
+                // INTELLIGENT PROMPT: Forces placeholder faces (gray ovals) to help Pass 1.5 detector
                 const memberPlaceholders = settings.members.map(m => `'${m.age}'`).join(', ');
-                const baseScenePrompt = `Create a realistic, high-quality photograph with an aspect ratio of ${settings.aspectRatio}.
-- **Scene:** ${settings.scene}.
-- **Content:** The scene should contain ${settings.members.length} people: ${memberPlaceholders}.
-- **Arrangement:** They are posed together in a style described as "${settings.pose}".
-- **Outfits:** They are all wearing outfits matching the style "${settings.outfit}".
-- **CRITICAL:** Do NOT generate detailed faces. Instead, render blurred, generic, or featureless placeholders for the faces. The focus is on the composition, lighting, and scene, not the identities.
-- **Additional details:** ${settings.customPrompt || 'Create a warm and happy atmosphere.'}`;
+                const baseScenePrompt = `You are generating a BASE LAYOUT image for a later face-replacement pipeline.
+
+[GOAL]
+Create a realistic, high-quality photograph with an aspect ratio of ${settings.aspectRatio}.
+This pass is ONLY for composition, camera, lighting and body pose.
+IDENTITY IS FORBIDDEN in this pass.
+
+[SCENE]
+- Scene: ${settings.scene}.
+- Number of people: ${settings.members.length} people: ${memberPlaceholders}.
+- Arrangement: They stand together in a family portrait style: "${settings.pose}".
+- Outfits: All wear outfits matching "${settings.outfit}".
+
+[PLACEHOLDER FACES – DO NOT DRAW REAL FACES]
+For EVERY person in the image:
+- Draw the head, hair and body normally.
+- BUT the face area MUST be a flat, featureless placeholder:
+    • Shape: a simple oval or circle.
+    • Color: solid mid-gray (#808080), no texture, no shading.
+    • NO eyes, NO nose, NO mouth, NO eyebrows, NO facial details at all.
+    • The placeholder must fully cover the face region from forehead to chin.
+    • The placeholder must have HARD edges and strong contrast with skin.
+
+ABSOLUTE RULES:
+- DO NOT generate realistic faces.
+- DO NOT generate any facial feature.
+- If you accidentally start to draw a real face, replace it with a gray oval mask.
+
+[OUTPUT]
+Return ONE photorealistic scene with correct composition, camera and lighting.
+Faces must look like gray oval masks, not real people.
+Additional details: ${settings.customPrompt || 'Create a warm and happy family atmosphere.'}`;
                 
                 const baseSceneResponse: GenerateContentResponse = await callGeminiWithRetry<GenerateContentResponse>('family_pass1_base_scene', () =>
                     ai.models.generateContent({
@@ -724,7 +758,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
 
                 // --- Pass 1.5: Detect ROIs from the generated scene ---
-                const roiDetectionPrompt = `Analyze the provided image. It contains ${settings.members.length} people with blurred or placeholder faces. Your task is to identify the bounding box for each of these placeholder faces.
+                const roiDetectionPrompt = `Analyze the provided image. It contains ${settings.members.length} people with gray oval placeholder faces. Your task is to identify the bounding box for each of these placeholder faces.
 Return ONLY a valid JSON array where each object represents a face and has the following keys: "xPct", "yPct", "wPct", "hPct". These values must be percentages (0.0 to 1.0) of the total image width and height.
 The array should be sorted by the x-coordinate of the faces, from left to right.
 Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"xPct": 0.6, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}]`;
@@ -847,14 +881,26 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                     } else {
                         // Low score: fallback to hard-swap for guaranteed identity
                         console.warn(`Low similarity score (${bestScore}) for member ${member.id}. Falling back to hard-swap.`);
-                        const refFaceCropped = await sharp(Buffer.from(member.photo.base64, 'base64'))
+                        
+                        // FALLBACK IMPROVEMENT: Center crop reference instead of full resize
+                        const refInput = sharp(Buffer.from(member.photo.base64, 'base64'));
+                        const refMeta = await refInput.metadata();
+                        const rw = refMeta.width || roi.w;
+                        const rh = refMeta.height || roi.h;
+                        // Get center ~70% crop to avoid background
+                        const cropSize = Math.round(Math.min(rw, rh) * 0.7);
+                        const cropX = Math.round((rw - cropSize) / 2);
+                        const cropY = Math.round((rh - cropSize) / 2);
+
+                        const refFaceCropped = await refInput
+                            .extract({ left: cropX, top: cropY, width: cropSize, height: cropSize })
                             .resize(roi.w, roi.h)
                             .toBuffer();
                         
                         const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
-                        // FIX: Use Buffer.alloc for mask creation instead of sharp({create}) to avoid type issues
+                        // FIX: Use Buffer.alloc for mask creation to fix build error
                         const hardSwapMask = await sharp(
-                            Buffer.alloc(roi.w * roi.h, 255),
+                            Buffer.alloc(roi.w * roi.h, 255), // 255 is white
                             { raw: { width: roi.w, height: roi.h, channels: 1 } }
                         ).blur(feather / 2).png().toBuffer();
             

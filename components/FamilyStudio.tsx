@@ -24,58 +24,44 @@ const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']>
 
     if (!isOpen) {
         return (
-            <button onClick={() => setIsOpen(true)} className="mt-6 text-xs text-gray-500 hover:text-white underline w-full text-center">
-                🛠️ Show Debug Info (Pass 1, ROI, Masks)
+            <button onClick={() => setIsOpen(true)} className="mt-4 text-xs text-gray-500 hover:text-white underline w-full text-center opacity-50 hover:opacity-100 transition-opacity">
+                🛠️ Open Debug Inspector
             </button>
         );
     }
 
     return (
-        <div className="mt-6 w-full bg-black/80 p-4 rounded-lg text-xs text-left text-gray-300 font-mono overflow-hidden border border-gray-700">
+        <div className="mt-4 w-full bg-[#0d1117] border border-gray-700 rounded-lg p-4 text-left font-mono text-xs text-gray-300 shadow-2xl">
             <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                <h3 className="font-bold text-yellow-400 text-sm">DEBUG INSPECTOR</h3>
-                <button onClick={() => setIsOpen(false)} className="text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-900/30">Close</button>
+                <h3 className="font-bold text-yellow-500 uppercase tracking-wider">Debug Inspector</h3>
+                <button onClick={() => setIsOpen(false)} className="text-red-400 hover:text-red-300 px-2">✕</button>
             </div>
 
-            {/* Pass 1 */}
+            {/* PASS 1 */}
             <div className="mb-6">
-                <h4 className="font-bold text-blue-400 mb-2">PASS 1: Base Scene (Generated)</h4>
-                <div className="w-full max-w-xs bg-gray-900 rounded border border-gray-700 overflow-hidden">
-                    <img src={b64Src(debugData.pass1)} alt="Pass 1" className="w-full h-auto opacity-90 hover:opacity-100" />
+                <h4 className="text-blue-400 font-bold mb-2 border-l-2 border-blue-400 pl-2">PASS 1: Base Scene (Generated)</h4>
+                <div className="relative w-full aspect-[4/3] bg-gray-800 rounded overflow-hidden border border-gray-600">
+                     <img src={b64Src(debugData.pass1)} className="w-full h-full object-contain" alt="Pass 1 Base" />
                 </div>
             </div>
 
-            {/* ROI */}
+             {/* PASS 2 */}
             <div className="mb-6">
-                <h4 className="font-bold text-green-400 mb-2">PASS 1.5: ROI Detection (JSON)</h4>
-                <pre className="bg-gray-900 p-3 rounded overflow-x-auto border border-gray-700 text-green-200">
-                    {JSON.stringify(debugData.roiJson, null, 2)}
-                </pre>
-            </div>
-
-            {/* Pass 2 Loop */}
-            <div>
-                <h4 className="font-bold text-pink-400 mb-2">PASS 2 & 3: Inpaint & Refine Loops</h4>
-                <div className="space-y-6">
-                    {debugData.pass2.map((member, idx) => (
-                        <div key={idx} className="bg-gray-900/50 p-3 rounded border border-gray-700">
-                            <p className="font-bold text-white mb-3 border-b border-gray-700/50 pb-1">Member ID: <span className="text-cyan-300">{member.memberId}</span></p>
-                            <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-thin">
-                                {member.debug.map((iter, i) => (
-                                    <div key={i} className="flex-shrink-0 w-48 flex flex-col gap-2 bg-black/40 p-2 rounded">
-                                        <div className="text-[10px] text-center text-gray-400 font-bold bg-gray-800 rounded py-0.5">Iteration #{iter.iteration}</div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] text-center text-gray-500 mb-1">Mask</span>
-                                                <img src={b64Src(iter.maskBase64)} className="w-full aspect-auto border border-gray-600 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-gray-700" />
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[9px] text-center text-gray-500 mb-1">Result</span>
-                                                <img src={b64Src(iter.imageBase64)} className="w-full aspect-auto border border-gray-600" />
-                                            </div>
+                <h4 className="text-pink-400 font-bold mb-2 border-l-2 border-pink-400 pl-2">PASS 2 & 3: Inpaint Loops</h4>
+                <div className="space-y-4">
+                    {debugData.pass2.map((m, idx) => (
+                        <div key={idx} className="bg-gray-800/50 p-2 rounded border border-gray-700">
+                            <p className="mb-2 font-bold text-gray-400">Member: <span className="text-cyan-300">{m.memberId}</span></p>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {m.debug.map((iter, i) => (
+                                    <div key={i} className="flex-shrink-0 w-32">
+                                        <div className="text-[10px] text-center bg-gray-900 py-1 rounded-t text-gray-500">Iter {iter.iteration}</div>
+                                        <div className="grid grid-cols-2 gap-px bg-gray-600 border border-gray-600">
+                                             <img src={b64Src(iter.maskBase64)} className="w-full aspect-square object-cover bg-black/50" title="Mask" />
+                                             <img src={b64Src(iter.imageBase64)} className="w-full aspect-square object-cover" title="Inpaint Result" />
                                         </div>
-                                        <div className="text-[9px] text-gray-500 bg-gray-800 p-1.5 rounded truncate font-mono" title={`x:${iter.roi.x}, y:${iter.roi.y}, w:${iter.roi.w}, h:${iter.roi.h}`}>
-                                            ROI: x{iter.roi.x}, y{iter.roi.y}, w{iter.roi.w}, h{iter.roi.h}
+                                        <div className="bg-gray-900 text-[9px] p-1 text-gray-500 rounded-b truncate">
+                                            ROI: {Math.round(iter.roi.x)},{Math.round(iter.roi.y)}
                                         </div>
                                     </div>
                                 ))}
@@ -83,6 +69,14 @@ const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']>
                         </div>
                     ))}
                 </div>
+            </div>
+
+            {/* ROI JSON */}
+             <div>
+                <h4 className="text-green-400 font-bold mb-2 border-l-2 border-green-400 pl-2">ROI Data (Pass 1.5)</h4>
+                <pre className="bg-gray-900 p-2 rounded text-[10px] text-green-300 overflow-x-auto custom-scrollbar">
+                    {JSON.stringify(debugData.roiJson, null, 2)}
+                </pre>
             </div>
         </div>
     );
