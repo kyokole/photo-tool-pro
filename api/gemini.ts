@@ -1,3 +1,4 @@
+
 // FIX: Removed triple-slash directive for 'node' as it causes errors in environments where @types/node is not present (like the testing environment).
 // The 'Buffer' type is declared as 'any' below as a fallback.
 // Fallback cho môi trường không có @types/node (Google AI Studio, editor).
@@ -34,6 +35,17 @@ interface RestorationOptions {
   age: 'auto' | 'child' | 'young_adult' | 'adult' | 'elderly';
   context: string;
 }
+
+// Added for Document Restoration
+interface DocumentRestorationOptions {
+  documentType: 'general' | 'id_card' | 'license' | 'certificate' | 'handwritten';
+  removeStains: boolean;
+  deskew: boolean;
+  enhanceText: boolean;
+  preserveSignatures: boolean;
+  customPrompt: string;
+}
+
 interface Settings {
   aspectRatio: AspectRatio;
   outfit: {
@@ -514,29 +526,23 @@ const makeFeatherMaskBuffer = async (
   roi: ROIAbsolute,
   feather: number
 ) => {
-  // REPLACE the sharp({ create: ... }) with Buffer.alloc()
-  // Creating a blank transparent image using raw buffer first
-  // 4 channels (RGBA), width * height pixels
-  const blankBuffer = Buffer.alloc(baseW * baseH * 4, 0); 
-  
-  const rectSvg = Buffer.from(
-    `<svg width="${roi.w}" height="${roi.h}"><rect x="0" y="0" width="${roi.w}" height="${roi.h}" fill="white"/></svg>`
-  );
-
-  const patch = await sharp(rectSvg).png().toBuffer();
-  const patchFeather = await sharp(patch).blur(feather / 2).png().toBuffer();
-
-  // Load the blank buffer into sharp, treating it as raw pixel data
-  return await sharp(blankBuffer, {
-      raw: {
-        width: baseW,
-        height: baseH,
-        channels: 4
-      }
-    })
-    .composite([{ input: patchFeather as any, left: roi.x, top: roi.y }])
-    .png()
-    .toBuffer();
+    // Use SVG to create the mask. This avoids allocating a huge raw buffer
+    // and lets Sharp handle the rasterization efficiently.
+    // White = editable (transparent in original image sense, but here we are making a mask),
+    // Black = protected.
+    // SVG Coordinates:
+    const svg = `
+    <svg width="${baseW}" height="${baseH}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="blurFilter" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="${feather / 2}" />
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" fill="black" />
+      <rect x="${roi.x}" y="${roi.y}" width="${roi.w}" height="${roi.h}" fill="white" filter="url(#blurFilter)" />
+    </svg>`;
+    
+    return await sharp(Buffer.from(svg)).png().toBuffer();
 };
 
 
@@ -898,11 +904,19 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                             .toBuffer();
                         
                         const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
-                        // FIX: Use Buffer.alloc for mask creation to fix build error
-                        const hardSwapMask = await sharp(
-                            Buffer.alloc(roi.w * roi.h, 255), // 255 is white
-                            { raw: { width: roi.w, height: roi.h, channels: 1 } }
-                        ).blur(feather / 2).png().toBuffer();
+                        // USE SVG FOR MASK to prevent allocation errors
+                        const maskSvg = `
+                            <svg width="${roi.w}" height="${roi.h}" xmlns="http://www.w3.org/2000/svg">
+                              <defs>
+                                <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+                                  <feGaussianBlur in="SourceGraphic" stdDeviation="${feather / 2}" />
+                                </filter>
+                              </defs>
+                              <rect width="100%" height="100%" fill="black" />
+                              <rect width="100%" height="100%" fill="white" filter="url(#blur)" />
+                            </svg>`;
+                        
+                        const hardSwapMask = await sharp(Buffer.from(maskSvg)).png().toBuffer();
             
                         const faceWithAlpha = await sharp(refFaceCropped)
                             .composite([{ input: hardSwapMask, blend: 'dest-in' }])
@@ -1038,6 +1052,55 @@ ${requestPrompt}
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
             }
+            
+            case 'performRestoration': {
+                if (!payload || !payload.imagePart || !payload.options) return res.status(400).json({ error: 'Thiếu ảnh hoặc tùy chọn phục hồi.' });
+                const { imagePart, options } = payload;
+
+                const requestPrompt = buildRestorationPrompt(options);
+                const fullPrompt = createFinalPromptVn(requestPrompt, true);
+                
+                const response: GenerateContentResponse = await models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [imagePart, { text: fullPrompt }] },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
+                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) {
+                    throw new Error("API không trả về hình ảnh.");
+                }
+                
+                const { data, mimeType } = resultPart.inlineData;
+                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+            }
+            
+            case 'performDocumentRestoration': {
+                if (!payload || !payload.imagePart || !payload.options) return res.status(400).json({ error: 'Thiếu dữ liệu ảnh hoặc tùy chọn.' });
+                const { imagePart, options } = payload;
+                const { documentType, removeStains, deskew, enhanceText, preserveSignatures, customPrompt } = options;
+
+                let prompt = `Bạn là chuyên gia phục hồi tài liệu AI. Hãy xử lý hình ảnh tài liệu này (loại: ${documentType}).\n`;
+                if (removeStains) prompt += `- Loại bỏ hoàn toàn các vết ố vàng, nấm mốc, nếp gấp và vết bẩn trên giấy để nền giấy trông sạch sẽ hơn.\n`;
+                if (deskew) prompt += `- Căn chỉnh lại tài liệu cho thẳng, phẳng (deskew/dewarp) nếu bị nghiêng, cong hoặc chụp ở góc xiên.\n`;
+                if (enhanceText) prompt += `- Tăng độ nét, độ tương phản và làm đậm nét chữ để văn bản dễ đọc hơn, khắc phục các chỗ chữ bị mờ.\n`;
+                if (preserveSignatures) prompt += `- QUAN TRỌNG: Giữ nguyên vẹn, làm rõ và tăng cường màu sắc cho các chữ ký và con dấu đỏ (mộc). Không được làm biến dạng hoặc mất nét các yếu tố này.\n`;
+                if (customPrompt) prompt += `- Yêu cầu khác: ${customPrompt}\n`;
+                
+                prompt += `Trả về hình ảnh tài liệu đã được làm sạch và phục hồi chất lượng cao. Giữ nguyên độ phân giải gốc nếu có thể.`;
+
+                const response: GenerateContentResponse = await models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: { parts: [imagePart, { text: prompt }] },
+                    config: { responseModalities: [Modality.IMAGE] }
+                });
+                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
+                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) {
+                    throw new Error("API không trả về hình ảnh.");
+                }
+                
+                const { data, mimeType } = resultPart.inlineData;
+                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
+            }
 
             case 'generateVideoPrompt': {
                 if (!payload || !payload.userIdea || !payload.base64Image) {
@@ -1125,27 +1188,6 @@ Example response format:
                 const response: GenerateContentResponse = await models.generateContent({ model: 'gemini-2.5-flash-image', contents: { parts: [imagePart, { text: fullPrompt }] }, config: { responseModalities: [Modality.IMAGE] } });
                 const resultPart = response.candidates?.[0]?.content?.parts?.[0];
                 if (!resultPart?.inlineData?.data || !resultPart.inlineData.mimeType) throw new Error("API không trả về hình ảnh.");
-                
-                const { data, mimeType } = resultPart.inlineData;
-                return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
-            }
-            
-            case 'performRestoration': {
-                if (!payload || !payload.imagePart || !payload.options) return res.status(400).json({ error: 'Thiếu ảnh hoặc tùy chọn phục hồi.' });
-                const { imagePart, options } = payload;
-
-                const requestPrompt = buildRestorationPrompt(options);
-                const fullPrompt = createFinalPromptVn(requestPrompt, true);
-                
-                const response: GenerateContentResponse = await models.generateContent({
-                    model: 'gemini-2.5-flash-image',
-                    contents: { parts: [imagePart, { text: fullPrompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                });
-                const resultPart = response.candidates?.[0]?.content?.parts?.[0];
-                if (!resultPart?.inlineData?.data || !resultPart?.inlineData?.mimeType) {
-                    throw new Error("API không trả về hình ảnh.");
-                }
                 
                 const { data, mimeType } = resultPart.inlineData;
                 return res.status(200).json({ imageData: `data:${mimeType};base64,${data}` });
