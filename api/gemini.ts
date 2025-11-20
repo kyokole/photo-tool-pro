@@ -1,4 +1,3 @@
-
 // FIX: Removed triple-slash directive for 'node' as it causes errors in environments where @types/node is not present (like the testing environment).
 // The 'Buffer' type is declared as 'any' below as a fallback.
 // Fallback cho môi trường không có @types/node (Google AI Studio, editor).
@@ -481,6 +480,31 @@ const smartCropServer = async (imageBase64: string, aspectRatio: AspectRatio): P
     return croppedBuffer.toString('base64');
 };
 
+// Helper to crop the face/center region from the reference image to remove background noise
+// This is critical to prevent "square card" effect when the reference has a strong background
+// CHANGE: Explicitly return Promise<any> to avoid "Buffer refers to a value" error.
+const getReferenceFaceBuffer = async (base64Data: string): Promise<any> => {
+    const buf = Buffer.from(base64Data, 'base64');
+    try {
+        const img = sharp(buf);
+        const meta = await img.metadata();
+        const w = meta.width ?? 0;
+        const h = meta.height ?? 0;
+
+        if (!w || !h) return buf;
+
+        // Simple center crop of 70%
+        const size = Math.round(Math.min(w, h) * 0.7);
+        const left = Math.round((w - size) / 2);
+        const top = Math.round((h - size) / 2);
+
+        return await img.extract({ left, top, width: size, height: size }).toBuffer();
+    } catch (e) {
+        console.warn("Failed to crop reference face, using original.", e);
+        return buf;
+    }
+};
+
 // Helper to convert base64 from client to a format the SDK understands
 const base64ToPart = (fileData: { base64: string, mimeType: string }): Part => ({
     inlineData: {
@@ -526,20 +550,24 @@ const makeFeatherMaskBuffer = async (
   roi: ROIAbsolute,
   feather: number
 ) => {
-    // Use SVG to create the mask. This avoids allocating a huge raw buffer
-    // and lets Sharp handle the rasterization efficiently.
+    // Use SVG to create an OVAL mask for better face blending.
     // White = editable (transparent in original image sense, but here we are making a mask),
     // Black = protected.
     // SVG Coordinates:
+    const rx = roi.w / 2;
+    const ry = roi.h / 2;
+    const cx = roi.x + rx;
+    const cy = roi.y + ry;
+
     const svg = `
     <svg width="${baseW}" height="${baseH}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <filter id="blurFilter" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="${feather / 2}" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="${feather}" />
         </filter>
       </defs>
       <rect width="100%" height="100%" fill="black" />
-      <rect x="${roi.x}" y="${roi.y}" width="${roi.w}" height="${roi.h}" fill="white" filter="url(#blurFilter)" />
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" filter="url(#blurFilter)" />
     </svg>`;
     
     return await sharp(Buffer.from(svg)).png().toBuffer();
@@ -697,8 +725,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         switch (action) {
             case 'generateFamilyPhoto_3_Pass': {
-                const FAMILY_SIM_THRESHOLD = Number(process.env.FAMILY_SIM_THRESHOLD ?? 0.85);
-                const FAMILY_MAX_REFINES = Number(process.env.FAMILY_MAX_REFINES ?? 3);
+                // LOWER THRESHOLD to reduce fallback rate for difficult cases
+                const FAMILY_SIM_THRESHOLD = Number(process.env.FAMILY_SIM_THRESHOLD ?? 0.78);
+                const FAMILY_MAX_REFINES = Number(process.env.FAMILY_MAX_REFINES ?? 4);
 
                 if (!payload || !payload.settings) {
                     return res.status(400).json({ error: 'Missing settings for 3-pass family photo generation.' });
@@ -828,7 +857,15 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                         continue;
                     }
             
-                    const refFacePart = base64ToPart(member.photo);
+                    // Optimization: Crop reference face to 70% to remove background noise
+                    const refFaceBuffer = await getReferenceFaceBuffer(member.photo.base64);
+                    const refFacePart: Part = {
+                        inlineData: {
+                            data: refFaceBuffer.toString('base64'),
+                            mimeType: member.photo.mimeType,
+                        },
+                    };
+
                     const memberDescription = `${member.age}${member.bodyDescription ? ', ' + member.bodyDescription : ''}`;
             
                     let bestPatchFullImageBuffer: any | null = null;
@@ -885,43 +922,39 @@ Example for 2 faces: [{"xPct": 0.25, "yPct": 0.2, "wPct": 0.15, "hPct": 0.2}, {"
                         // High score: use the well-blended inpaint result
                         currentImageBuffer = bestPatchFullImageBuffer;
                     } else {
-                        // Low score: fallback to hard-swap for guaranteed identity
+                        // Low score: fallback to hard-swap but with PROPER MASKING to avoid square cut
                         console.warn(`Low similarity score (${bestScore}) for member ${member.id}. Falling back to hard-swap.`);
                         
-                        // FALLBACK IMPROVEMENT: Center crop reference instead of full resize
-                        const refInput = sharp(Buffer.from(member.photo.base64, 'base64'));
-                        const refMeta = await refInput.metadata();
-                        const rw = refMeta.width || roi.w;
-                        const rh = refMeta.height || roi.h;
-                        // Get center ~70% crop to avoid background
-                        const cropSize = Math.round(Math.min(rw, rh) * 0.7);
-                        const cropX = Math.round((rw - cropSize) / 2);
-                        const cropY = Math.round((rh - cropSize) / 2);
-
-                        const refFaceCropped = await refInput
-                            .extract({ left: cropX, top: cropY, width: cropSize, height: cropSize })
-                            .resize(roi.w, roi.h)
+                        // 1. Resize reference cropped face to fill ROI
+                        const patchW = roi.w;
+                        const patchH = roi.h;
+                        const refFaceCropped = await sharp(refFaceBuffer)
+                            .resize(patchW, patchH, { fit: 'cover' })
+                            .ensureAlpha() // CRITICAL: Ensure alpha channel exists
                             .toBuffer();
                         
-                        const feather = Math.round(Math.min(roi.w, roi.h) * 0.12);
-                        // USE SVG FOR MASK to prevent allocation errors
+                        // 2. Create a feathered mask for the PATCH size (Oval)
+                        const feather = Math.round(Math.min(patchW, patchH) * 0.15);
                         const maskSvg = `
-                            <svg width="${roi.w}" height="${roi.h}" xmlns="http://www.w3.org/2000/svg">
+                            <svg width="${patchW}" height="${patchH}" xmlns="http://www.w3.org/2000/svg">
                               <defs>
                                 <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
-                                  <feGaussianBlur in="SourceGraphic" stdDeviation="${feather / 2}" />
+                                  <feGaussianBlur in="SourceGraphic" stdDeviation="${feather}" />
                                 </filter>
                               </defs>
                               <rect width="100%" height="100%" fill="black" />
-                              <rect width="100%" height="100%" fill="white" filter="url(#blur)" />
+                              <ellipse cx="${patchW/2}" cy="${patchH/2}" rx="${patchW/2 - feather}" ry="${patchH/2 - feather}" fill="white" filter="url(#blur)" />
                             </svg>`;
                         
-                        const hardSwapMask = await sharp(Buffer.from(maskSvg)).png().toBuffer();
+                        const patchMask = await sharp(Buffer.from(maskSvg)).png().toBuffer();
             
+                        // 3. Apply mask to the face patch
                         const faceWithAlpha = await sharp(refFaceCropped)
-                            .composite([{ input: hardSwapMask, blend: 'dest-in' }])
-                            .png().toBuffer();
+                            .composite([{ input: patchMask, blend: 'dest-in' }])
+                            .png()
+                            .toBuffer();
                         
+                        // 4. Composite masked patch onto current scene
                         currentImageBuffer = await sharp(currentImageBuffer)
                             .composite([{ input: faceWithAlpha, left: roi.x, top: roi.y }])
                             .toBuffer();
