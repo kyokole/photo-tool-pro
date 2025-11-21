@@ -8,6 +8,7 @@ import { FAMILY_SCENES, FAMILY_OUTFITS, FAMILY_POSES, DEFAULT_FAMILY_STUDIO_SETT
 import { serializeFamilyMembers } from '../utils/fileUtils';
 import { generateFamilyPhoto_3_Pass } from '../services/geminiService';
 import { applyWatermark, dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
+import { ZoomModal } from './creativestudio/ZoomModal';
 
 interface FamilyStudioProps {
     theme: string;
@@ -192,6 +193,7 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [progressMessage, setProgressMessage] = useState<string>('');
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
     const dragItem = useRef<number | null>(null);
     const dragOverItem = useRef<number | null>(null);
@@ -458,7 +460,10 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                         <div className="w-full h-full flex flex-col items-center">
                             <div className="group relative w-full h-auto max-h-[70vh] rounded-lg overflow-hidden flex-shrink-0">
                                 <img src={result.imageUrl} alt="Generated family photo" className="w-full h-full object-contain animate-fade-in" />
-                                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-2">
+                                    <button title={t('aiStudio.gallery.zoom')} onClick={() => setZoomedImage(result.imageUrl.split(',')[1])} className="h-10 w-10 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] rounded-full flex items-center justify-center text-[var(--text-primary)]">
+                                        <span role="img" aria-label="zoom">🔍</span>
+                                    </button>
                                     <button onClick={handleDownload} className="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center transform transition-transform duration-200 hover:scale-105">
                                         <i className="fas fa-download mr-2"></i> {t('familyStudio.download')}
                                     </button>
@@ -499,6 +504,13 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                     )}
                 </main>
             </main>
+            {zoomedImage && (
+                <ZoomModal
+                    isOpen={!!zoomedImage}
+                    onClose={() => setZoomedImage(null)}
+                    base64Image={zoomedImage}
+                />
+            )}
         </div>
     );
 };

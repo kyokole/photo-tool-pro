@@ -365,7 +365,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     });
                 }
 
-                // 2. Construct the Advanced Multimodal Prompt
+                // 2. Construct the Advanced Multimodal Prompt with IDENTITY ANCHORING
+                let identityInstruction = "";
+                if (faceConsistency) {
+                    identityInstruction = `
+                    [HYPER-REALISTIC IDENTITY PRESERVATION PROTOCOL]
+                    You are a forensic artist. Your PRIMARY GOAL is to transfer the exact facial features (eyes, nose, mouth shape, unique skin irregularities, facial proportions) from the reference images to the generated image. 
+                    1. **IGNORE generic beauty standards.** Do not make the faces look like generic AI models. 
+                    2. **COPY** the exact facial structure from [REFERENCE_MEMBER_x]. Treat the reference face as a TEXTURE MAP to be applied.
+                    3. **Maintain Ethnicity and Age** strictly as visible in the reference.
+                    4. If the reference has a specific expression (e.g., smile), keep it unless the pose requires otherwise.
+                    `;
+                }
+
                 const prompt = `
                 [TASK] Create a hyper-realistic family photo compositing the specific people provided above.
                 [MODEL] Gemini 3 Pro Image Preview / Nano Banana Pro (High Fidelity Mode).
@@ -375,12 +387,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 [GLOBAL POSE] ${pose}.
                 [ADDITIONAL DETAILS] ${customPrompt}.
                 
-                [CRITICAL INSTRUCTIONS FOR FACE CONSISTENCY]
-                1. **Identity Locking**: You MUST use the provided reference images [REFERENCE_MEMBER_x] as the absolute ground truth for faces. Do not generate random people. The generated faces must be recognizable as the specific individuals uploaded.
-                2. **Composition**: Arrange the members naturally in the scene based on their designated positions (Left/Center/Right).
-                3. **Interaction**: Ensure natural interaction (eye contact, touching, lighting consistency) between members so they look like they are truly in the same space.
-                4. **Quality**: 8K resolution, photorealistic texture, perfect eyes, skin texture preservation.
-                ${faceConsistency ? "5. **STRICT MODE**: Do not beautify or alter facial structures excessively. Maintain the unique characteristics of each person." : ""}
+                ${identityInstruction}
+                
+                [COMPOSITION INSTRUCTIONS]
+                1. Arrange the members naturally in the scene based on their designated positions.
+                2. Interaction: Ensure natural interaction (eye contact, touching, lighting consistency) so they look like they are truly in the same space.
+                3. Quality: 8K resolution, photorealistic texture, perfect eyes, skin texture preservation.
                 
                 Generate the final composite image now.
                 `;
@@ -392,7 +404,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
-                        imageConfig: { imageSize: '4K' } // Explicitly requesting 4K
+                        imageConfig: { imageSize: '4K' } // Explicitly requesting 4K for detail
                     }
                 });
 
