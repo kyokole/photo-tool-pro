@@ -25,7 +25,7 @@ const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']>
     if (!isOpen) {
         return (
             <button onClick={() => setIsOpen(true)} className="mt-4 text-xs text-gray-500 hover:text-white underline w-full text-center opacity-50 hover:opacity-100 transition-opacity">
-                🛠️ Open Debug Inspector
+                🛠️ Xem Thông tin Kỹ thuật (Debug)
             </button>
         );
     }
@@ -33,13 +33,13 @@ const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']>
     return (
         <div className="mt-4 w-full bg-[#0d1117] border border-gray-700 rounded-lg p-4 text-left font-mono text-xs text-gray-300 shadow-2xl">
             <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                <h3 className="font-bold text-yellow-500 uppercase tracking-wider">Debug Inspector</h3>
+                <h3 className="font-bold text-yellow-500 uppercase tracking-wider">Thông tin Kỹ thuật</h3>
                 <button onClick={() => setIsOpen(false)} className="text-red-400 hover:text-red-300 px-2">✕</button>
             </div>
 
             {/* PASS 1 */}
             <div className="mb-6">
-                <h4 className="text-blue-400 font-bold mb-2 border-l-2 border-blue-400 pl-2">PASS 1: Base Scene (Generated)</h4>
+                <h4 className="text-blue-400 font-bold mb-2 border-l-2 border-blue-400 pl-2">Bước 1: Cảnh nền cơ sở</h4>
                 <div className="relative w-full aspect-[4/3] bg-gray-800 rounded overflow-hidden border border-gray-600">
                      <img src={b64Src(debugData.pass1)} className="w-full h-full object-contain" alt="Pass 1 Base" />
                 </div>
@@ -47,21 +47,21 @@ const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']>
 
              {/* PASS 2 */}
             <div className="mb-6">
-                <h4 className="text-pink-400 font-bold mb-2 border-l-2 border-pink-400 pl-2">PASS 2 & 3: Inpaint Loops</h4>
+                <h4 className="text-pink-400 font-bold mb-2 border-l-2 border-pink-400 pl-2">Bước 2 & 3: Quá trình Inpainting</h4>
                 <div className="space-y-4">
                     {debugData.pass2.map((m, idx) => (
                         <div key={idx} className="bg-gray-800/50 p-2 rounded border border-gray-700">
-                            <p className="mb-2 font-bold text-gray-400">Member: <span className="text-cyan-300">{m.memberId}</span></p>
+                            <p className="mb-2 font-bold text-gray-400">Thành viên: <span className="text-cyan-300">{m.memberId}</span></p>
                             <div className="flex gap-2 overflow-x-auto pb-2">
                                 {m.debug.map((iter, i) => (
                                     <div key={i} className="flex-shrink-0 w-32">
-                                        <div className="text-[10px] text-center bg-gray-900 py-1 rounded-t text-gray-500">Iter {iter.iteration}</div>
+                                        <div className="text-[10px] text-center bg-gray-900 py-1 rounded-t text-gray-500">Lần lặp {iter.iteration}</div>
                                         <div className="grid grid-cols-2 gap-px bg-gray-600 border border-gray-600">
-                                             <img src={b64Src(iter.maskBase64)} className="w-full aspect-square object-cover bg-black/50" title="Mask" />
-                                             <img src={b64Src(iter.imageBase64)} className="w-full aspect-square object-cover" title="Inpaint Result" />
+                                             <img src={b64Src(iter.maskBase64)} className="w-full aspect-square object-cover bg-black/50" title="Mặt nạ (Mask)" />
+                                             <img src={b64Src(iter.imageBase64)} className="w-full aspect-square object-cover" title="Kết quả Inpaint" />
                                         </div>
                                         <div className="bg-gray-900 text-[9px] p-1 text-gray-500 rounded-b truncate">
-                                            ROI: {Math.round(iter.roi.x)},{Math.round(iter.roi.y)}
+                                            Vùng: {Math.round(iter.roi.x)},{Math.round(iter.roi.y)}
                                         </div>
                                     </div>
                                 ))}
@@ -73,7 +73,7 @@ const DebugPanel: React.FC<{ debugData: NonNullable<FamilyStudioResult['debug']>
 
             {/* ROI JSON */}
              <div>
-                <h4 className="text-green-400 font-bold mb-2 border-l-2 border-green-400 pl-2">ROI Data (Pass 1.5)</h4>
+                <h4 className="text-green-400 font-bold mb-2 border-l-2 border-green-400 pl-2">Dữ liệu Vùng (ROI)</h4>
                 <pre className="bg-gray-900 p-2 rounded text-[10px] text-green-300 overflow-x-auto custom-scrollbar">
                     {JSON.stringify(debugData.roiJson, null, 2)}
                 </pre>
@@ -125,7 +125,7 @@ const MemberUploader: React.FC<{
                     {imageUrl ? (
                         <img src={imageUrl} alt={`Member ${memberNumber}`} className="w-full h-full object-cover rounded-md" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)] text-3xl">
+                        <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)] text-3xl cursor-pointer">
                            <i className="fas fa-user-plus"></i>
                         </div>
                     )}
@@ -198,12 +198,10 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
     const dragItem = useRef<number | null>(null);
     const dragOverItem = useRef<number | null>(null);
     
-    // ✅ Chuẩn hoá updateSettings
     const updateSettings = (update: Partial<FamilyStudioSettings>) => {
       setSettings(prev => ({ ...prev, ...update }));
     };
 
-    // ✅ Thêm thành viên
     const addMember = () => {
       if (settings.members.length >= 9) {
         alert(t('familyStudio.maxMembersReached'));
@@ -213,7 +211,6 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
       setSettings(prev => ({ ...prev, members: [...prev.members, newMember] }));
     };
 
-    // ✅ Xoá thành viên
     const removeMember = (id: string) => {
       if (settings.members.length <= 2) {
         alert(t('familyStudio.minMembersRequired'));
@@ -222,7 +219,6 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
       setSettings(prev => ({ ...prev, members: prev.members.filter(m => m.id !== id) }));
     };
 
-    // ✅ Cập nhật 1 member
     const updateMember = (id: string, update: Partial<FamilyMember>) => {
       setSettings(prev => ({
         ...prev,
@@ -232,7 +228,6 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
       }));
     };
 
-    // ✅ DnD handlers
     const handleDragStart = (index: number) => (dragItem.current = index);
     const handleDragEnter = (index: number) => (dragOverItem.current = index);
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();

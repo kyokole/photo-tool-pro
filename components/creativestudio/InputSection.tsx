@@ -1,14 +1,15 @@
+
 // components/creativestudio/InputSection.tsx
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Feature, FeatureAction, FeatureInput, Concept } from '../../types';
 import { FileUpload } from './FileUpload';
 import { MultiSelect } from './MultiSelect';
+import { SliderInput } from './SliderInput';
 import { Spinner } from './Spinner';
 import { getHotTrends } from '../../services/creativeStudioService';
 import { MALE_HAIRSTYLE_NAMES, FEMALE_HAIRSTYLE_NAMES, YOGA_POSES_BEGINNER, YOGA_POSES_INTERMEDIATE, YOGA_POSES_ADVANCED } from '../../constants/creativeStudioConstants';
 import { ConceptInserter } from '../ConceptInserter';
-import { SliderInput } from './SliderInput';
 
 interface InputSectionProps {
   feature: Feature;
@@ -251,8 +252,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
                     return <option key={optionKey} value={valueAttr}>{t(optionKey)}</option>;
                 }
-                // This handles object-based options like { value: '...', label: '...' }
-                return <option key={opt.value} value={t(opt.label)}>{t(opt.label)}</option>;
+                // Use opt.value as the actual value sent to the backend, while displaying the translated label.
+                // This fixes issues where the prompt needs to be detailed (like Korean studio) but the UI needs to be clean (Vietnamese title).
+                return <option key={opt.value} value={opt.value}>{t(opt.label)}</option>;
               })}
             </select>
           </div>

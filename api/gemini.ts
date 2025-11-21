@@ -204,7 +204,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                  for (const key in formData) textData[key] = processValue(formData[key]);
 
-                 const prompt = `[TASK] Execute Feature: ${featureAction}. [CONTEXT] Input: ${JSON.stringify(textData)}. [QUALITY] 8K, Nano Banana Pro, highly detailed. 4K OUTPUT.`;
+                 // Enhanced Prompt for better Vietnamese handling
+                 const prompt = `
+                 [TASK] Execute Feature: ${featureAction}.
+                 [CONTEXT] Input: ${JSON.stringify(textData)}.
+                 [LANGUAGE INSTRUCTION] The input data contains descriptions in VIETNAMESE. You MUST interpret them accurately. Translate contextually to English internal logic for image generation if necessary, but preserve specific cultural nuances (e.g., "Ao Dai", "Non La").
+                 [QUALITY] 8K, Nano Banana Pro, photorealistic, highly detailed. 4K OUTPUT.
+                 `;
                  parts.push({ text: prompt });
 
                  const geminiRes = await ai.models.generateContent({
@@ -359,7 +365,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             }
 
                             parts.push({
-                                text: `[REFERENCE_MEMBER_${index + 1}] ID: ${m.id}. Description: ${m.age}, ${m.bodyDescription || ''}. Outfit: ${m.outfit || outfit}. Pose: ${m.pose || 'Natural'}. Position: ${posDesc}.`
+                                text: `[REFERENCE_MEMBER_${index + 1}] ID: ${m.id}. Attributes: ${m.age}, ${m.bodyDescription || ''}. Preferred Outfit: ${m.outfit || outfit}. Pose: ${m.pose || 'Natural'}. Position: ${posDesc}.`
                             });
                         }
                     });
@@ -370,22 +376,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (faceConsistency) {
                     identityInstruction = `
                     [HYPER-REALISTIC IDENTITY PRESERVATION PROTOCOL]
-                    You are a forensic artist. Your PRIMARY GOAL is to transfer the exact facial features (eyes, nose, mouth shape, unique skin irregularities, facial proportions) from the reference images to the generated image. 
-                    1. **IGNORE generic beauty standards.** Do not make the faces look like generic AI models. 
-                    2. **COPY** the exact facial structure from [REFERENCE_MEMBER_x]. Treat the reference face as a TEXTURE MAP to be applied.
-                    3. **Maintain Ethnicity and Age** strictly as visible in the reference.
-                    4. If the reference has a specific expression (e.g., smile), keep it unless the pose requires otherwise.
+                    You are a specialized forensic artist. Your HIGHEST PRIORITY is to transfer the exact facial features from the [REFERENCE_MEMBER] images to the final composition.
+                    
+                    **MANDATORY RULES:**
+                    1. **DIRECT COPY:** Treat the face in the reference image as a "Texture Map". You must apply this exact face onto the generated body.
+                    2. **NO HALLUCINATION:** Do not generate a "generic Asian person" or a "generic 35 year old woman". It MUST look like the specific individual in [REFERENCE_MEMBER_1], [REFERENCE_MEMBER_2], etc.
+                    3. **IGNORE TEXT BIAS:** Even if the text description says "mother", do not use your internal training of a "mother face". Use the REFERENCE IMAGE PIXELS.
+                    4. **LIGHTING ADAPTATION:** Only adjust the lighting and skin tone to match the scene. Do not change the bone structure, eye shape, nose shape, or mouth.
                     `;
                 }
 
                 const prompt = `
                 [TASK] Create a hyper-realistic family photo compositing the specific people provided above.
-                [MODEL] Gemini 3 Pro Image Preview / Nano Banana Pro (High Fidelity Mode).
                 
-                [SCENE] ${scene}.
-                [GLOBAL OUTFIT STYLE] ${outfit}.
-                [GLOBAL POSE] ${pose}.
-                [ADDITIONAL DETAILS] ${customPrompt}.
+                **CONTEXT TRANSLATION:**
+                The user input below is in VIETNAMESE. Please interpret the context (mood, setting) correctly but DO NOT let the Vietnamese text descriptions override the visual identity of the reference images.
+                
+                [SCENE] ${scene}
+                [GLOBAL OUTFIT STYLE] ${outfit}
+                [GLOBAL POSE] ${pose}
+                [ADDITIONAL DETAILS] ${customPrompt}
                 
                 ${identityInstruction}
                 
