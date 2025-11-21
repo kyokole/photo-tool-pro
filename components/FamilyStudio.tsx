@@ -1,7 +1,6 @@
 
 // FIX: Correctly import React and its hooks (useState, useMemo, useCallback, useRef) from the 'react' package to resolve multiple import and reference errors.
-import React from 'react';
-import { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { FamilyMember, FamilyStudioSettings, FamilyStudioResult, ROI, SerializedFamilyStudioSettings } from '../types';

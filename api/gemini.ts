@@ -6,17 +6,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
 import sharp from 'sharp';
 import { Buffer } from 'node:buffer';
-import type { SerializedFamilyStudioSettings } from '../types';
-
-// --- TYPES ---
-// (Kept brief for readability, assume standard types from frontend are mirrored here conceptually)
 
 // --- CONSTANTS ---
 const NANO_BANANA_PRO = 'gemini-3-pro-image-preview';
 const TEXT_MODEL = 'gemini-2.5-flash';
-const VEO_MODEL = 'veo-3.1-fast-generate-preview'; // Or 'veo-3.1-generate-preview' for higher quality if needed
+const VEO_MODEL = 'veo-3.1-fast-generate-preview';
 
-// --- PROMPT BUILDERS (Reuse existing logic) ---
+// --- PROMPT BUILDERS ---
 const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
 **Vai trò:** Biên tập viên ảnh thẻ chuyên nghiệp (Passport/Visa standard).
@@ -80,55 +76,6 @@ const getAi = () => {
     return new GoogleGenAI({ apiKey });
 };
 
-// Smart crop for Face Consistency
-const getReferenceFaceBuffer = async (base64Data: string) => {
-    const buf = Buffer.from(base64Data, 'base64');
-    try {
-        const img = sharp(buf);
-        const meta = await img.metadata();
-        const w = meta.width || 0;
-        const h = meta.height || 0;
-        if (!w || !h) return buf;
-        const size = Math.round(Math.min(w, h) * 0.70);
-        const left = Math.round((w - size) / 2);
-        const top = Math.round((h - size) / 2);
-        return await img.extract({ left, top, width: size, height: size }).toBuffer();
-    } catch (e) {
-        console.warn("Smart crop failed, using original.", e);
-        return buf;
-    }
-};
-
-const makeFeatherMaskBuffer = async (baseW: number, baseH: number, roi: any, feather: number): Promise<Buffer> => {
-    const rx = roi.w / 2;
-    const ry = roi.h / 2;
-    const cx = roi.x + rx;
-    const cy = roi.y + ry;
-    const svg = `
-    <svg width="${baseW}" height="${baseH}" xmlns="http://www.w3.org/2000/svg">
-      <defs><filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="${feather}" /></filter></defs>
-      <rect width="100%" height="100%" fill="black" />
-      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" filter="url(#blur)" />
-    </svg>`;
-    return await sharp(Buffer.from(svg)).png().toBuffer();
-};
-
-async function callGeminiWithRetry<T>(label: string, fn: () => Promise<T>, maxRetries = 3): Promise<T> {
-  let delay = 1200;
-  for (let i = 1; i <= maxRetries; i++) {
-    try { return await fn(); }
-    catch (err: any) {
-      const msg = (err?.message || '').toLowerCase();
-      if ((err?.status === 503 || msg.includes('overloaded')) && i < maxRetries) {
-        console.warn(`[${label}] Retry ${i}/${maxRetries}`);
-        await new Promise(r => setTimeout(r, delay));
-        delay *= 2;
-      } else throw err;
-    }
-  }
-  throw new Error(`[${label}] Failed after retries`);
-}
-
 // --- HANDLER ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -174,7 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
-                });
+                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
@@ -267,27 +214,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  if (!data) throw new Error("No image returned.");
-                 // For batch effect in single request, backend could loop, but simplified here to 1
                  return res.json({ images: [data], successCount: 1 });
             }
 
             case 'generateBatchImages': {
                 const { prompt, aspectRatio, numOutputs } = payload;
-                // Generate multiple images in parallel
                 const generateOne = () => ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [{ text: `[TASK] Image Generation. [PROMPT] ${prompt}. [ASPECT] ${aspectRatio}. [QUALITY] 8K, Nano Banana Pro. 4K OUTPUT.` }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                 });
 
-                const count = Math.min(numOutputs || 1, 4); // Limit for safety
+                const count = Math.min(numOutputs || 1, 4);
                 const promises = Array(count).fill(0).map(() => generateOne());
                 const results = await Promise.all(promises);
                 const images = results.map(r => r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data).filter(Boolean);
                 return res.json({ images: images.map(i => `data:image/png;base64,${i}`) });
             }
 
-            // --- UTILITIES (Thumbnail, Outfit, Video, Trends) ---
+            // --- UTILITIES ---
             case 'generateThumbnail': {
                  const { modelImage, refImage, inputs, ratio } = payload;
                  const parts: Part[] = [];
@@ -307,7 +252,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'detectOutfit': {
                 const { base64Image, mimeType } = payload;
-                const prompt = "Analyze the person's outfit in this image. Describe it briefly in Vietnamese (e.g., 'áo sơ mi trắng', 'váy hoa'). Return only the description.";
+                const prompt = "Analyze the person's outfit in this image. Describe it briefly in Vietnamese. Return only the description.";
                 const geminiRes = await ai.models.generateContent({
                     model: TEXT_MODEL,
                     contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] }
@@ -342,7 +287,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateVideoPrompt': {
                 const { userIdea, base64Image } = payload;
-                const prompt = `Create a high-quality video generation prompt based on this image and idea: "${userIdea}". Return JSON { "englishPrompt": "...", "vietnamesePrompt": "..." }. English prompt should be detailed for Veo.`;
+                const prompt = `Create a high-quality video generation prompt based on this image and idea: "${userIdea}". Return JSON { "englishPrompt": "...", "vietnamesePrompt": "..." }.`;
                 const parts: Part[] = [{ text: prompt }];
                 if (base64Image) parts.unshift({ inlineData: { data: base64Image.split(',')[1], mimeType: 'image/png' } });
                 
@@ -356,10 +301,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateVideoFromImage': {
                 const { base64Image, prompt } = payload;
-                // VEO Video Generation
-                // Note: Veo requires specific quota/access. Using text-to-video or image-to-video.
-                // Assuming 'veo-3.1-fast-generate-preview' or similar.
-                
                 let operation = await ai.models.generateVideos({
                   model: VEO_MODEL,
                   prompt: prompt,
@@ -367,23 +308,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     imageBytes: base64Image.split(',')[1], 
                     mimeType: 'image/png',
                   },
-                  config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' } // Veo doesn't support '4K' video output setting via API yet, usually 1080p.
+                  config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' }
                 });
                 
-                // Polling loop (simplified for serverless - ideally use webhooks or longer timeout)
                 let retries = 0;
-                while (!operation.done && retries < 30) { // ~5 min max
+                while (!operation.done && retries < 30) {
                   await new Promise(resolve => setTimeout(resolve, 10000));
                   operation = await ai.operations.getVideosOperation({operation: operation});
                   retries++;
                 }
                 
                 if (!operation.done) throw new Error("Video generation timed out.");
-                
                 const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
                 if (!downloadLink) throw new Error("No video URI returned.");
                 
-                // Fetch the video bytes
                 const vidRes = await fetch(`${downloadLink}&key=${process.env.GEMINI_API_KEY || process.env.API_KEY}`);
                 const vidArrayBuffer = await vidRes.arrayBuffer();
                 const vidBase64 = Buffer.from(vidArrayBuffer).toString('base64');
@@ -391,27 +329,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.json({ videoUrl: `data:video/mp4;base64,${vidBase64}` });
             }
 
+            // --- FAMILY STUDIO (Consolidated Advanced Method) ---
+            case 'generateFamilyPhoto': // Legacy name mapped to new logic
             case 'generateFamilyPhoto_3_Pass': {
-                // Use loose typing for settings to prevent build errors if type definitions are out of sync
-                const settings: any = payload.settings;
-                // PASS 1
-                const basePrompt = `[TASK] Create Base Scene for Family Photo. 8K Resolution. [SCENE] ${settings.scene}. [DETAILS] ${settings.customPrompt}.`;
-                const baseRes = await ai.models.generateContent({
+                const { settings } = payload;
+                const { members, scene, outfit, pose, customPrompt, rois, faceConsistency } = settings;
+
+                const parts: Part[] = [];
+
+                // 1. Add Member Reference Images with Text Descriptions
+                if (members && Array.isArray(members)) {
+                    members.forEach((m: any, index: number) => {
+                        if (m.photo?.base64) {
+                            // Ensure base64 is clean
+                            const cleanBase64 = m.photo.base64.replace(/^data:image\/\w+;base64,/, "");
+                            parts.push({
+                                inlineData: {
+                                    data: cleanBase64,
+                                    mimeType: m.photo.mimeType || 'image/jpeg'
+                                }
+                            });
+                            
+                            // Calculate simplified position
+                            const roi = rois?.find((r: any) => r.memberId === m.id);
+                            let posDesc = "";
+                            if (roi) {
+                                const center = roi.xPct + (roi.wPct / 2);
+                                posDesc = center < 0.33 ? "on the left" : center > 0.66 ? "on the right" : "in the center";
+                            }
+
+                            parts.push({
+                                text: `[REFERENCE_MEMBER_${index + 1}] ID: ${m.id}. Description: ${m.age}, ${m.bodyDescription || ''}. Outfit: ${m.outfit || outfit}. Pose: ${m.pose || 'Natural'}. Position: ${posDesc}.`
+                            });
+                        }
+                    });
+                }
+
+                // 2. Construct the Advanced Multimodal Prompt
+                const prompt = `
+                [TASK] Create a hyper-realistic family photo compositing the specific people provided above.
+                [MODEL] Gemini 3 Pro Image Preview / Nano Banana Pro (High Fidelity Mode).
+                
+                [SCENE] ${scene}.
+                [GLOBAL OUTFIT STYLE] ${outfit}.
+                [GLOBAL POSE] ${pose}.
+                [ADDITIONAL DETAILS] ${customPrompt}.
+                
+                [CRITICAL INSTRUCTIONS FOR FACE CONSISTENCY]
+                1. **Identity Locking**: You MUST use the provided reference images [REFERENCE_MEMBER_x] as the absolute ground truth for faces. Do not generate random people. The generated faces must be recognizable as the specific individuals uploaded.
+                2. **Composition**: Arrange the members naturally in the scene based on their designated positions (Left/Center/Right).
+                3. **Interaction**: Ensure natural interaction (eye contact, touching, lighting consistency) between members so they look like they are truly in the same space.
+                4. **Quality**: 8K resolution, photorealistic texture, perfect eyes, skin texture preservation.
+                ${faceConsistency ? "5. **STRICT MODE**: Do not beautify or alter facial structures excessively. Maintain the unique characteristics of each person." : ""}
+                
+                Generate the final composite image now.
+                `;
+
+                parts.push({ text: prompt });
+
+                const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
-                    contents: { parts: [{ text: basePrompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    contents: { parts },
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: { imageSize: '4K' } // Explicitly requesting 4K
+                    }
                 });
-                const base64 = baseRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                if (!base64) throw new Error("Pass 1 failed");
-                return res.json({ imageData: `data:image/png;base64,${base64}`, similarityScores: [], debug: null });
+
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                if (!data) throw new Error("Failed to generate image.");
+                
+                // Returning debug info as null since we are doing single-pass advanced inference
+                return res.json({ imageData: `data:image/png;base64,${data}`, similarityScores: [], debug: null });
             }
 
-            // --- PROMPT ANALYZER ---
             case 'generatePromptFromImage': {
                 const { base64Image, mimeType, isFaceLockEnabled, language } = payload;
                 const promptText = `Describe this image in extreme detail for image generation. ${isFaceLockEnabled ? "Focus intensely on describing the face features, proportions, and identity." : ""} Output language: ${language}.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-2.5-pro', // Use Pro for better reasoning/description
+                    model: 'gemini-2.5-pro',
                     contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: promptText }] }
                 });
                 return res.json({ prompt: geminiRes.text });

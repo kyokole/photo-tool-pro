@@ -416,7 +416,7 @@ export interface SerializedFamilyStudioSettings {
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
     faceConsistency: boolean;
-    rois: ROI[];
+    rois?: ROI[]; // Make optional for backend compatibility
 }
 
 

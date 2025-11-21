@@ -1,3 +1,4 @@
+
 import type { FilePart, FamilyMember, SerializedFamilyMember } from '../types';
 
 const MAX_DIMENSION = 4096; // Max width or height for the image
