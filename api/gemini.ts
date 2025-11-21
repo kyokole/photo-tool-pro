@@ -372,6 +372,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
 
                 // 2. Construct the Advanced Multimodal Prompt with IDENTITY ANCHORING
+                // NEW: Enhanced logic for STRICT identity preservation
                 let identityInstruction = "";
                 if (faceConsistency) {
                     identityInstruction = `
@@ -379,11 +380,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     You are a specialized forensic artist. Your HIGHEST PRIORITY is to transfer the exact facial features from the [REFERENCE_MEMBER] images to the final composition.
                     
                     **MANDATORY RULES:**
-                    1. **DIRECT COPY:** Treat the face in the reference image as a "Texture Map". You must apply this exact face onto the generated body.
-                    2. **NO HALLUCINATION:** Do not generate a "generic Asian person" or a "generic 35 year old woman". It MUST look like the specific individual in [REFERENCE_MEMBER_1], [REFERENCE_MEMBER_2], etc.
-                    3. **IGNORE TEXT BIAS:** Even if the text description says "mother", do not use your internal training of a "mother face". Use the REFERENCE IMAGE PIXELS.
-                    4. **LIGHTING ADAPTATION:** Only adjust the lighting and skin tone to match the scene. Do not change the bone structure, eye shape, nose shape, or mouth.
+                    1. **DIRECT COPY (Texture Mapping):** Treat the faces in the reference images as "Texture Maps". You must apply these exact facial pixels (eyes, nose, mouth, bone structure) onto the generated bodies.
+                    2. **NO HALLUCINATION:** Do not generate a "generic Asian person" or a "generic 35 year old woman". It MUST look EXACTLY like the specific individual in [REFERENCE_MEMBER_1], [REFERENCE_MEMBER_2], etc.
+                    3. **IGNORE TEXT BIAS:** Even if the text description says "mother", do not use your internal training of a "generic mother face". Use the REFERENCE IMAGE PIXELS. The text "mother" describes the role, NOT the face.
+                    4. **LIGHTING ADAPTATION:** Only adjust the lighting and skin tone to match the scene. Do NOT change the bone structure, eye shape, nose shape, or mouth.
+                    5. **AGE FIDELITY:** Preserve the exact age markers (wrinkles, skin texture) from the source photo. Do not artificially smooth or "beautify" unless requested.
                     `;
+                } else {
+                    identityInstruction = `[CREATIVE INTERPRETATION] Create characters inspired by the reference images, but prioritize artistic style and idealized beauty over exact likeness.`;
                 }
 
                 const prompt = `
