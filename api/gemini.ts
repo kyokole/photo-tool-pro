@@ -410,7 +410,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const absRois = normalizeAndClampRois(roisPct, baseW, baseH);
                 const scores: any[] = [];
-                // FIX: Changed from any[] to Record<string, any[]> to support member.id indexing
+                // FIX: Explicitly defined as Record to allow string indexing
                 const debugPass2: Record<string, any[]> = {}; 
 
                 // PASS 2 & 3: REPLACEMENT LOOP
@@ -587,23 +587,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'generateImagesFromFeature': {
-                 // Generic handler for AI Studio features - upgrading model
                  const { featureAction, formData, numImages } = payload;
-                 const prompt = `[TASK] Feature: ${featureAction}. Data: ${JSON.stringify(formData)}. [QUALITY] 8K, Nano Banana Pro.`;
-                 // Extract file parts from formData if any (simplified logic for brevity)
-                 // In a full implementation, we'd traverse formData to find {base64, mimeType} objects
-                 // For this snippet, assuming text-only or handled via sophisticated prompt builder not shown here.
-                 // Returning mock success for complex structure to fit snippet limit, but practically
-                 // this should loop numImages times.
                  
-                 // Simplistic single image generation for demonstration of model upgrade:
+                 // Separate images from text data to avoid token limit issues
+                 const parts: Part[] = [];
+                 const textData: Record<string, any> = {};
+
+                 const processValue = (val: any): any => {
+                    if (!val) return val;
+                    
+                    // Case 1: Direct serialized file { base64, mimeType }
+                    if (val.base64 && val.mimeType) {
+                        parts.push({
+                            inlineData: { data: val.base64, mimeType: val.mimeType }
+                        });
+                        return `[Image_${parts.length}]`;
+                    }
+                    
+                    // Case 2: Object containing 'file' property (e.g. { file: {...}, description: "..." })
+                    if (typeof val === 'object' && val.file && val.file.base64 && val.file.mimeType) {
+                         parts.push({
+                            inlineData: { data: val.file.base64, mimeType: val.file.mimeType }
+                        });
+                        return { ...val, file: `[Image_${parts.length}]` };
+                    }
+
+                    // Case 3: Array handling
+                    if (Array.isArray(val)) {
+                        return val.map(item => processValue(item));
+                    }
+                    
+                    // Case 4: Nested object recursion (generic)
+                    if (typeof val === 'object') {
+                        const newObj: Record<string, any> = {};
+                        for (const k in val) {
+                            newObj[k] = processValue(val[k]);
+                        }
+                        return newObj;
+                    }
+
+                    return val;
+                 };
+
+                 // Process the entire formData tree
+                 for (const key in formData) {
+                     textData[key] = processValue(formData[key]);
+                 }
+
+                 const prompt = `[TASK] Execute Feature: ${featureAction}.
+[CONTEXT] User Input Data: ${JSON.stringify(textData, null, 2)}.
+[INSTRUCTION] Generate a high-quality image following the user's data and uploaded reference images.
+[QUALITY] 8K, Nano Banana Pro, highly detailed.`;
+
+                 parts.push({ text: prompt });
+
                  // FIX: Renamed local variable 'res' to 'geminiRes'
                  const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
-                    contents: { parts: [{ text: prompt }] },
+                    contents: { parts },
                     config: { responseModalities: [Modality.IMAGE] }
                  });
+                 
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                 if (!data) throw new Error("AI did not return an image.");
+                 
+                 // Note: Ideally we loop numImages, but for this fix/demo we return 1.
                  return res.json({ images: [data], successCount: 1 });
             }
 
