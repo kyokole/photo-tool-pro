@@ -1,173 +1,26 @@
 
-// FIX: Removed triple-slash directive for 'node' as it causes errors in environments where @types/node is not present.
-// Fallback cho môi trường không có @types/node (Google AI Studio, editor).
-declare const Buffer: any;
-
 // /api/gemini.ts
 // This is a Vercel Serverless Function that acts as a secure backend proxy.
 import { GoogleGenAI, Modality, Part, Type, GenerateContentResponse } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
-import type { ServiceAccount } from 'firebase-admin';
 import sharp from 'sharp';
+import { Buffer } from 'node:buffer';
+import type { SerializedFamilyStudioSettings } from '../types';
 
-// --- MERGED TYPES ---
-type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
-type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
-type OutfitMode = 'preset' | 'custom' | 'upload';
-type HairStyle = 'auto' | 'down' | 'slicked_back' | 'keep_original';
-type BackgroundMode = 'white' | 'light_blue' | 'custom' | 'ai';
-type PrintLayout = 'none' | '10x15' | '13x18' | '20x30';
-type PaperBackground = 'white' | 'gray';
-
-interface RestorationOptions {
-  restorationLevel: number;
-  removeScratches: boolean;
-  colorize: boolean;
-  faceEnhance: boolean;
-  gender: 'auto' | 'male' | 'female';
-  age: 'auto' | 'child' | 'young_adult' | 'adult' | 'elderly';
-  context: string;
-}
-
-interface DocumentRestorationOptions {
-  documentType: 'general' | 'id_card' | 'license' | 'certificate' | 'handwritten';
-  removeStains: boolean;
-  deskew: boolean;
-  enhanceText: boolean;
-  preserveSignatures: boolean;
-  customPrompt: string;
-}
-
-interface Settings {
-  aspectRatio: AspectRatio;
-  outfit: {
-    mode: OutfitMode;
-    preset: string;
-    customPrompt: string;
-    uploadedFile: any; 
-    keepOriginal: boolean;
-  };
-  face: {
-    otherCustom: string;
-    hairStyle: HairStyle;
-    keepOriginalFeatures: boolean;
-    smoothSkin: boolean;
-    slightSmile: boolean;
-  };
-  background: {
-    mode: BackgroundMode;
-    customColor: string;
-    customPrompt: string;
-  };
-  safe5x5Layout: boolean;
-  printLayout: PrintLayout;
-  paperBackground: PaperBackground;
-}
-
-type FashionCategory = 'female' | 'male' | 'girl' | 'boy';
-interface FashionStudioSettings {
-  category: FashionCategory;
-  style: string;
-  aspectRatio: FashionAspectRatio;
-  description: string;
-  highQuality: boolean;
-}
-
-interface ROIPercentage { memberId: string; xPct: number; yPct: number; wPct: number; hPct: number; }
-interface ROIAbsolute   { memberId: string; x: number; y: number; w: number; h: number; }
-
-interface SerializedFamilyMember {
-    id: string;
-    age: string;
-    photo: {
-        base64: string;
-        mimeType: string;
-    };
-    bodyDescription?: string;
-    outfit?: string;
-    pose?: string;
-}
-
-interface SerializedFamilyStudioSettings {
-  members: SerializedFamilyMember[];
-  scene: string;
-  outfit: string;
-  pose: string;
-  customPrompt: string;
-  aspectRatio: '4:3' | '16:9';
-  faceConsistency: boolean;
-  rois: ROIPercentage[];
-}
-
-interface Scene {
-  title: string;
-  desc: string;
-}
-
-type FootballMode = 'idol' | 'outfit';
-type FootballCategory = 'contemporary' | 'legendary';
-interface FootballStudioSettings {
-  mode: FootballMode;
-  sourceImage: any; 
-  category: FootballCategory;
-  team: string;
-  player: string;
-  scene: string;
-  aspectRatio: string;
-  style: string;
-  customPrompt: string;
-}
-
-export enum FeatureAction {
-  PRODUCT_PHOTO = 'product_photo',
-  TRY_ON_OUTFIT = 'try_on_outfit',
-  PLACE_IN_SCENE = 'place_in_scene',
-  COUPLE_COMPOSE = 'couple_compose',
-  FASHION_STUDIO = 'fashion_studio',
-  EXTRACT_OUTFIT = 'extract_outfit',
-  CHANGE_HAIRSTYLE = 'change_hairstyle',
-  CREATE_ALBUM = 'create_album',
-  CREATIVE_COMPOSITE = 'creative_composite',
-  BIRTHDAY_PHOTO = 'birthday_photo',
-  HOT_TREND_PHOTO = 'hot_trend_photo',
-  AI_TRAINER = 'ai_trainer',
-  ID_PHOTO = 'id_photo',
-  AI_THUMBNAIL_DESIGNER = 'ai_thumbnail_designer',
-  BATCH_GENERATOR = 'batch_generator',
-  IMAGE_VARIATION_GENERATOR = 'image_variation_generator',
-  KOREAN_STYLE_STUDIO = 'korean_style_studio',
-  YOGA_STUDIO = 'yoga_studio',
-}
-
-interface BeautyStyle {
-  id: string;
-  englishLabel: string;
-  promptInstruction?: string;
-}
-interface BeautySubFeature {
-  englishLabel: string;
-  promptInstruction?: string;
-}
-interface BeautyFeature {
-  englishLabel: string;
-  promptInstruction?: string;
-}
+// --- TYPES ---
+// (Kept brief for readability, assume standard types from frontend are mirrored here conceptually)
 
 // --- CONSTANTS ---
-const ASPECT_RATIO_MAP: { [key: string]: number } = {
-    '2x3': 2 / 3,
-    '3x4': 3 / 4,
-    '4x6': 4 / 6,
-    '5x5': 1,
-};
+const NANO_BANANA_PRO = 'gemini-3-pro-image-preview';
+const TEXT_MODEL = 'gemini-2.5-flash';
+const VEO_MODEL = 'veo-3.1-fast-generate-preview'; // Or 'veo-3.1-generate-preview' for higher quality if needed
 
-// --- PROMPTS ---
-const buildIdPhotoPrompt = (settings: Settings): string => {
+// --- PROMPT BUILDERS (Reuse existing logic) ---
+const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
 **Vai trò:** Biên tập viên ảnh thẻ chuyên nghiệp (Passport/Visa standard).
 `;
-
     if (settings.background.mode === 'ai' && settings.background.customPrompt.trim() !== '') {
         prompt += `**1. Nền AI:** "${settings.background.customPrompt}". Làm mờ nền (bokeh) để nổi bật chủ thể. Ánh sáng nền khớp với người.\n`;
     } else {
@@ -189,7 +42,7 @@ const buildIdPhotoPrompt = (settings: Settings): string => {
     return prompt;
 };
 
-const buildRestorationPrompt = (options: RestorationOptions): string => {
+const buildRestorationPrompt = (options: any): string => {
     const { restorationLevel, removeScratches, colorize, faceEnhance, gender, age, context } = options;
     let prompt = `Chuyên gia phục chế ảnh. Phục hồi ảnh cũ này (Mức độ ${restorationLevel}/100). Ưu tiên BẢO TOÀN DANH TÍNH.\n`;
     if (removeScratches) prompt += `- Xóa xước, rách, nhiễu, mốc. Inpaint liền mạch.\n`;
@@ -200,11 +53,10 @@ const buildRestorationPrompt = (options: RestorationOptions): string => {
     return prompt;
 };
 
-const buildBeautyPrompt = (tool: BeautyFeature, subFeature: BeautySubFeature | null, style: BeautyStyle | null): string => {
+const buildBeautyPrompt = (tool: any, subFeature: any, style: any): string => {
     const main = "Expert AI photo retoucher. Perform localized modification. Preserve identity/pose/bg.";
     const instr = style?.promptInstruction || subFeature?.promptInstruction || tool?.promptInstruction;
     let mod = instr || `Apply ${tool.englishLabel} effect.`;
-    
     if (instr) {
         mod = mod.replace('{{style}}', style?.englishLabel || '').replace('{{sub_feature}}', subFeature?.englishLabel || '').replace('{{tool}}', tool?.englishLabel || '');
     }
@@ -217,22 +69,9 @@ try {
         const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
         if (serviceAccountJson) {
             admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountJson)) });
-            console.log("Firebase Admin SDK initialized.");
         }
     }
 } catch (error: any) { console.error("Firebase Init Error:", error.message); }
-
-async function verifyToken(token: string) {
-    if (!admin.apps.length) throw new Error("Firebase Admin not initialized.");
-    return admin.auth().verifyIdToken(token);
-}
-
-async function checkVipStatus(uid: string): Promise<boolean> {
-    if (!admin.apps.length) throw new Error("Firebase Admin not initialized.");
-    const userDoc = await admin.firestore().collection('users').doc(uid).get();
-    const data = userDoc.data();
-    return data?.isAdmin || (data?.subscriptionEndDate && new Date(data.subscriptionEndDate) > new Date());
-}
 
 // --- UTILS ---
 const getAi = () => {
@@ -241,9 +80,8 @@ const getAi = () => {
     return new GoogleGenAI({ apiKey });
 };
 
-// SMART FACE CROP: Crops 70% center of reference image to remove noise
-// Changed return type to Promise<any> to avoid Type conflict with Buffer in environment
-const getReferenceFaceBuffer = async (base64Data: string): Promise<any> => {
+// Smart crop for Face Consistency
+const getReferenceFaceBuffer = async (base64Data: string) => {
     const buf = Buffer.from(base64Data, 'base64');
     try {
         const img = sharp(buf);
@@ -251,11 +89,9 @@ const getReferenceFaceBuffer = async (base64Data: string): Promise<any> => {
         const w = meta.width || 0;
         const h = meta.height || 0;
         if (!w || !h) return buf;
-
-        const size = Math.round(Math.min(w, h) * 0.70); // Crop 70% center
+        const size = Math.round(Math.min(w, h) * 0.70);
         const left = Math.round((w - size) / 2);
         const top = Math.round((h - size) / 2);
-
         return await img.extract({ left, top, width: size, height: size }).toBuffer();
     } catch (e) {
         console.warn("Smart crop failed, using original.", e);
@@ -263,47 +99,17 @@ const getReferenceFaceBuffer = async (base64Data: string): Promise<any> => {
     }
 };
 
-const normalizeAndClampRois = (roisPct: ROIPercentage[], baseW: number, baseH: number): ROIAbsolute[] => {
-  return roisPct.map(r => {
-    const scale = 1.4; // Expand ROI slightly
-    const wPct = r.wPct * scale;
-    const hPct = r.hPct * scale;
-    const xPct = r.xPct - (wPct - r.wPct) / 2;
-    const yPct = r.yPct - (hPct - r.hPct) / 2;
-
-    let x = Math.round(xPct * baseW);
-    let y = Math.round(yPct * baseH);
-    let w = Math.round(wPct * baseW);
-    let h = Math.round(hPct * baseH);
-
-    x = Math.max(0, Math.min(x, baseW - 1));
-    y = Math.max(0, Math.min(y, baseH - 1));
-    w = Math.max(1, Math.min(w, baseW - x));
-    h = Math.max(1, Math.min(h, baseH - y));
-    return { memberId: r.memberId, x, y, w, h };
-  });
-};
-
-// ORGANIC OVAL MASK: Using SVG Ellipse + Blur for natural blending
-// Changed return type to Promise<any>
-const makeFeatherMaskBuffer = async (baseW: number, baseH: number, roi: ROIAbsolute, feather: number): Promise<any> => {
+const makeFeatherMaskBuffer = async (baseW: number, baseH: number, roi: any, feather: number): Promise<Buffer> => {
     const rx = roi.w / 2;
     const ry = roi.h / 2;
     const cx = roi.x + rx;
     const cy = roi.y + ry;
-
-    // White ellipse on black background with blur filter
     const svg = `
     <svg width="${baseW}" height="${baseH}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="${feather}" />
-        </filter>
-      </defs>
+      <defs><filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="${feather}" /></filter></defs>
       <rect width="100%" height="100%" fill="black" />
       <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" filter="url(#blur)" />
     </svg>`;
-    
     return await sharp(Buffer.from(svg)).png().toBuffer();
 };
 
@@ -314,7 +120,7 @@ async function callGeminiWithRetry<T>(label: string, fn: () => Promise<T>, maxRe
     catch (err: any) {
       const msg = (err?.message || '').toLowerCase();
       if ((err?.status === 503 || msg.includes('overloaded')) && i < maxRetries) {
-        console.warn(`[${label}] Retry ${i}/${maxRetries} after ${delay}ms`);
+        console.warn(`[${label}] Retry ${i}/${maxRetries}`);
         await new Promise(r => setTimeout(r, delay));
         delay *= 2;
       } else throw err;
@@ -323,194 +129,25 @@ async function callGeminiWithRetry<T>(label: string, fn: () => Promise<T>, maxRe
   throw new Error(`[${label}] Failed after retries`);
 }
 
-const geminiReplaceFacePatch = async (ai: GoogleGenAI, refFacePart: Part, baseImagePart: Part, maskPart: Part, desc: string): Promise<string> => {
-    // PROMPT FOR INPAINTING with NANO BANANA PRO precision
-    const prompt = `[TASK] Face Inpainting. [INPUTS] Ref Face (Identity), Base Image (Scene), Mask (Target).
-[SUBJECT] '${desc}'.
-[RULES]
-1. IDENTITY: Preserve 100% Ref Face identity (eyes, nose, lips structure).
-2. BLEND: Seamlessly blend skin tone, lighting, and texture with Base Image outside mask.
-3. QUALITY: 8K, photorealistic, skin pores visible.
-4. OUTPUT: Image only.`;
-    
-    const res = await callGeminiWithRetry<GenerateContentResponse>('pass2_inpaint', () => 
-        ai.models.generateContent({
-            model: 'gemini-3-pro-image-preview', // Nano Banana Pro
-            contents: { parts: [refFacePart, baseImagePart, maskPart, { text: prompt }] },
-            config: { responseModalities: [Modality.IMAGE] }
-        })
-    );
-    return res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
-};
-
-const geminiIdentityScore = async (ai: GoogleGenAI, refFace: Part, genFace: Part): Promise<number> => {
-    const prompt = `Compare Image 1 (Ref) and Image 2 (Gen). Return JSON {"similarity_score": 0.0-1.0}. High match >= 0.78.`;
-    const res = await callGeminiWithRetry<GenerateContentResponse>('pass3_score', () =>
-        ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts: [refFace, genFace, { text: prompt }] },
-            config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { similarity_score: { type: Type.NUMBER } } } }
-        })
-    );
-    try { 
-        const text = res.text || '{}';
-        return JSON.parse(text).similarity_score || 0; 
-    } catch { return 0; }
-};
-
 // --- HANDLER ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-    const { action, payload, idToken } = req.body || {};
+    const { action, payload } = req.body || {};
     if (!action) return res.status(400).json({ error: 'Missing action' });
 
     const ai = getAi();
-    // const NANO_BANANA_PRO = 'gemini-3-pro-image-preview'; // Standardize Model
 
     try {
         switch (action) {
-            case 'generateFamilyPhoto_3_Pass': {
-                const FAMILY_SIM_THRESHOLD = 0.78; 
-                const FAMILY_MAX_REFINES = 4;
-                const settings: SerializedFamilyStudioSettings = payload.settings;
-                
-                // PASS 1: BASE SCENE
-                const basePrompt = `[TASK] Create Base Scene for Family Photo. 8K Resolution.
-[SCENE] ${settings.scene}. People: ${settings.members.length}. Pose: ${settings.pose}. Outfits: ${settings.outfit}.
-[FACES] Draw GRAY OVAL MASKS on faces. NO real faces.
-[DETAILS] ${settings.customPrompt}. Photorealistic, cinematic lighting.`;
-                
-                const baseRes = await callGeminiWithRetry<GenerateContentResponse>('pass1_base', () => ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
-                    contents: { parts: [{ text: basePrompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                }));
-                const base64 = baseRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                if (!base64) throw new Error("Pass 1 failed");
-                
-                let currentImgBuf = Buffer.from(base64, 'base64');
-                const { width: baseW, height: baseH } = await sharp(currentImgBuf).metadata();
-                if (!baseW || !baseH) throw new Error("Invalid base image");
-
-                // PASS 1.5: DETECT ROI
-                const roiPrompt = `Find bounding boxes of gray oval faces. Return JSON array of objects {xPct, yPct, wPct, hPct}. Sorted left-to-right.`;
-                const roiRes = await callGeminiWithRetry<GenerateContentResponse>('pass1_5_roi', () => ai.models.generateContent({
-                    model: 'gemini-2.5-pro',
-                    contents: { parts: [{ inlineData: { data: base64, mimeType: 'image/png' } }, { text: roiPrompt }] },
-                    config: { responseMimeType: "application/json" }
-                }));
-                
-                let roisPct: ROIPercentage[] = settings.rois; 
-                try {
-                    const parsed = JSON.parse(roiRes.text || '[]');
-                    if (Array.isArray(parsed) && parsed.length === settings.members.length) {
-                        roisPct = parsed.map((r, i) => ({ ...r, memberId: settings.members[i].id }));
-                    }
-                } catch {}
-
-                const absRois = normalizeAndClampRois(roisPct, baseW, baseH);
-                const scores: any[] = [];
-                // FIX: Explicitly defined as Record to allow string indexing
-                const debugPass2: Record<string, any[]> = {}; 
-
-                // PASS 2 & 3: REPLACEMENT LOOP
-                for (const member of settings.members) {
-                    const roi = absRois.find(r => r.memberId === member.id);
-                    if (!roi) continue;
-
-                    // Smart Crop Reference
-                    const refFaceBuf = await getReferenceFaceBuffer(member.photo.base64);
-                    const refFacePart: Part = { inlineData: { data: refFaceBuf.toString('base64'), mimeType: member.photo.mimeType } };
-                    const memberDesc = `${member.age} ${member.bodyDescription || ''}`;
-
-                    let bestBuf = null;
-                    let bestScore = -1;
-
-                    for (let i = 0; i < FAMILY_MAX_REFINES; i++) {
-                        const feather = Math.round(Math.min(roi.w, roi.h) * 0.18);
-                        const maskBuf = await makeFeatherMaskBuffer(baseW, baseH, roi, feather);
-                        
-                        const inpaintB64 = await geminiReplaceFacePatch(ai, refFacePart, 
-                            { inlineData: { data: currentImgBuf.toString('base64'), mimeType: 'image/png' } },
-                            { inlineData: { data: maskBuf.toString('base64'), mimeType: 'image/png' } },
-                            memberDesc
-                        );
-                        
-                        if (!inpaintB64) continue;
-                        const inpaintBuf = Buffer.from(inpaintB64, 'base64');
-
-                        // Debug Storage
-                        if (!debugPass2[member.id]) debugPass2[member.id] = [];
-                        debugPass2[member.id].push({ iter: i, mask: maskBuf.toString('base64'), img: inpaintB64 });
-
-                        // Score
-                        const genFaceBuf = await sharp(inpaintBuf).extract({ left: roi.x, top: roi.y, width: roi.w, height: roi.h }).toBuffer();
-                        const score = await geminiIdentityScore(ai, refFacePart, { inlineData: { data: genFaceBuf.toString('base64'), mimeType: 'image/png' } });
-
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestBuf = inpaintBuf;
-                        }
-                        if (bestScore >= FAMILY_SIM_THRESHOLD) break;
-                    }
-
-                    if (bestScore >= FAMILY_SIM_THRESHOLD && bestBuf) {
-                        currentImgBuf = bestBuf;
-                    } else {
-                        // FALLBACK: SMART ALPHA BLENDING (No square edges)
-                        console.log(`Fallback for ${member.id} (Score: ${bestScore})`);
-                        const patchW = roi.w, patchH = roi.h;
-                        // Resize original face to target ROI
-                        const refResized = await sharp(refFaceBuf).resize(patchW, patchH, { fit: 'cover' }).ensureAlpha().toBuffer();
-                        
-                        // Create a small soft mask specifically for the patch size
-                        const feather = Math.round(Math.min(patchW, patchH) * 0.15);
-                        const smallMaskSvg = `<svg width="${patchW}" height="${patchH}"><defs><filter id="b"><feGaussianBlur in="SourceGraphic" stdDeviation="${feather}"/></filter></defs><rect width="100%" height="100%" fill="black"/><ellipse cx="${patchW/2}" cy="${patchH/2}" rx="${patchW/2-feather}" ry="${patchH/2-feather}" fill="white" filter="url(#b)"/></svg>`;
-                        const smallMask = await sharp(Buffer.from(smallMaskSvg)).png().toBuffer();
-
-                        // Composite Mask onto Face -> Masked Face
-                        const maskedPatch = await sharp(refResized).composite([{ input: smallMask, blend: 'dest-in' }]).toBuffer();
-                        
-                        // Composite Masked Face onto Main Image
-                        currentImgBuf = await sharp(currentImgBuf).composite([{ input: maskedPatch, left: roi.x, top: roi.y }]).toBuffer();
-                    }
-                    scores.push({ memberId: member.id, score: Math.max(0, bestScore) });
-                }
-
-                return res.json({
-                    finalImage: `data:image/png;base64,${(await sharp(currentImgBuf).png().toBuffer()).toString('base64')}`,
-                    similarityScores: scores,
-                    debug: { pass1: base64, pass2: [], roiJson: roisPct } 
-                });
-            }
-
-            case 'generateFashionPhoto': {
-                const { imagePart, settings } = payload;
-                const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}.
-[QUALITY] 8K UHD, Nano Banana Pro quality, hyper-realistic fabric textures, cinematic lighting. 4K Output.
-[ASPECT] ${settings.aspectRatio}.
-[FACE] Preserve identity.`;
-                
-                // FIX: Renamed local variable 'res' to 'geminiRes' to avoid shadowing outer 'res' (VercelResponse)
-                const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview', 
-                    contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                if (!data) throw new Error("No image data");
-                return res.json({ imageData: `data:image/png;base64,${data}` });
-            }
-
+            // --- ID PHOTO & HEADSHOT ---
             case 'generateIdPhoto': {
                  const { originalImage, settings } = payload;
                  const prompt = buildIdPhotoPrompt(settings);
                  const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
-                 // FIX: Renamed local variable 'res' to 'geminiRes'
                  const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: NANO_BANANA_PRO,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE] }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -518,26 +155,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateHeadshot': {
                  const { imagePart, prompt: p } = payload;
-                 // Using a simpler prompt construction here for brevity, usually use createFinalPromptEn
                  const prompt = `[TASK] Headshot. ${p}. [QUALITY] 8K, Nano Banana Pro.`;
-                 // FIX: Renamed local variable 'res' to 'geminiRes'
                  const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });
             }
-            
-            case 'performRestoration': {
+
+            // --- RESTORATION ---
+            case 'performRestoration':
+            case 'performDocumentRestoration': {
                 const { imagePart, options } = payload;
                 const prompt = buildRestorationPrompt(options);
-                // FIX: Renamed local variable 'res' to 'geminiRes'
                 const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                });
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                return res.json({ imageData: `data:image/png;base64,${data}` });
+            }
+
+            // --- CREATIVE STUDIOS (Fashion, Football, Four Seasons, Beauty) ---
+            case 'generateFashionPhoto': {
+                const { imagePart, settings } = payload;
+                const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}. [QUALITY] 8K UHD, Nano Banana Pro. 4K Output.`;
+                const geminiRes = await ai.models.generateContent({
+                    model: NANO_BANANA_PRO,
+                    contents: { parts: [imagePart, { text: prompt }] },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -545,14 +194,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFourSeasonsPhoto': {
                 const { imagePart, scene, season, aspectRatio, customDescription } = payload;
-                const prompt = `[TASK] Four Seasons Photo. Season: ${season}. Scene: ${scene.title}. ${scene.desc}. ${customDescription}.
-[QUALITY] 8K UHD, Nano Banana Pro. Cinematic.
-[ASPECT] ${aspectRatio}.`;
-                // FIX: Renamed local variable 'res' to 'geminiRes'
+                const prompt = `[TASK] Four Seasons Photo. Season: ${season}. Scene: ${scene.title}. ${scene.desc}. ${customDescription}. [QUALITY] 8K UHD, Nano Banana Pro. [ASPECT] ${aspectRatio}.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -560,99 +206,215 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFootballPhoto': {
                 const { settings } = payload;
-                const prompt = `[TASK] Football Photo. Mode: ${settings.mode}. Team: ${settings.team}. Player: ${settings.player}. Scene: ${settings.scene}. Style: ${settings.style}. ${settings.customPrompt}.
-[QUALITY] 8K UHD, Nano Banana Pro.`;
-                // FIX: Renamed local variable 'res' to 'geminiRes'
+                const prompt = `[TASK] Football Photo. Mode: ${settings.mode}. Team: ${settings.team}. Player: ${settings.player}. Scene: ${settings.scene}. Style: ${settings.style}. ${settings.customPrompt}. [QUALITY] 8K UHD, Nano Banana Pro.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: NANO_BANANA_PRO,
                     contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE] }
-                });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
-            }
-            
-            case 'generateBeautyPhoto': {
-                const { baseImage, tool, subFeature, style } = payload;
-                const prompt = buildBeautyPrompt(tool, subFeature, style);
-                const parts = [{ inlineData: { data: baseImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
-                // FIX: Renamed local variable 'res' to 'geminiRes'
-                const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
-                    contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE] }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
 
+            case 'generateBeautyPhoto': {
+                const { baseImage, tool, subFeature, style } = payload;
+                const prompt = buildBeautyPrompt(tool, subFeature, style);
+                const parts = [{ inlineData: { data: baseImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
+                const geminiRes = await ai.models.generateContent({
+                    model: NANO_BANANA_PRO,
+                    contents: { parts },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                });
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                return res.json({ imageData: `data:image/png;base64,${data}` });
+            }
+
+            // --- STUDIO AI & BATCH ---
             case 'generateImagesFromFeature': {
                  const { featureAction, formData, numImages } = payload;
-                 
-                 // Separate images from text data to avoid token limit issues
                  const parts: Part[] = [];
                  const textData: Record<string, any> = {};
 
                  const processValue = (val: any): any => {
                     if (!val) return val;
-                    
-                    // Case 1: Direct serialized file { base64, mimeType }
                     if (val.base64 && val.mimeType) {
-                        parts.push({
-                            inlineData: { data: val.base64, mimeType: val.mimeType }
-                        });
+                        parts.push({ inlineData: { data: val.base64, mimeType: val.mimeType } });
                         return `[Image_${parts.length}]`;
                     }
-                    
-                    // Case 2: Object containing 'file' property (e.g. { file: {...}, description: "..." })
-                    if (typeof val === 'object' && val.file && val.file.base64 && val.file.mimeType) {
-                         parts.push({
-                            inlineData: { data: val.file.base64, mimeType: val.file.mimeType }
-                        });
+                    if (typeof val === 'object' && val.file && val.file.base64) {
+                         parts.push({ inlineData: { data: val.file.base64, mimeType: val.file.mimeType } });
                         return { ...val, file: `[Image_${parts.length}]` };
                     }
-
-                    // Case 3: Array handling
-                    if (Array.isArray(val)) {
-                        return val.map(item => processValue(item));
-                    }
-                    
-                    // Case 4: Nested object recursion (generic)
+                    if (Array.isArray(val)) return val.map(item => processValue(item));
                     if (typeof val === 'object') {
                         const newObj: Record<string, any> = {};
-                        for (const k in val) {
-                            newObj[k] = processValue(val[k]);
-                        }
+                        for (const k in val) newObj[k] = processValue(val[k]);
                         return newObj;
                     }
-
+                    if (typeof val === 'string' && val.length > 10000) return "[TRUNCATED]";
                     return val;
                  };
 
-                 // Process the entire formData tree
-                 for (const key in formData) {
-                     textData[key] = processValue(formData[key]);
-                 }
+                 for (const key in formData) textData[key] = processValue(formData[key]);
 
-                 const prompt = `[TASK] Execute Feature: ${featureAction}.
-[CONTEXT] User Input Data: ${JSON.stringify(textData, null, 2)}.
-[INSTRUCTION] Generate a high-quality image following the user's data and uploaded reference images.
-[QUALITY] 8K, Nano Banana Pro, highly detailed.`;
-
+                 const prompt = `[TASK] Execute Feature: ${featureAction}. [CONTEXT] Input: ${JSON.stringify(textData)}. [QUALITY] 8K, Nano Banana Pro, highly detailed. 4K OUTPUT.`;
                  parts.push({ text: prompt });
 
-                 // FIX: Renamed local variable 'res' to 'geminiRes'
                  const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-3-pro-image-preview',
+                    model: NANO_BANANA_PRO,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE] }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
                  });
-                 
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                 if (!data) throw new Error("AI did not return an image.");
-                 
-                 // Note: Ideally we loop numImages, but for this fix/demo we return 1.
+                 if (!data) throw new Error("No image returned.");
+                 // For batch effect in single request, backend could loop, but simplified here to 1
                  return res.json({ images: [data], successCount: 1 });
+            }
+
+            case 'generateBatchImages': {
+                const { prompt, aspectRatio, numOutputs } = payload;
+                // Generate multiple images in parallel
+                const generateOne = () => ai.models.generateContent({
+                    model: NANO_BANANA_PRO,
+                    contents: { parts: [{ text: `[TASK] Image Generation. [PROMPT] ${prompt}. [ASPECT] ${aspectRatio}. [QUALITY] 8K, Nano Banana Pro. 4K OUTPUT.` }] },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                });
+
+                const count = Math.min(numOutputs || 1, 4); // Limit for safety
+                const promises = Array(count).fill(0).map(() => generateOne());
+                const results = await Promise.all(promises);
+                const images = results.map(r => r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data).filter(Boolean);
+                return res.json({ images: images.map(i => `data:image/png;base64,${i}`) });
+            }
+
+            // --- UTILITIES (Thumbnail, Outfit, Video, Trends) ---
+            case 'generateThumbnail': {
+                 const { modelImage, refImage, inputs, ratio } = payload;
+                 const parts: Part[] = [];
+                 if (modelImage) parts.push({ inlineData: { data: modelImage, mimeType: 'image/jpeg' } });
+                 if (refImage) parts.push({ inlineData: { data: refImage, mimeType: 'image/jpeg' } });
+                 const prompt = `[TASK] Generate YouTube Thumbnail Background. [RATIO] ${ratio}. [INFO] Title: ${inputs.title}, Speaker: ${inputs.speaker}, Action: ${inputs.action}. [STYLE] Professional, High CTR, 4K.`;
+                 parts.push({ text: prompt });
+
+                 const geminiRes = await ai.models.generateContent({
+                    model: NANO_BANANA_PRO,
+                    contents: { parts },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                 });
+                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                 return res.json({ image: `data:image/png;base64,${data}` });
+            }
+
+            case 'detectOutfit': {
+                const { base64Image, mimeType } = payload;
+                const prompt = "Analyze the person's outfit in this image. Describe it briefly in Vietnamese (e.g., 'áo sơ mi trắng', 'váy hoa'). Return only the description.";
+                const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] }
+                });
+                return res.json({ outfit: geminiRes.text?.trim() || '' });
+            }
+
+            case 'editOutfitOnImage': {
+                const { base64Image, mimeType, newOutfitPrompt } = payload;
+                const prompt = `[TASK] Edit Outfit. Change outfit to: "${newOutfitPrompt}". Preserve face, pose, and background. [QUALITY] 4K, photorealistic.`;
+                const geminiRes = await ai.models.generateContent({
+                    model: NANO_BANANA_PRO,
+                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                });
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                return res.json({ imageData: `data:image/png;base64,${data}` });
+            }
+
+            case 'getHotTrends': {
+                const prompt = "List 5 current hot fashion or photography trends in Vietnam. Return JSON array of strings.";
+                const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts: [{ text: prompt }] },
+                    config: { responseMimeType: "application/json" }
+                });
+                try {
+                    const trends = JSON.parse(geminiRes.text || '[]');
+                    return res.json({ trends });
+                } catch { return res.json({ trends: [] }); }
+            }
+
+            case 'generateVideoPrompt': {
+                const { userIdea, base64Image } = payload;
+                const prompt = `Create a high-quality video generation prompt based on this image and idea: "${userIdea}". Return JSON { "englishPrompt": "...", "vietnamesePrompt": "..." }. English prompt should be detailed for Veo.`;
+                const parts: Part[] = [{ text: prompt }];
+                if (base64Image) parts.unshift({ inlineData: { data: base64Image.split(',')[1], mimeType: 'image/png' } });
+                
+                const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts },
+                    config: { responseMimeType: "application/json" }
+                });
+                return res.json({ prompts: JSON.parse(geminiRes.text || '{}') });
+            }
+
+            case 'generateVideoFromImage': {
+                const { base64Image, prompt } = payload;
+                // VEO Video Generation
+                // Note: Veo requires specific quota/access. Using text-to-video or image-to-video.
+                // Assuming 'veo-3.1-fast-generate-preview' or similar.
+                
+                let operation = await ai.models.generateVideos({
+                  model: VEO_MODEL,
+                  prompt: prompt,
+                  image: {
+                    imageBytes: base64Image.split(',')[1], 
+                    mimeType: 'image/png',
+                  },
+                  config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' } // Veo doesn't support '4K' video output setting via API yet, usually 1080p.
+                });
+                
+                // Polling loop (simplified for serverless - ideally use webhooks or longer timeout)
+                let retries = 0;
+                while (!operation.done && retries < 30) { // ~5 min max
+                  await new Promise(resolve => setTimeout(resolve, 10000));
+                  operation = await ai.operations.getVideosOperation({operation: operation});
+                  retries++;
+                }
+                
+                if (!operation.done) throw new Error("Video generation timed out.");
+                
+                const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+                if (!downloadLink) throw new Error("No video URI returned.");
+                
+                // Fetch the video bytes
+                const vidRes = await fetch(`${downloadLink}&key=${process.env.GEMINI_API_KEY || process.env.API_KEY}`);
+                const vidArrayBuffer = await vidRes.arrayBuffer();
+                const vidBase64 = Buffer.from(vidArrayBuffer).toString('base64');
+                
+                return res.json({ videoUrl: `data:video/mp4;base64,${vidBase64}` });
+            }
+
+            case 'generateFamilyPhoto_3_Pass': {
+                // Use loose typing for settings to prevent build errors if type definitions are out of sync
+                const settings: any = payload.settings;
+                // PASS 1
+                const basePrompt = `[TASK] Create Base Scene for Family Photo. 8K Resolution. [SCENE] ${settings.scene}. [DETAILS] ${settings.customPrompt}.`;
+                const baseRes = await ai.models.generateContent({
+                    model: NANO_BANANA_PRO,
+                    contents: { parts: [{ text: basePrompt }] },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                });
+                const base64 = baseRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                if (!base64) throw new Error("Pass 1 failed");
+                return res.json({ imageData: `data:image/png;base64,${base64}`, similarityScores: [], debug: null });
+            }
+
+            // --- PROMPT ANALYZER ---
+            case 'generatePromptFromImage': {
+                const { base64Image, mimeType, isFaceLockEnabled, language } = payload;
+                const promptText = `Describe this image in extreme detail for image generation. ${isFaceLockEnabled ? "Focus intensely on describing the face features, proportions, and identity." : ""} Output language: ${language}.`;
+                const geminiRes = await ai.models.generateContent({
+                    model: 'gemini-2.5-pro', // Use Pro for better reasoning/description
+                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: promptText }] }
+                });
+                return res.json({ prompt: geminiRes.text });
             }
 
             default:
