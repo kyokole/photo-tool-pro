@@ -410,7 +410,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 const absRois = normalizeAndClampRois(roisPct, baseW, baseH);
                 const scores: any[] = [];
-                const debugPass2: any[] = []; 
+                // FIX: Changed from any[] to Record<string, any[]> to support member.id indexing
+                const debugPass2: Record<string, any[]> = {}; 
 
                 // PASS 2 & 3: REPLACEMENT LOOP
                 for (const member of settings.members) {
@@ -490,12 +491,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 [ASPECT] ${settings.aspectRatio}.
 [FACE] Preserve identity.`;
                 
-                const res = await ai.models.generateContent({
+                // FIX: Renamed local variable 'res' to 'geminiRes' to avoid shadowing outer 'res' (VercelResponse)
+                const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview', 
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 if (!data) throw new Error("No image data");
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
@@ -504,12 +506,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const { originalImage, settings } = payload;
                  const prompt = buildIdPhotoPrompt(settings);
                  const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
-                 const res = await ai.models.generateContent({
+                 // FIX: Renamed local variable 'res' to 'geminiRes'
+                 const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts },
                     config: { responseModalities: [Modality.IMAGE] }
                  });
-                 const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });
             }
 
@@ -517,24 +520,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const { imagePart, prompt: p } = payload;
                  // Using a simpler prompt construction here for brevity, usually use createFinalPromptEn
                  const prompt = `[TASK] Headshot. ${p}. [QUALITY] 8K, Nano Banana Pro.`;
-                 const res = await ai.models.generateContent({
+                 // FIX: Renamed local variable 'res' to 'geminiRes'
+                 const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                  });
-                 const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });
             }
             
             case 'performRestoration': {
                 const { imagePart, options } = payload;
                 const prompt = buildRestorationPrompt(options);
-                const res = await ai.models.generateContent({
+                // FIX: Renamed local variable 'res' to 'geminiRes'
+                const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
 
@@ -543,12 +548,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const prompt = `[TASK] Four Seasons Photo. Season: ${season}. Scene: ${scene.title}. ${scene.desc}. ${customDescription}.
 [QUALITY] 8K UHD, Nano Banana Pro. Cinematic.
 [ASPECT] ${aspectRatio}.`;
-                const res = await ai.models.generateContent({
+                // FIX: Renamed local variable 'res' to 'geminiRes'
+                const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
 
@@ -556,12 +562,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { settings } = payload;
                 const prompt = `[TASK] Football Photo. Mode: ${settings.mode}. Team: ${settings.team}. Player: ${settings.player}. Scene: ${settings.scene}. Style: ${settings.style}. ${settings.customPrompt}.
 [QUALITY] 8K UHD, Nano Banana Pro.`;
-                const res = await ai.models.generateContent({
+                // FIX: Renamed local variable 'res' to 'geminiRes'
+                const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
             
@@ -569,12 +576,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { baseImage, tool, subFeature, style } = payload;
                 const prompt = buildBeautyPrompt(tool, subFeature, style);
                 const parts = [{ inlineData: { data: baseImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
-                const res = await ai.models.generateContent({
+                // FIX: Renamed local variable 'res' to 'geminiRes'
+                const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts },
                     config: { responseModalities: [Modality.IMAGE] }
                 });
-                const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
             }
 
@@ -589,12 +597,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  // this should loop numImages times.
                  
                  // Simplistic single image generation for demonstration of model upgrade:
-                 const res = await ai.models.generateContent({
+                 // FIX: Renamed local variable 'res' to 'geminiRes'
+                 const geminiRes = await ai.models.generateContent({
                     model: 'gemini-3-pro-image-preview',
                     contents: { parts: [{ text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE] }
                  });
-                 const data = res.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ images: [data], successCount: 1 });
             }
 
