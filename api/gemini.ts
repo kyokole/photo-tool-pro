@@ -102,10 +102,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const { originalImage, settings } = payload;
                  const prompt = buildIdPhotoPrompt(settings);
                  const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
+                 
+                 // Map app ratios to Gemini supported ratios
+                 let modelRatio = '3:4'; // Default portrait
+                 if (settings.aspectRatio === '2x3' || settings.aspectRatio === '3x4' || settings.aspectRatio === '4x6') {
+                     modelRatio = '3:4'; // Gemini supports 3:4, matches these portrait formats best
+                 } else if (settings.aspectRatio === '5x5') {
+                     modelRatio = '1:1';
+                 }
+
                  const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: { 
+                            imageSize: '4K',
+                            aspectRatio: modelRatio
+                        } 
+                    }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });

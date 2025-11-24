@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ASPECT_RATIO_MAP } from '../constants';
@@ -52,9 +53,6 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
     const resultViewportRef = useRef<HTMLDivElement>(null);
     const [resultKey, setResultKey] = useState(0);
 
-    // State for smart viewport sizing
-    const [viewportStyle, setViewportStyle] = useState<React.CSSProperties>({ width: '100%', height: 'auto' });
-
     useEffect(() => {
         setPan({ x: 0, y: 0 }); // Reset pan on new image
         if (processedImage) {
@@ -107,19 +105,6 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
                 setPreviewError(e instanceof Error ? e.message : t('errors.previewError'));
             }
             return () => { isActive = false; };
-        } else if (!isPrintView && resultContainerRef.current) {
-            // Smart Sizing Logic
-            const container = resultContainerRef.current;
-            const containerRatio = container.clientWidth / container.clientHeight;
-            const imageRatio = ASPECT_RATIO_MAP[aspectRatio];
-
-            if (containerRatio > imageRatio) {
-                // Container is WIDER than the image, so fit to height
-                setViewportStyle({ height: '100%', width: 'auto' });
-            } else {
-                // Container is TALLER than (or same ratio as) the image, so fit to width
-                setViewportStyle({ width: '100%', height: 'auto' });
-            }
         }
     }, [isPrintView, processedImage, printLayout, aspectRatio, paperBackground, t]);
 
@@ -157,7 +142,7 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
     const renderResultContent = () => {
       if (!processedImage) {
           return (
-              <div className="text-center text-[var(--text-secondary)] p-4 flex flex-col items-center justify-center h-full">
+              <div className="text-center text-[var(--text-secondary)] p-4 flex flex-col items-center justify-center h-full w-full">
                   <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4 opacity-50">
                     <path d="M14.5 4L17.5 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M12.4382 10.3444C12.7932 9.98943 13.3862 9.91497 13.8242 10.1504L15.3022 10.9214C16.2082 11.3914 16.5202 12.5184 16.0502 13.4244L15.4202 14.6824C15.1842 15.1204 14.6542 15.3484 14.1682 15.2214L11.5312 14.5494C11.0452 14.4224 10.6692 14.0464 10.5422 13.5604L9.87022 10.9234C9.74322 10.4374 9.97122 9.90743 10.4092 9.67143L11.1802 9.28643C11.6182 9.05043 12.0832 9.20843 12.4382 9.56343" fill="currentColor" fillOpacity="0.1"/>
@@ -181,7 +166,12 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
       } else {
           return (
               <>
-                  <img src={processedImage} alt={t('imagePanes.processedAlt')} className="w-full h-full object-cover shadow-lg" />
+                  <img 
+                    src={processedImage} 
+                    alt={t('imagePanes.processedAlt')} 
+                    className="w-full h-full object-cover shadow-lg" 
+                    style={{ objectFit: 'cover' }} // Crucial for visual cropping
+                  />
                   <div className="absolute inset-0 border border-dashed border-white/20 pointer-events-none" title={t('imagePanes.safeCropArea')}></div>
                   <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
                       {keepOriginalFeatures && (
@@ -203,12 +193,13 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
     const getViewportStyle = (): React.CSSProperties => {
         const baseStyle: React.CSSProperties = {
             margin: 'auto',
-            display: 'grid',
-            placeItems: 'center',
-            padding: 12,
+            display: 'flex', // Changed to flex for better centering
+            alignItems: 'center',
+            justifyContent: 'center',
             background: 'var(--bg-deep-space)',
             borderRadius: 10,
             overflow: 'hidden',
+            boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5)',
         };
 
         if (isPrintView) {
@@ -218,10 +209,17 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
                 height: '100%',
             };
         } else {
+            // Smart Sizing based on Aspect Ratio
+            const ratioValue = ASPECT_RATIO_MAP[aspectRatio];
+            // We want the viewport to fit within the container while maintaining the aspect ratio
+            // and being as large as possible.
+            
+            // We can use aspect-ratio CSS property directly.
             return {
                 ...baseStyle,
-                ...viewportStyle, // Apply smart sizing
-                aspectRatio: ASPECT_RATIO_MAP[aspectRatio],
+                aspectRatio: `${ratioValue}`,
+                height: ratioValue > 1 ? 'auto' : '90%', // Taller images constrained by height
+                width: ratioValue > 1 ? '90%' : 'auto',  // Wider images constrained by width
                 maxWidth: '100%',
                 maxHeight: '100%',
             };
@@ -301,7 +299,7 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
                 <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-2 uppercase text-center tracking-wider">{t('imagePanes.resultTitle')}</h2>
                 <div 
                     ref={resultContainerRef}
-                    className="flex-1 overflow-hidden rounded-lg relative bg-[var(--bg-deep-space)] flex items-center justify-center shadow-inner" // Centering the viewport
+                    className="flex-1 overflow-hidden rounded-lg relative bg-[var(--bg-deep-space)] flex items-center justify-center shadow-inner"
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
@@ -310,15 +308,12 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
                 >
                     <div
                         ref={resultViewportRef}
-                        className="flex items-center justify-center" // No w-full h-full here
+                        className="flex items-center justify-center"
                         style={{
                             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel}) rotate(${rotation}deg)`,
                             transition: 'transform 0.2s ease-out',
-                             // Let the inner div dictate the size
-                            width: 'auto', 
-                            height: 'auto',
-                            maxWidth: '100%',
-                            maxHeight: '100%',
+                            width: '100%',
+                            height: '100%',
                         }}
                     >
                         <div 
@@ -330,13 +325,13 @@ const ImagePanes: React.FC<ImagePanesProps> = ({
                         </div>
                     </div>
 
-                    {/* FIXED CENTERLINE GUIDE - MOVED OUTSIDE OF THE TRANSFORMED DIV */}
+                    {/* FIXED CENTERLINE GUIDE */}
                     {processedImage && !isPrintView && (
                       <div 
                         className="absolute top-0 bottom-0 left-1/2 w-px pointer-events-none" 
                         style={{
                           transform: 'translateX(-50%)',
-                          backgroundImage: 'linear-gradient(to bottom, rgba(239, 68, 68, 0.7) 50%, transparent 50%)', // Dashed line effect
+                          backgroundImage: 'linear-gradient(to bottom, rgba(239, 68, 68, 0.7) 50%, transparent 50%)',
                           backgroundSize: '1px 10px',
                           backgroundRepeat: 'repeat-y'
                         }}
