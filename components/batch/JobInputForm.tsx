@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BatchAspectRatio, JobDefinition } from '../../types';
@@ -134,7 +135,9 @@ export const JobInputForm: React.FC<JobInputFormProps> = ({ onAddJob, onAddMulti
               disabled={isDisabled}
             >
               {batchAspectRatios.map(ratio => (
-                <option key={ratio} value={ratio}>{ratio}</option>
+                <option key={ratio} value={ratio}>
+                    {t(`batch.ratios.ratio_${ratio.replace(':', '_')}`, { defaultValue: ratio })}
+                </option>
               ))}
             </select>
           </div>

@@ -1,10 +1,10 @@
 
 export default {
   "themes": {
-    "roseGoldGlam": "Hồng Vàng Sang Trọng",
-    "cyberpunkNight": "Đêm Cyberpunk",
-    "galacticCobalt": "Thiên Hà Xanh",
-    "synthwaveGrid": "Lưới Synthwave",
+    "roseGoldGlam": "Rose Gold Glam",
+    "cyberpunkNight": "Cyberpunk Night",
+    "galacticCobalt": "Galactic Cobalt",
+    "synthwaveGrid": "Synthwave Grid",
     "change": "Đổi Giao Diện",
     "select": "Chọn Giao Diện"
   },
@@ -88,14 +88,21 @@ export default {
         "frameStyle": {
           "label": "Kiểu khung hình",
           "options": {
-            "fullBody": "Toàn thân",
-            "halfBody": "Nửa người",
+            "fullBody": "Toàn thân (Full Body)",
+            "halfBody": "Nửa người (Half Body)",
             "shoulderPortrait": "Chân dung vai",
             "cinematicWide": "Góc rộng điện ảnh"
           }
         },
         "aspectRatio": {
-          "label": "Tỉ lệ ảnh"
+          "label": "Tỉ lệ ảnh",
+          "options": {
+            "square": "Vuông (1:1)",
+            "portrait": "Chân dung (3:4)",
+            "landscape_classic": "Ngang (4:3)",
+            "story": "Story (9:16)",
+            "cinematic": "Điện ảnh (16:9)"
+          }
         }
       },
       "product_photo": {
@@ -495,6 +502,234 @@ export default {
     "generationError": "Chỉ tạo được {{successCount}} trên {{total}} ảnh yêu cầu. Một số ảnh có thể đã bị chặn do chính sách nội dung.",
     "creativeTip": "✨ Mẹo Sáng tạo: Bây giờ, hãy chỉnh sửa câu lệnh dưới đây để biến đổi hình ảnh theo ý thích của bạn!"
   },
+  "hairstyles": {
+    "female": {
+      "shortBob": "Tóc Bob Ngắn",
+      "longBob": "Tóc Bob Dài (Lob)",
+      "pixie": "Tóc Pixie Cá Tính",
+      "mullet": "Tóc Mullet Nữ",
+      "shag": "Tóc Shag",
+      "tomboy": "Tóc Tomboy",
+      "wavyCurls": "Xoăn Sóng Nước",
+      "waterWaves": "Xoăn Sóng Lơi",
+      "cCurl": "Uốn Cụp Chữ C",
+      "naturalStraight": "Thẳng Tự Nhiên",
+      "layeredStraight": "Tóc Tỉa Layer Thẳng",
+      "frenchBraid": "Tết Tóc Kiểu Pháp",
+      "fishtailBraid": "Tết Tóc Đuôi Cá",
+      "highPonytail": "Buộc Đuôi Ngựa Cao",
+      "garlicBun": "Búi Tóc Củ Tỏi",
+      "lowLooseBun": "Búi Thấp Lơi",
+      "himeCut": "Kiểu Hime Nhật Bản",
+      "wolfCut": "Tóc Wolf Cut",
+      "butterflyCut": "Tóc Cắt Cánh Bướm",
+      "hippieCurls": "Xoăn Hippie",
+      "ramenCurls": "Xoăn Mì Tôm",
+      "asymmetricalBob": "Tóc Bob Bất Đối Xứng",
+      "shoulderLengthCCurl": "Ngang Vai Uốn Cụp",
+      "leafCut": "Tóc Chiếc Lá",
+      "koreanBangs": "Mái Thưa Hàn Quốc",
+      "bluntBangs": "Mái Bằng",
+      "curtainBangs": "Mái Bay",
+      "highlight": "Nhuộm Highlight",
+      "balayage": "Nhuộm Balayage",
+      "ombre": "Nhuộm Ombre"
+    },
+    "male": {
+      "buzzCut": "Đầu Đinh (Buzz Cut)",
+      "crewCut": "Đầu Cua (Crew Cut)",
+      "caesar": "Kiểu Caesar",
+      "classicUndercut": "Undercut Cổ Điển",
+      "quiffUndercut": "Quiff Undercut",
+      "pompadour": "Pompadour Lịch Lãm",
+      "manBun": "Búi Tóc Nam (Man Bun)",
+      "topKnot": "Búi Chỏm (Top Knot)",
+      "mohican": "Mohican",
+      "fauxHawk": "Giả Mohican (Faux Hawk)",
+      "sidePart": "Rẽ Ngôi (Side Part)",
+      "middlePart": "Hai Mái (Middle Part)",
+      "slickBack": "Vuốt Ngược (Slick Back)",
+      "layered": "Tỉa Layer Nam",
+      "naturalWavy": "Xoăn Tự Nhiên",
+      "kinkyCurls": "Xoăn Xù",
+      "spiky": "Tóc Dựng (Spiky)",
+      "frenchCrop": "French Crop",
+      "ivyLeague": "Kiểu Ivy League",
+      "dreadlocks": "Tóc Tết Dreadlocks",
+      "mullet": "Tóc Mullet Nam",
+      "commaHair": "Tóc Dấu Phẩy",
+      "twoBlock": "Two Block Hàn Quốc",
+      "bowlCut": "Đầu Nấm",
+      "texturedCrop": "Textured Crop",
+      "shoulderLength": "Tóc Dài Ngang Vai",
+      "taperFade": "Taper Fade",
+      "highFade": "High Fade",
+      "lowFade": "Low Fade",
+      "dropFade": "Drop Fade"
+    }
+  },
+  "trainer": {
+    "title": "Huấn luyện AI",
+    "newConcept": "Tạo concept mới",
+    "deleteConfirm": "Bạn có chắc muốn xóa concept này? Hành động này không thể hoàn tác.",
+    "nameRequired": "Tên concept không được để trống.",
+    "imagesRequired": "Cần ít nhất 3 ảnh để huấn luyện concept.",
+    "nameExists": "Tên concept đã tồn tại. Vui lòng chọn tên khác.",
+    "editTitle": "Chỉnh sửa Concept",
+    "newTitle": "Tạo Concept Mới",
+    "empty": "Chưa có concept nào. Nhấn 'Tạo concept mới' để bắt đầu huấn luyện AI.",
+    "nameLabel": "Tên Concept",
+    "typeLabel": "Loại Concept",
+    "typeCharacter": "Nhân vật (Giữ khuôn mặt)",
+    "typeStyle": "Phong cách (Màu sắc, ánh sáng...)",
+    "imagesLabel": "Ảnh huấn luyện",
+    "imagesHelp": "Tải lên ít nhất 3 ảnh. Với nhân vật, dùng ảnh nhiều góc mặt. Với phong cách, dùng ảnh có chung chủ đề.",
+    "insertTooltip": "Chèn concept đã huấn luyện",
+    "insertButton": "Chèn concept",
+    "character": "Nhân vật",
+    "style": "Phong cách"
+  },
+  "videoCreator": {
+    "title": "Tạo Video từ Ảnh",
+    "success": "Tạo video thành công!",
+    "editTools": "Công cụ chỉnh sửa (Xem trước)",
+    "hideText": "Ẩn chữ",
+    "addText": "Thêm chữ",
+    "textHelp": "Kéo để di chuyển, nhấp đúp để sửa.",
+    "editNotice": "Lưu ý: Chỉnh sửa chỉ để xem trước. Video tải xuống là video gốc được tạo bởi AI.",
+    "sourceImage": "Ảnh nguồn",
+    "step1": "1. Nhập ý tưởng của bạn",
+    "ideaPlaceholder": "Vd: người mẫu đi bộ trên phố New York, tóc bay trong gió, chuyển động chậm...",
+    "generatingPrompt": "Đang tạo prompt...",
+    "generatePromptButton": "Tạo Prompt Chuyên Nghiệp",
+    "step2": "2. Prompt chi tiết (AI tạo)",
+    "promptPlaceholder": "Prompt chi tiết do AI tạo sẽ xuất hiện ở đây...",
+    "creatingVideo": "Đang tạo video...",
+    "step3": "3. Tạo Video",
+    "apiKeySelect": {
+      "title": "Yêu cầu chọn API Key",
+      "description": "Tính năng tạo video yêu cầu bạn chọn API Key trả phí của riêng mình. Vui lòng xem tài liệu thanh toán",
+      "docs": "tại đây",
+      "button": "Chọn API Key"
+    },
+    "editTextPlaceholder": "Nhấp đúp để sửa",
+    "editTextPrompt": "Nhập nội dung mới:"
+  },
+  "promptAnalyzer": {
+    "title": "Phân Tích Ảnh",
+    "subtitle": "Biến bất kỳ ảnh nào thành prompt AI chi tiết",
+    "uploadTitle": "1. Tải Ảnh Của Bạn",
+    "generatedTitle": "2. Prompt Được Tạo",
+    "generateButton": "Tạo Prompt",
+    "generatingButton": "Đang tạo...",
+    "placeholder": "Prompt được tạo sẽ xuất hiện ở đây...",
+    "copyButton": "Sao chép Prompt",
+    "copiedButton": "Đã chép!",
+    "faceLockLabel": "Khóa Gương Mặt",
+    "faceLockDescription": "Hướng dẫn AI mô tả khuôn mặt gốc với độ chính xác 100% để tái tạo lại.",
+    "faceLockPrefix": "Sử dụng 100% khuôn mặt tôi tải lên làm tham chiếu nhận dạng, giữ khuôn mặt tự nhiên và chân thực với tỷ lệ và kết cấu da chính xác. ",
+    "useInStudio": "Dùng trong Studio AI",
+    "upload": {
+      "dragDrop": "Kéo thả ảnh vào đây",
+      "click": "nhấp để chọn",
+      "formats": "Hỗ trợ PNG, JPG, WEBP"
+    },
+    "error": {
+      "uploadRequired": "Vui lòng tải ảnh lên trước.",
+      "unknown": "Đã xảy ra lỗi không xác định. Vui lòng thử lại.",
+      "blocked": "Không thể tạo prompt do ảnh bị chặn bởi bộ lọc an toàn.",
+      "stopped": "Mô hình AI đã dừng đột ngột (Lý do: {{reason}}). Vui lòng thử lại.",
+      "empty": "Mô hình AI trả về phản hồi trống.",
+      "invalidKey": "API key không hợp lệ.",
+      "serviceError": "Lỗi dịch vụ AI."
+    },
+    "howToUse": {
+      "title": "Hướng dẫn: Cách giữ 100% khuôn mặt gốc",
+      "step1Title": "Bước 1: Hiểu về 'Khóa Gương Mặt'",
+      "step1Content": "Khi bật 'Khóa Gương Mặt', công cụ này sẽ thêm một đoạn mô tả cực kỳ chi tiết về khuôn mặt trong ảnh của bạn. Điều này giúp các công cụ AI khác vẽ lại người giống hệt ảnh gốc.",
+      "step2Title": "Bước 2: Quy trình 'Khóa Gương Mặt' ĐÚNG (Quan trọng!)",
+      "step2Content": "Một đoạn văn bản (prompt) <strong>KHÔNG THỂ</strong> giữ lại 100% khuôn mặt một cách hoàn hảo. Bạn <strong>BẮT BUỘC</strong> phải kết hợp prompt này với ảnh gốc của bạn trong một công cụ AI hỗ trợ cả đầu vào ảnh và văn bản (như Studio AI của chúng tôi hoặc Midjourney).\n\n<strong>QUY TRÌNH ĐÚNG:</strong>\n1. Sao chép prompt vừa tạo ở đây.\n2. Mở công cụ tạo ảnh AI khác (ví dụ: Studio AI).\n3. <strong>Tải ảnh gốc của bạn</strong> vào ô tải ảnh.\n4. <strong>Dán prompt đã sao chép</strong> vào ô nhập văn bản.\n\nSự kết hợp này ra lệnh cho AI: 'Lấy khuôn mặt từ <strong>BỨC ẢNH</strong> này, và áp dụng các mô tả trong <strong>VĂN BẢN</strong> này cho phần còn lại của bức hình.'"
+    }
+  },
+  "thumbnailDesigner": {
+    "uploadSectionTitle": "1. Tải Ảnh Lên",
+    "modelHint": "Tải Ảnh Mẫu",
+    "refHint": "Tải Ảnh Tham Khảo",
+    "note": "Ảnh Mẫu là bắt buộc. Ảnh Tham Khảo (tùy chọn) sẽ quyết định phong cách, màu sắc và bố cục của ảnh nền được tạo.",
+    "settingsTitle": "2. Cài đặt & Xem trước",
+    "ratioLabel": "Tỷ lệ Thumbnail",
+    "ratioHorizontal": "Ngang (YouTube)",
+    "ratioVertical": "Dọc (Shorts/Reels)",
+    "programTitleLabel": "Tiêu đề chương trình",
+    "speakerLabel": "Diễn giả",
+    "bySpeaker": "bởi {{speaker}}",
+    "outfitLabel": "Trang phục",
+    "actionLabel": "Hành động / Dáng",
+    "extraLabel": "Ghi chú thêm",
+    "updatePreview": "Cập nhật Xem trước",
+    "generateButton": "Tạo & Tải Nền",
+    "generatingButton": "Đang tạo...",
+    "statusReady": "Sẵn sàng",
+    "statusGenerating": "Đang tạo nền với AI...",
+    "statusSuccess": "Thành công! Đã tự động tải xuống.",
+    "statusError": "Lỗi: {{error}}",
+    "errorNoModel": "Vui lòng tải lên 'Ảnh Mẫu' trước khi tạo."
+  },
+  "imageVariation": {
+        "sections": {
+            "upload": "1. Tải lên ảnh tham chiếu",
+            "configure": "2. Cấu hình các biến thể"
+        },
+        "inputs": {
+            "referenceImage": {
+                "label": "Tải lên ảnh tham chiếu"
+            },
+            "aspectRatio": {
+                "label": "Tỷ lệ khung hình"
+            },
+            "identityLock": {
+                "label": "Khóa nhận dạng"
+            },
+            "variationStrength": {
+                "label": "Cường độ biến thể"
+            },
+            "themeAnchor": {
+                "label": "Chủ đề chính"
+            },
+            "style": {
+                "label": "Phong cách"
+            }
+        },
+        "options": {
+            "aspectRatio": {
+                "story": "9:16 (Tin)",
+                "portrait": "3:4 (Chân dung)",
+                "social": "4:5 (Mạng xã hội)",
+                "square": "1:1 (Vuông)",
+                "landscape": "16:9 (Phong cảnh)"
+            },
+            "theme": {
+                "character": "Phù hợp với nhân vật",
+                "classic": "Chân dung Cổ điển",
+                "studio": "Studio Sạch sẽ",
+                "outdoor": "Ngoài trời Tự nhiên",
+                "cozy": "Trong nhà Ấm cúng",
+                "urban": "Đường phố Đô thị",
+                "fashion": "Thời trang Thanh lịch",
+                "garden": "Sân vườn/Cây xanh",
+                "cafe": "Quán cà phê Ban ngày",
+                "beach": "Bãi biển Hoàng hôn",
+                "minimal": "Phông nền Tối giản"
+            },
+            "style": {
+                "photorealistic": "Chân thực như ảnh chụp",
+                "cinematic": "Điện ảnh",
+                "editorial": "Tạp chí",
+                "minimal": "Tối giản Pastel",
+                "vivid": "Màu sắc Sống động"
+            }
+        }
+    },
   "koreanConcepts": {
         "winterSnowWhite": "Công Chúa Tuyết Mùa Đông",
         "lonelyWinterSky": "Bầu Trời Đông Cô Đơn",

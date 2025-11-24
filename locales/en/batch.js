@@ -1,3 +1,4 @@
+
 export default {
     "batch": {
         // --- Keys for Creative Studio Batch Processor (and shared keys) ---
@@ -65,6 +66,13 @@ export default {
             "title": "VIP Batch Processing Feature",
             "description": "Processing multiple photos at once is a premium feature. Please upgrade to use it.",
             "button": "Contact & Upgrade"
+        },
+        "ratios": {
+            "ratio_9_16": "9:16 (Story/TikTok)",
+            "ratio_1_1": "1:1 (Square/Avatar)",
+            "ratio_16_9": "16:9 (Youtube/Landscape)",
+            "ratio_4_3": "4:3 (Classic Portrait)",
+            "ratio_3_4": "3:4 (Phone Portrait)"
         }
     }
 }

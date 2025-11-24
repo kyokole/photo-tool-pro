@@ -1,3 +1,4 @@
+
 export default {
     "footballStudio": {
         "title": "Studio Bóng Đá",
@@ -50,6 +51,13 @@ export default {
             "netherlands": "Hà Lan",
             "germany": "Đức",
             "italy": "Ý"
+        },
+        "aspectRatios": {
+            "square": "1:1 (Vuông)",
+            "portrait_classic": "4:3 (Chân dung chuẩn)",
+            "portrait_phone": "3:4 (Điện thoại)",
+            "landscape": "16:9 (Điện ảnh)",
+            "story": "9:16 (Story/TikTok)"
         }
     },
     "scenes": {

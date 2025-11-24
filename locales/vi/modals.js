@@ -1,158 +1,186 @@
 export default {
   "guide": {
     "title": "Hướng dẫn sử dụng",
-    "subtitle": "Tận dụng tối đa các công cụ AI của chúng tôi",
+    "subtitle": "Làm chủ bộ công cụ AI toàn năng",
     "creativeStudio": {
-      "title": "Studio AI Sáng tạo",
-      "intro": "Đây là bộ công cụ mạnh mẽ và đa năng nhất, cho phép bạn tạo ra gần như mọi thứ từ hình ảnh của mình.",
+      "title": "Studio Sáng Tạo (Creative Studio)",
+      "intro": "Bộ công cụ đa năng nhất, nơi bạn biến mọi ý tưởng thành hiện thực (Ghép cặp đôi, Thử tóc, Ảnh sản phẩm...).",
       "step1": {
         "title": "Chọn Tính Năng",
-        "desc": "Chọn một tính năng từ thanh công cụ trên cùng (ví dụ: Ảnh Sản Phẩm, Thử Trang Phục, Ghép Cảnh...)."
+        "desc": "Lựa chọn một tính năng cụ thể từ danh sách (VD: Ghép ảnh Cặp đôi, Thử Trang phục, Tạo ảnh hàng loạt...)."
       },
       "step2": {
-        "title": "Cung Cấp Dữ Liệu",
-        "desc": "Tải lên các hình ảnh cần thiết và điền vào các mô tả văn bản để hướng dẫn AI."
+        "title": "Nhập Dữ Liệu",
+        "desc": "Tải lên ảnh gốc và điền các mô tả cần thiết. Sử dụng 'Huấn luyện AI' để lưu giữ gương mặt hoặc phong cách riêng."
       },
       "step3": {
         "title": "Tạo Ảnh",
-        "desc": "Nhấn nút 'Tạo ảnh' và xem kết quả. Các ảnh sẽ được tự động lưu vào thư viện của bạn."
+        "desc": "Nhấn 'Tạo ảnh'. Hệ thống sẽ xử lý và lưu kết quả vào Thư viện của bạn."
       },
-      "note": "Sử dụng tính năng 'Huấn luyện AI' để tạo các 'concept' nhân vật hoặc phong cách của riêng bạn để sử dụng lại sau này."
+      "note": "Mẹo: Sử dụng tính năng 'Tạo Video' từ ảnh kết quả để làm nội dung sinh động hơn."
     },
-    "promptAnalyzer": {
-      "title": "Phân Tích Ảnh (Tạo Prompt)",
-      "intro": "Công cụ này giúp bạn 'dịch' một hình ảnh thành một câu lệnh văn bản chi tiết cho AI.",
+    "beautyStudio": {
+      "title": "Studio Làm Đẹp (Beauty Studio)",
+      "intro": "Chỉnh sửa gương mặt chuyên sâu, trang điểm và thay đổi ánh sáng chuẩn studio.",
       "step1": {
-        "title": "Tải Ảnh Lên",
-        "desc": "Tải lên bất kỳ ảnh nào bạn muốn phân tích."
+        "title": "Tải Ảnh",
+        "desc": "Tải lên ảnh chân dung cần chỉnh sửa."
       },
       "step2": {
-        "title": "Tạo Câu Lệnh",
-        "desc": "Nhấn nút 'Tạo câu lệnh'. AI sẽ mô tả hình ảnh một cách chi tiết."
+        "title": "Chọn Công Cụ",
+        "desc": "Sử dụng thanh công cụ để chọn tính năng: Chế độ Apple, Làm mịn da, Trang điểm, hay Đổi kiểu tóc."
       },
       "step3": {
-        "title": "Sử Dụng",
-        "desc": "Sao chép câu lệnh này và sử dụng trong các công cụ AI khác (như Studio AI) để tạo ảnh tương tự."
+        "title": "Tinh Chỉnh",
+        "desc": "Điều chỉnh cường độ hiệu ứng hoặc chọn các mẫu có sẵn (preset) để có kết quả ưng ý nhất."
+      }
+    },
+    "familyStudio": {
+      "title": "Ghép Ảnh Gia Đình",
+      "intro": "Tạo bức ảnh gia đình hoàn hảo từ những bức ảnh chân dung riêng lẻ.",
+      "step1": {
+        "title": "Thêm Thành Viên",
+        "desc": "Tải ảnh chân dung của từng thành viên và nhập tuổi/mô tả."
       },
-      "note": "Tính năng 'Khóa Gương Mặt' yêu cầu bạn phải sử dụng cả ảnh gốc và câu lệnh được tạo trong công cụ AI khác để giữ lại 100% khuôn mặt."
+      "step2": {
+        "title": "Thiết Lập Bối Cảnh",
+        "desc": "Chọn bối cảnh (Phòng khách, Bãi biển, Tết...), trang phục chung và kiểu tạo dáng."
+      },
+      "step3": {
+        "title": "Face Consistency",
+        "desc": "Bật 'Bảo toàn khuôn mặt' để giữ độ giống thật cao nhất, hoặc tắt để có phong cách nghệ thuật hơn."
+      }
+    },
+    "promptAnalyzer": {
+      "title": "Phân Tích Ảnh (Image Analyzer)",
+      "intro": "Dịch hình ảnh thành ngôn ngữ mà AI có thể hiểu (Prompt).",
+      "step1": {
+        "title": "Tải Ảnh Mẫu",
+        "desc": "Tải lên bức ảnh bạn muốn AI bắt chước phong cách hoặc nội dung."
+      },
+      "step2": {
+        "title": "Tạo Prompt",
+        "desc": "Nhấn 'Tạo Prompt'. Sao chép đoạn văn bản này để dùng trong Studio Sáng tạo."
+      },
+      "step3": {
+        "title": "Khóa Gương Mặt",
+        "desc": "Sử dụng tùy chọn 'Khóa Gương Mặt' để tạo prompt mô tả chi tiết đặc điểm khuôn mặt."
+      },
+      "note": "Kết hợp Prompt tạo ra + Ảnh gốc trong Studio Sáng tạo để đạt hiệu quả cao nhất."
     },
     "fourSeasons": {
       "title": "Studio Bốn Mùa",
-      "intro": "Đưa bạn vào những khung cảnh bốn mùa tuyệt đẹp.",
+      "intro": "Du lịch qua ảnh với các bối cảnh theo mùa tuyệt đẹp.",
       "step1": {
-        "title": "Chọn Mùa & Tải Ảnh",
-        "desc": "Chọn một mùa (Xuân, Hạ, Thu, Đông) và tải ảnh của bạn lên."
+        "title": "Chọn Mùa & Ảnh",
+        "desc": "Chọn mùa (Xuân, Hạ, Thu, Đông) và tải ảnh cá nhân lên."
       },
       "step2": {
         "title": "Chọn Bối Cảnh",
-        "desc": "Chọn một bối cảnh cụ thể từ danh sách đa dạng của mùa đó."
+        "desc": "Lựa chọn địa điểm mong muốn (VD: Vườn đào Nhật Tân, Tuyết Sapa...)."
       },
       "step3": {
-        "title": "Tạo Kiệt Tác",
-        "desc": "Điều chỉnh tỷ lệ, thêm chi tiết nếu muốn và nhấn nút 'Tạo kiệt tác' để hoàn thành."
+        "title": "Tùy Biến",
+        "desc": "Sử dụng tính năng 'Chỉnh sửa trang phục' để thay đổi quần áo cho phù hợp với bối cảnh."
       }
     },
     "fashionStudio": {
-      "title": "Studio Thời trang AI",
-      "intro": "Thử vô số trang phục và phong cách một cách ảo diệu.",
+      "title": "Thời Trang & Lookbook",
+      "intro": "Phòng thay đồ ảo cho các tín đồ thời trang.",
       "step1": {
-        "title": "Tải Ảnh Lên",
-        "desc": "Tải lên ảnh toàn thân hoặc nửa người của bạn."
+        "title": "Đầu Vào",
+        "desc": "Tải lên ảnh toàn thân hoặc nửa người rõ nét."
       },
       "step2": {
         "title": "Chọn Phong Cách",
-        "desc": "Chọn danh mục (Nữ, Nam, Bé gái, Bé trai) và chọn từ thư viện phong cách khổng lồ."
+        "desc": "Chọn danh mục (Nam/Nữ/Trẻ em) và phong cách (Vest, Dạ hội, Áo dài...)."
       },
       "step3": {
-        "title": "Tạo Ảnh",
-        "desc": "Nhấn nút 'Tạo Ảnh' để xem diện mạo mới của bạn trong trang phục đã chọn."
+        "title": "Chất Lượng Cao",
+        "desc": "Bật chế độ 'Chất lượng cao' để có chi tiết vải và ánh sáng tốt nhất."
       }
     },
     "footballStudio": {
       "title": "Studio Bóng Đá",
-      "intro": "Tạo những bức ảnh tuyệt vời cùng các thần tượng bóng đá yêu thích của bạn.",
+      "intro": "Sát cánh cùng thần tượng sân cỏ.",
       "step1": {
         "title": "Chọn Chế Độ",
-        "desc": "Chọn chế độ 'Chụp cùng Idol' hoặc 'Thử đồ cho Idol'."
+        "desc": "'Chụp cùng Idol' hoặc 'Thử đồ cho Idol'."
       },
       "step2": {
-        "title": "Cung Cấp Dữ Liệu",
-        "desc": "Tải lên ảnh của bạn (cho chế độ Idol) hoặc ảnh trang phục (cho chế độ Thử đồ)."
-      },
-      "step3": {
-        "title": "Tùy Chỉnh & Tạo Ảnh",
-        "desc": "Chọn cầu thủ, đội tuyển, bối cảnh, phong cách và nhấn 'Tạo Ảnh'."
-      }
-    },
-    "headshot": {
-      "title": "Tạo Ảnh Headshot AI",
-      "intro": "Tạo ảnh chân dung chuyên nghiệp từ một bức ảnh duy nhất.",
-      "step1": {
-        "title": "Tải Ảnh Lên",
-        "desc": "Tải lên một bức ảnh chân dung rõ nét, chụp chính diện."
-      },
-      "step2": {
-        "title": "Chọn Phong Cách",
-        "desc": "Chọn một phong cách phù hợp (Doanh nghiệp, Nghệ thuật, Ngoài trời, Tối giản)."
+        "title": "Tùy Chỉnh",
+        "desc": "Chọn cầu thủ, đội tuyển và bối cảnh (Ăn mừng, Họp báo, Sân cỏ...)."
       },
       "step3": {
         "title": "Tạo Ảnh",
-        "desc": "Nhấn nút 'Tạo 4 ảnh Headshot' và AI sẽ tạo ra 4 biến thể ảnh chân dung chuyên nghiệp."
+        "desc": "AI sẽ ghép bạn vào khung hình một cách tự nhiên nhất."
+      }
+    },
+    "headshot": {
+      "title": "Headshot Chuyên Nghiệp",
+      "intro": "Nâng cấp hồ sơ LinkedIn/CV của bạn.",
+      "step1": {
+        "title": "Ảnh Gốc",
+        "desc": "Tải lên ảnh selfie hoặc chân dung đời thường."
+      },
+      "step2": {
+        "title": "Phong Cách",
+        "desc": "Chọn phong cách (Doanh nghiệp, Nghệ thuật, Tối giản...)."
+      },
+      "step3": {
+        "title": "Kết Quả",
+        "desc": "Nhận về 4 biến thể chuyên nghiệp khác nhau để lựa chọn."
       }
     },
     "idPhoto": {
-      "title": "Công cụ ảnh thẻ",
-      "intro": "Làm theo các bước sau để tạo ảnh thẻ chuyên nghiệp:",
+      "title": "Ảnh Thẻ & Hộ Chiếu",
+      "intro": "Tự làm ảnh thẻ chuẩn quốc tế tại nhà.",
       "step1": {
-        "title": "Tải ảnh lên",
-        "desc": "Chọn một bức ảnh chân dung rõ nét, chụp chính diện."
+        "title": "Tải & Cắt",
+        "desc": "Tải ảnh lên, AI sẽ tự động căn chỉnh mặt và tách nền."
       },
       "step2": {
-        "title": "Tùy chỉnh",
-        "desc": "Sử dụng bảng điều khiển để chọn tỉ lệ, nền, trang phục và các chỉnh sửa khác."
+        "title": "Trang Phục & Nền",
+        "desc": "Thay đổi trang phục (Vest, Sơ mi) và màu nền (Trắng, Xanh) chỉ với 1 cú nhấp."
       },
       "step3": {
-        "title": "Tạo ảnh",
-        "desc": "Nhấn nút 'Tạo ảnh' và để AI thực hiện phép màu."
+        "title": "Bố Cục In",
+        "desc": "Chọn khổ giấy in (10x15, 13x18) để xuất file in ấn tiết kiệm."
       },
       "step4": {
-        "title": "Tải xuống",
-        "desc": "Xem lại kết quả, điều chỉnh thêm nếu cần và tải ảnh về máy."
+        "title": "Xử Lý Hàng Loạt",
+        "desc": "(VIP) Sử dụng chế độ 'Hàng loạt' để xử lý nhiều ảnh cùng lúc."
       },
-      "note": "Tính năng 'Khóa gương mặt' đảm bảo giữ nguyên 100% các đường nét trên khuôn mặt của bạn."
+      "note": "Tính năng 'Face-Lock' giúp giữ nguyên 100% nét mặt tự nhiên."
     },
     "restoration": {
-      "title": "Công cụ phục hồi ảnh",
-      "intro": "Biến những bức ảnh cũ, mờ, hỏng thành những kỷ niệm sống động:",
+      "title": "Phục Hồi Ảnh Cũ",
+      "intro": "Làm mới kỷ niệm xưa với công nghệ AI tiên tiến.",
       "step1": {
-        "title": "Tải ảnh lên",
-        "desc": "Chọn ảnh cũ bạn muốn phục hồi."
+        "title": "Chọn Chế Độ",
+        "desc": "Phục hồi Ảnh (cho ảnh chân dung/phong cảnh) hoặc Tài liệu (cho giấy tờ/văn bản)."
       },
       "step2": {
-        "title": "Xử lý tự động",
-        "desc": "AI sẽ tự động chạy qua một quy trình gồm nhiều bước: làm sạch, phục chế chi tiết và tô màu."
+        "title": "Tùy Chọn Nâng Cao",
+        "desc": "Chọn mức độ phục hồi, khử nhiễu, và bật/tắt tô màu tự động."
       },
       "step3": {
-        "title": "Xem lại các bước",
-        "desc": "Bạn có thể xem kết quả của từng giai đoạn để thấy sự thay đổi."
-      },
-      "step4": {
-        "title": "Tải xuống",
-        "desc": "Tải về các phiên bản ảnh đã được phục hồi."
+        "title": "So Sánh",
+        "desc": "Sử dụng thanh trượt Trước/Sau để thấy sự khác biệt rõ rệt."
       }
     },
     "tips": {
-      "title": "Mẹo để có kết quả tốt nhất",
+      "title": "Mẹo Để Có Kết Quả Tốt Nhất",
       "tip1": {
-        "title": "Ảnh chất lượng cao",
-        "desc": "Sử dụng ảnh gốc có độ phân giải càng cao càng tốt."
+        "title": "Chất Lượng Ảnh Gốc",
+        "desc": "Ảnh đầu vào càng rõ nét, kết quả AI tạo ra càng chi tiết và chân thực."
       },
       "tip2": {
-        "title": "Ánh sáng tốt",
-        "desc": "Ảnh chụp đủ sáng, không quá tối hoặc cháy sáng sẽ cho kết quả đẹp hơn."
+        "title": "Mô Tả Chi Tiết",
+        "desc": "Khi nhập prompt, hãy mô tả cụ thể về ánh sáng, màu sắc và tâm trạng bức ảnh."
       },
       "tip3": {
-        "desc": "Hãy thử nghiệm với các tùy chọn khác nhau để tạo ra bức ảnh ưng ý nhất!"
+        "desc": "Đừng ngại thử nghiệm nhiều lần với các thông số khác nhau (Scale, Style) để tìm ra kết quả hoàn hảo nhất!"
       }
     }
   },

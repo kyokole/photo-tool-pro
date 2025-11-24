@@ -1,158 +1,186 @@
 export default {
   "guide": {
     "title": "User Guide",
-    "subtitle": "Get the most out of our AI tools",
+    "subtitle": "Master the All-in-One AI Suite",
     "creativeStudio": {
-      "title": "Creative AI Studio",
-      "intro": "This is the most powerful and flexible toolkit, allowing you to create almost anything from your images.",
+      "title": "Creative Studio",
+      "intro": "The most versatile toolkit to turn any idea into reality (Couple Photos, Try-On, Product Photography...).",
       "step1": {
-        "title": "Select a Feature",
-        "desc": "Choose a feature from the top toolbar (e.g., Product Photo, Try On Outfit, Place in Scene...)."
+        "title": "Select Feature",
+        "desc": "Choose a specific tool from the list (e.g., Couple Composite, Try On Outfit, Batch Generation...)."
       },
       "step2": {
-        "title": "Provide Inputs",
-        "desc": "Upload the necessary images and fill in the text descriptions to guide the AI."
+        "title": "Input Data",
+        "desc": "Upload your source images and fill in the prompts. Use 'AI Trainer' to save custom faces or styles."
       },
       "step3": {
         "title": "Generate",
-        "desc": "Click the 'Generate' button and see the results. Images are automatically saved to your library."
+        "desc": "Click 'Generate'. The system processes and saves the result to your Library."
       },
-      "note": "Use the 'AI Trainer' feature to create your own character or style 'concepts' for later reuse."
+      "note": "Tip: Use the 'Create Video' feature from the result image to make dynamic content."
+    },
+    "beautyStudio": {
+      "title": "Beauty Studio",
+      "intro": "Advanced face retouching, makeup, and studio lighting adjustment.",
+      "step1": {
+        "title": "Upload Photo",
+        "desc": "Upload a clear portrait photo."
+      },
+      "step2": {
+        "title": "Select Tool",
+        "desc": "Choose a tool from the toolbar: Apple Mode, Smooth Skin, Makeup, or Change Hairstyle."
+      },
+      "step3": {
+        "title": "Fine-tune",
+        "desc": "Adjust intensity or select presets to achieve your desired look."
+      }
+    },
+    "familyStudio": {
+      "title": "Family Studio",
+      "intro": "Create perfect family photos from individual portraits.",
+      "step1": {
+        "title": "Add Members",
+        "desc": "Upload a portrait for each family member and enter their age/description."
+      },
+      "step2": {
+        "title": "Set Scene",
+        "desc": "Choose a scene (Living Room, Beach, Holiday...), outfit style, and pose."
+      },
+      "step3": {
+        "title": "Face Consistency",
+        "desc": "Enable 'Face Consistency' for maximum realism, or disable it for a more artistic style."
+      }
     },
     "promptAnalyzer": {
-      "title": "Image Analyzer (Prompt Generator)",
-      "intro": "This tool helps you 'translate' an image into a detailed text prompt for AI.",
+      "title": "Image Analyzer",
+      "intro": "Translate images into language the AI understands (Prompts).",
       "step1": {
-        "title": "Upload Image",
-        "desc": "Upload any image you want to analyze."
+        "title": "Upload Sample",
+        "desc": "Upload an image you want the AI to mimic in style or content."
       },
       "step2": {
         "title": "Generate Prompt",
-        "desc": "Click the 'Generate Prompt' button. The AI will describe the image in detail."
+        "desc": "Click 'Generate Prompt'. Copy this text to use in Creative Studio."
       },
       "step3": {
-        "title": "Use It",
-        "desc": "Copy this prompt and use it in other AI tools (like the Creative Studio) to create similar images."
+        "title": "Face Lock",
+        "desc": "Use the 'Face Lock' option to generate a prompt that describes facial features in detail."
       },
-      "note": "The 'Face Lock' feature requires you to use both the original image and the generated prompt in another AI tool to retain 100% of the face."
+      "note": "Combine the generated Prompt + Original Image in Creative Studio for best results."
     },
     "fourSeasons": {
       "title": "Four Seasons Studio",
-      "intro": "Place yourself in beautiful seasonal scenes.",
+      "intro": "Travel through photos with beautiful seasonal backdrops.",
       "step1": {
-        "title": "Select Season & Upload",
+        "title": "Select Season & Photo",
         "desc": "Choose a season (Spring, Summer, Autumn, Winter) and upload your photo."
       },
       "step2": {
-        "title": "Choose a Scene",
-        "desc": "Select a specific scene from that season's diverse list."
+        "title": "Choose Scene",
+        "desc": "Select a desired location (e.g., Cherry Blossom Garden, Snowy Mountain...)."
       },
       "step3": {
-        "title": "Create Masterpiece",
-        "desc": "Adjust the aspect ratio, add optional details, and click the 'Create Masterpiece' button."
+        "title": "Customize",
+        "desc": "Use the 'Edit Outfit' feature to change clothes to match the scene."
       }
     },
     "fashionStudio": {
-      "title": "AI Fashion Studio",
-      "intro": "Virtually try on countless outfits and styles.",
+      "title": "Fashion & Lookbook",
+      "intro": "A virtual fitting room for fashion enthusiasts.",
       "step1": {
-        "title": "Upload Photo",
-        "desc": "Upload a full-body or half-body photo of yourself."
+        "title": "Input",
+        "desc": "Upload a clear full-body or half-body photo."
       },
       "step2": {
         "title": "Choose Style",
-        "desc": "Select a category (Female, Male, Girl, Boy) and choose from the huge style library."
+        "desc": "Select category (Men/Women/Kids) and style (Suit, Gown, Ao Dai...)."
       },
       "step3": {
-        "title": "Generate Photo",
-        "desc": "Click the 'Generate Photo' button to see your new look in the selected outfit."
+        "title": "High Quality",
+        "desc": "Enable 'High Quality' mode for the best fabric details and lighting."
       }
     },
     "footballStudio": {
       "title": "Football Studio",
-      "intro": "Create amazing photos with your favorite football idols.",
+      "intro": "Stand side-by-side with football idols.",
       "step1": {
         "title": "Select Mode",
-        "desc": "Choose between 'Photo with Idol' or 'Try on Kit' mode."
-      },
-      "step2": {
-        "title": "Provide Inputs",
-        "desc": "Upload your photo (for Idol mode) or an outfit photo (for Try on Kit mode)."
-      },
-      "step3": {
-        "title": "Customize & Generate",
-        "desc": "Select the player, team, scene, and style, then click 'Generate Photo'."
-      }
-    },
-    "headshot": {
-      "title": "AI Headshot Generator",
-      "intro": "Create professional headshots from a single photo.",
-      "step1": {
-        "title": "Upload Photo",
-        "desc": "Upload a clear, front-facing portrait of yourself."
-      },
-      "step2": {
-        "title": "Choose a Style",
-        "desc": "Select a suitable style (Corporate, Artistic, Outdoor, Minimalist)."
-      },
-      "step3": {
-        "title": "Generate Photos",
-        "desc": "Click the 'Generate 4 Headshots' button, and the AI will create 4 professional portrait variations."
-      }
-    },
-    "idPhoto": {
-      "title": "ID Photo Tool",
-      "intro": "Follow these steps to create a professional ID photo:",
-      "step1": {
-        "title": "Upload Photo",
-        "desc": "Choose a clear, front-facing portrait."
+        "desc": "'Photo with Idol' or 'Try on Kit'."
       },
       "step2": {
         "title": "Customize",
-        "desc": "Use the control panel to select the ratio, background, outfit, and other edits."
+        "desc": "Select player, team, and context (Celebration, Press Conference, Pitch...)."
       },
       "step3": {
         "title": "Generate",
-        "desc": "Press the 'Generate' button and let the AI work its magic."
-      },
-      "step4": {
-        "title": "Download",
-        "desc": "Review the result, make further adjustments if needed, and download your photo."
-      },
-      "note": "The 'Face-Lock' feature ensures 100% preservation of your facial features."
+        "desc": "AI will naturally blend you into the frame."
+      }
     },
-    "restoration": {
-      "title": "Photo Restoration Tool",
-      "intro": "Turn old, blurry, or damaged photos into vibrant memories:",
+    "headshot": {
+      "title": "Professional Headshot",
+      "intro": "Upgrade your LinkedIn profile or CV.",
       "step1": {
-        "title": "Upload Photo",
-        "desc": "Select the old photo you want to restore."
+        "title": "Original Photo",
+        "desc": "Upload a selfie or casual portrait."
       },
       "step2": {
-        "title": "Automatic Processing",
-        "desc": "The AI will automatically run through a multi-step pipeline: cleaning, restoring details, and colorizing."
+        "title": "Style",
+        "desc": "Choose a style (Corporate, Artistic, Minimalist...)."
       },
       "step3": {
-        "title": "Review Steps",
-        "desc": "You can view the result of each stage to see the transformation."
+        "title": "Result",
+        "desc": "Receive 4 professional variations to choose from."
+      }
+    },
+    "idPhoto": {
+      "title": "ID & Passport Photo",
+      "intro": "DIY professional ID photos at home.",
+      "step1": {
+        "title": "Upload & Crop",
+        "desc": "Upload photo, AI automatically aligns face and removes background."
+      },
+      "step2": {
+        "title": "Outfit & Background",
+        "desc": "Change outfit (Suit, Shirt) and background color (White, Blue) in one click."
+      },
+      "step3": {
+        "title": "Print Layout",
+        "desc": "Select print paper size (10x15, 13x18) for economical printing."
       },
       "step4": {
-        "title": "Download",
-        "desc": "Download the beautifully restored versions of your photo."
+        "title": "Batch Process",
+        "desc": "(VIP) Use 'Batch' mode to process multiple photos at once."
+      },
+      "note": "'Face-Lock' ensures 100% natural facial features are preserved."
+    },
+    "restoration": {
+      "title": "Photo Restoration",
+      "intro": "Renew old memories with advanced AI.",
+      "step1": {
+        "title": "Select Mode",
+        "desc": "Photo Restoration (portraits/scenery) or Document Restoration (papers/text)."
+      },
+      "step2": {
+        "title": "Advanced Options",
+        "desc": "Select restoration level, denoise, and toggle auto-colorization."
+      },
+      "step3": {
+        "title": "Compare",
+        "desc": "Use the Before/After slider to see the dramatic difference."
       }
     },
     "tips": {
       "title": "Tips for Best Results",
       "tip1": {
-        "title": "High-Quality Photo",
-        "desc": "Use the highest resolution source photo possible."
+        "title": "Original Photo Quality",
+        "desc": "The clearer the input photo, the more detailed and realistic the AI result."
       },
       "tip2": {
-        "title": "Good Lighting",
-        "desc": "A well-lit photo, not too dark or overexposed, yields better results."
+        "title": "Detailed Prompts",
+        "desc": "When typing prompts, be specific about lighting, colors, and mood."
       },
       "tip3": {
-        "desc": "Experiment with different options to create your perfect picture!"
+        "desc": "Don't hesitate to experiment with different settings (Scale, Style) to find the perfect result!"
       }
     }
   },

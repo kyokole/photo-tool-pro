@@ -1,3 +1,4 @@
+
 export default {
     "beautyStudio": {
         "title": "Studio Làm Đẹp",

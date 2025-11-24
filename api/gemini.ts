@@ -12,6 +12,17 @@ const NANO_BANANA_PRO = 'gemini-3-pro-image-preview';
 const TEXT_MODEL = 'gemini-2.5-flash';
 const VEO_MODEL = 'veo-3.1-fast-generate-preview';
 
+// --- HELPER: FRAME STYLE MAPPER ---
+const getFramingInstruction = (style: string): string => {
+    switch (style) {
+        case 'full_body': return "Full Body Shot. Show the subject from head to toe. Shoes must be visible.";
+        case 'half_body': return "Medium Shot. Frame from the waist up. **CRITICAL: DO NOT SHOW LEGS. DO NOT SHOW SHOES.** Focus on the upper body.";
+        case 'shoulder_portrait': return "Close-up Portrait. Frame from the shoulders up. Focus intensely on facial details.";
+        case 'cinematic_wide': return "Wide Angle Shot. Environmental portrait showing the subject in a broad scene.";
+        default: return "Standard portrait framing.";
+    }
+};
+
 // --- PROMPT BUILDERS ---
 const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
@@ -204,12 +215,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                  for (const key in formData) textData[key] = processValue(formData[key]);
 
-                 // Enhanced Prompt for better Vietnamese handling
+                 let specificInstructions = "";
+
+                 // INSTRUCTION INJECTION FOR SPECIFIC FEATURES
+                 if (featureAction === 'couple_compose') {
+                     specificInstructions = `
+                     [STRICT IDENTITY & GENDER PROTOCOL]
+                     1. **FACE IDENTITY:** You MUST preserve the facial identity of the uploaded images. Treat them as source face textures. Do not generate generic faces.
+                     2. **GENDER CONSISTENCY:** Strictly follow specified genders.
+                     3. **POSITIONING:** Ensure the person from 'person_left_image' appears on the left.
+                     `;
+                 } else if (['try_on_outfit', 'change_hairstyle', 'korean_style_studio', 'professional_headshot', 'product_photo', 'place_in_scene'].includes(featureAction)) {
+                     const framingInstr = getFramingInstruction(textData.frame_style || 'half_body');
+                     specificInstructions = `
+                     [STRICT IDENTITY & FRAMING PROTOCOL]
+                     1. **FACE IDENTITY (HIGHEST PRIORITY):** The 'subject_image' is the source of truth. You MUST perform a "Face Swap" operation conceptually. The output face MUST be identical to the source face (eyes, nose, mouth, unique features). Do NOT create a lookalike; reproduce the exact person.
+                     2. **FRAMING:** ${framingInstr}
+                     3. **OUTFIT:** If feature is 'try_on_outfit', apply the 'outfit_image' to the subject's body naturally.
+                     `;
+                 }
+
+                 // Enhanced Prompt for better Vietnamese handling & framing
                  const prompt = `
                  [TASK] Execute Feature: ${featureAction}.
-                 [CONTEXT] Input: ${JSON.stringify(textData)}.
+                 [CONTEXT] Input Data: ${JSON.stringify(textData)}.
+                 
+                 ${specificInstructions}
+                 
                  [LANGUAGE INSTRUCTION] The input data contains descriptions in VIETNAMESE. You MUST interpret them accurately. Translate contextually to English internal logic for image generation if necessary, but preserve specific cultural nuances (e.g., "Ao Dai", "Non La").
-                 [QUALITY] 8K, Nano Banana Pro, photorealistic, highly detailed. 4K OUTPUT.
+                 
+                 [OUTPUT CONFIG] 
+                 - Quality: 8K, Nano Banana Pro, photorealistic, highly detailed. 
+                 - Aspect Ratio: ${textData.aspect_ratio || '3:4'}.
                  `;
                  parts.push({ text: prompt });
 

@@ -1,3 +1,4 @@
+
 export default {
   "sidebar": {
     "mainTitle": "AI PHOTO SUITE",

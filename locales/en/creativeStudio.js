@@ -1,3 +1,4 @@
+
 export default {
   "themes": {
     "roseGoldGlam": "Rose Gold Glam",
@@ -94,7 +95,14 @@ export default {
           }
         },
         "aspectRatio": {
-          "label": "Aspect Ratio"
+          "label": "Aspect Ratio",
+          "options": {
+            "square": "Square (1:1)",
+            "portrait": "Portrait (3:4)",
+            "landscape_classic": "Landscape (4:3)",
+            "story": "Story (9:16)",
+            "cinematic": "Cinematic (16:9)"
+          }
         }
       },
       "product_photo": {

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FootballStudioSettings, FootballStudioResult, FootballCategory } from '../types';
@@ -229,12 +230,22 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                                 {sceneOptions.map(sKey => <option key={sKey} value={sKey}>{t(sKey)}</option>)}
                             </select>
                         )}
+                        
+                        {/* Aspect Ratio Button Grid */}
                         {renderSetting(t('footballStudio.aspectRatio'), 
-                            <select value={settings.aspectRatio} onChange={e => updateSettings({ aspectRatio: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
-                                 <option value="">{t('footballStudio.placeholders.aspectRatio')}</option>
-                                {FOOTBALL_ASPECT_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {FOOTBALL_ASPECT_RATIOS.map(r => (
+                                    <button 
+                                        key={r.value} 
+                                        onClick={() => updateSettings({ aspectRatio: r.value })}
+                                        className={`py-2 px-2 rounded-md text-xs font-bold transition-all duration-200 w-full ${settings.aspectRatio === r.value ? 'btn-gradient text-white shadow' : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+                                    >
+                                        {t(r.labelKey)}
+                                    </button>
+                                ))}
+                            </div>
                         )}
+
                         {renderSetting(t('footballStudio.style'), 
                             <select value={settings.style} onChange={e => updateSettings({ style: e.target.value })} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm">
                                 <option value="">{t('footballStudio.placeholders.style')}</option>

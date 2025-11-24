@@ -1,3 +1,4 @@
+
 // constants/creativeStudioConstants.ts
 import React from 'react';
 import { Feature, FeatureAction, SelectInput } from '../types';
@@ -11,18 +12,24 @@ const COMMON_INPUTS: {
     label: 'aiStudio.inputs.common.frameStyle.label',
     name: 'frame_style',
     options: [
-        "aiStudio.inputs.common.frameStyle.options.fullBody",
-        "aiStudio.inputs.common.frameStyle.options.halfBody",
-        "aiStudio.inputs.common.frameStyle.options.shoulderPortrait",
-        "aiStudio.inputs.common.frameStyle.options.cinematicWide"
+        { value: 'full_body', label: 'aiStudio.inputs.common.frameStyle.options.fullBody' },
+        { value: 'half_body', label: 'aiStudio.inputs.common.frameStyle.options.halfBody' },
+        { value: 'shoulder_portrait', label: 'aiStudio.inputs.common.frameStyle.options.shoulderPortrait' },
+        { value: 'cinematic_wide', label: 'aiStudio.inputs.common.frameStyle.options.cinematicWide' }
     ],
-    default: 'aiStudio.inputs.common.frameStyle.options.halfBody'
+    default: 'half_body'
   },
   ASPECT_RATIO: {
     type: 'select',
     label: 'aiStudio.inputs.common.aspectRatio.label',
     name: 'aspect_ratio',
-    options: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+    options: [
+        { value: '1:1', label: 'aiStudio.inputs.common.aspectRatio.options.square' },
+        { value: '3:4', label: 'aiStudio.inputs.common.aspectRatio.options.portrait' },
+        { value: '4:3', label: 'aiStudio.inputs.common.aspectRatio.options.landscape_classic' },
+        { value: '9:16', label: 'aiStudio.inputs.common.aspectRatio.options.story' },
+        { value: '16:9', label: 'aiStudio.inputs.common.aspectRatio.options.cinematic' }
+    ],
     default: '3:4'
   },
 };
@@ -124,17 +131,7 @@ export const FEATURES: Feature[] = [
         default: K_CONCEPTS[0].prompt,
         required: true
       },
-      {
-        type: 'select',
-        label: 'aiStudio.inputs.common.aspectRatio.label',
-        name: 'aspect_ratio',
-        options: [
-            { value: '1:1', label: 'aiStudio.inputs.korean_style_studio.aspectRatios.square' },
-            { value: '3:4', label: 'aiStudio.inputs.korean_style_studio.aspectRatios.portrait' },
-            { value: '9:16', label: 'aiStudio.inputs.korean_style_studio.aspectRatios.story' }
-        ],
-        default: '3:4'
-      },
+      COMMON_INPUTS.ASPECT_RATIO,
       {
         type: 'select',
         label: 'aiStudio.inputs.korean_style_studio.quality.label',
@@ -161,19 +158,7 @@ export const FEATURES: Feature[] = [
     icon: 'fas fa-clone',
     inputs: [
       { type: 'file', label: 'imageVariation.inputs.referenceImage.label', name: 'reference_image', accept: ['image/*'], required: true },
-      { 
-        type: 'select', 
-        label: 'imageVariation.inputs.aspectRatio.label', 
-        name: 'aspectRatio', 
-        options: [ 
-            { value: '9:16', label: 'imageVariation.options.aspectRatio.story' },
-            { value: '3:4', label: 'imageVariation.options.aspectRatio.portrait' },
-            { value: '4:5', label: 'imageVariation.options.aspectRatio.social' },
-            { value: '1:1', label: 'imageVariation.options.aspectRatio.square' },
-            { value: '16:9', label: 'imageVariation.options.aspectRatio.landscape' }
-        ], 
-        default: '4:5' 
-      },
+      COMMON_INPUTS.ASPECT_RATIO,
       { type: 'slider', label: 'imageVariation.inputs.identityLock.label', name: 'identityLock', min: 0, max: 100, default: 80 },
       { type: 'slider', label: 'imageVariation.inputs.variationStrength.label', name: 'variationStrength', min: 0, max: 100, default: 25 },
       { type: 'select', label: 'imageVariation.inputs.themeAnchor.label', name: 'themeAnchor', options: [

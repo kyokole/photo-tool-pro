@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { generateFourSeasonsPhoto, detectOutfit, editOutfitOnImage } from '../services/geminiService';
 import { fileToGenerativePart } from '../utils/fileUtils';
-import { applyWatermark } from '../utils/canvasUtils';
+import { applyWatermark, dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
 import type { Scene, FilePart } from '../types';
 
 type Season = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -42,6 +43,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [customDescription, setCustomDescription] = useState<string>('');
     const [isDragging, setIsDragging] = useState(false);
+    const [hoveredRatio, setHoveredRatio] = useState<AspectRatio | null>(null);
 
     // State for the new outfit editor
     const [outfitEditPrompt, setOutfitEditPrompt] = useState<string>('');
@@ -81,6 +83,14 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             prompts: t('fourSeasons.prompts.winter', { returnObjects: true }) as Scene[]
         },
     }), [t]);
+
+    const aspectRatioHints: Record<AspectRatio, string> = {
+        '1:1': t('batch.ratios.ratio_1_1', { defaultValue: 'Vuông (Avatar/Facebook)' }),
+        '4:3': t('batch.ratios.ratio_4_3', { defaultValue: 'Chân dung cổ điển' }),
+        '9:16': t('batch.ratios.ratio_9_16', { defaultValue: 'Dọc (Story/TikTok)' }),
+        '16:9': t('batch.ratios.ratio_16_9', { defaultValue: 'Ngang (Youtube/Điện ảnh)' }),
+        '3:4': t('batch.ratios.ratio_3_4', { defaultValue: 'Dọc (Điện thoại)' })
+    };
 
     useEffect(() => {
         if (resultImage) {
@@ -179,6 +189,28 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             setIsEditingOutfit(false);
         }
     }, [resultImage, outfitEditPrompt, t, isVip]);
+
+    const handleDownload = useCallback(async () => {
+        if (!resultImage) return;
+        
+        try {
+            // Check if running on mobile for better UX using Native Share
+            if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+                const blob = dataUrlToBlob(resultImage);
+                const file = new File([blob], `four-seasons-${activeSeason}.png`, { type: 'image/png' });
+                await navigator.share({
+                    files: [file],
+                    title: 'Four Seasons Photo',
+                });
+            } else {
+                smartDownload(resultImage, `four-seasons-${activeSeason}.png`);
+            }
+        } catch (e) {
+            // Fallback if share fails or is cancelled, try forcing download
+            console.error("Share failed, falling back to download", e);
+            smartDownload(resultImage, `four-seasons-${activeSeason}.png`);
+        }
+    }, [resultImage, activeSeason]);
     
     const currentSeasonTheme = seasonsConfig[activeSeason];
     
@@ -271,10 +303,20 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
                         </div>
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold mb-2">{t('fourSeasons.aspectRatioTitle')}</h3>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-lg font-bold">{t('fourSeasons.aspectRatioTitle')}</h3>
+                            {/* Hover Hint Bubble */}
+                            <div className={`bg-[var(--accent-cyan)] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transition-all duration-300 transform ${hoveredRatio ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
+                                {hoveredRatio && aspectRatioHints[hoveredRatio]}
+                            </div>
+                        </div>
                         <div className="grid grid-cols-5 gap-2">
                             {(['1:1', '4:3', '3:4', '16:9', '9:16'] as AspectRatio[]).map(r => (
-                                 <button key={r} onClick={() => setAspectRatio(r)}
+                                 <button 
+                                    key={r} 
+                                    onClick={() => setAspectRatio(r)}
+                                    onMouseEnter={() => setHoveredRatio(r)}
+                                    onMouseLeave={() => setHoveredRatio(null)}
                                     className={`py-2 px-3 rounded-md text-sm font-bold transition-all duration-200 w-full ${aspectRatio === r ? `${currentSeasonTheme.accentBg} text-white shadow` : `bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]`}`}>
                                     {r}
                                 </button>
@@ -310,9 +352,12 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
                         <div className="w-full h-full flex flex-col">
                             <div className="w-full h-full relative group flex-1 rounded-lg overflow-hidden">
                                 <img src={resultImage} alt="Generated result" className="w-full h-full object-cover"/>
-                                <a href={resultImage} download={`four-seasons-${activeSeason}.png`} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                <button 
+                                    onClick={handleDownload} 
+                                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer w-full h-full border-none"
+                                >
                                     <i className="fas fa-download fa-2x text-white"></i>
-                                </a>
+                                </button>
                             </div>
                              <div className="mt-4 p-4 bg-[var(--bg-tertiary)] rounded-lg space-y-3 animate-fade-in border border-[var(--border-color)]">
                                 <h4 className="font-semibold text-[var(--text-primary)]">

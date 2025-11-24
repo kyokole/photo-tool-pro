@@ -457,7 +457,19 @@ export const InputSection: React.FC<InputSectionProps> = ({
                 ))}
                 <button onClick={addComponent} className="text-[var(--accent-text-start)] font-semibold">+ {t('aiStudio.composite.add')}</button>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 !mt-6">
-                    {renderInput({ type: 'select', label: 'aiStudio.inputs.common.aspectRatio.label', name: 'aspect_ratio', options: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: '4:3' })}
+                    {renderInput({
+                        type: 'select',
+                        label: 'aiStudio.inputs.common.aspectRatio.label',
+                        name: 'aspect_ratio',
+                        options: [
+                            { value: "1:1", label: "aiStudio.inputs.common.aspectRatio.options.square" },
+                            { value: "3:4", label: "aiStudio.inputs.common.aspectRatio.options.portrait" },
+                            { value: "4:3", label: "aiStudio.inputs.common.aspectRatio.options.landscape_classic" },
+                            { value: "9:16", label: "aiStudio.inputs.common.aspectRatio.options.story" },
+                            { value: "16:9", label: "aiStudio.inputs.common.aspectRatio.options.cinematic" }
+                        ],
+                        default: '4:3'
+                    })}
                 </div>
             </div>
         )

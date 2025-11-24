@@ -1,6 +1,13 @@
+
 import { FootballStudioSettings, FootballCategory } from "../types";
 
-export const FOOTBALL_ASPECT_RATIOS = ["1:1", "4:3", "3:4", "16:9", "9:16"];
+export const FOOTBALL_ASPECT_RATIOS = [
+    { value: "1:1", labelKey: "footballStudio.aspectRatios.square" },
+    { value: "4:3", labelKey: "footballStudio.aspectRatios.portrait_classic" },
+    { value: "3:4", labelKey: "footballStudio.aspectRatios.portrait_phone" },
+    { value: "16:9", labelKey: "footballStudio.aspectRatios.landscape" },
+    { value: "9:16", labelKey: "footballStudio.aspectRatios.story" }
+];
 
 export const FOOTBALL_TEAMS: Record<FootballCategory, string[]> = {
     contemporary: ["vietnam", "argentina", "portugal", "france", "brazil", "england", "norway", "belgium", "south_korea"],

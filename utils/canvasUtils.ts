@@ -1,3 +1,4 @@
+
 import type { PrintLayout, AspectRatio, PaperBackground } from '../types';
 
 // --- Types ---
@@ -32,15 +33,13 @@ export const PHOTO_SIZES_MM: Record<AspectRatio, {width:number, height:number}> 
     '5x5': { width: 50, height: 50 },
 };
 
-export const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
+export const WATERMARK_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAVAAAACACAYAAAAx7wz2AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAiDSURBVHgB7d0/bhtHGMfxp/9ECpEgQUqECBEiBwkQ5AAK3CghQAIkCEmChAgRooMECXIAxV2QkKA1aHJHkPYODk3QW2m+x33iY/zS3k8962yvP1lW1e549/zP+J41n/1dXV19/vz58/bt29fc3Nze3t7Kysrq6urS09NzcnJycnJybm7u/Pz80tLS5ubmxsbG1tbWdnZ2lpaWpqamhobG2NhYV1dXVVVVWVlZX1/f3NzcxMTE+Pj4yMjIwsLC1NTU2NjY6Ojo2tra7u7uRkZGOjo69vb2ampqenp6WllZWVtbu7y83NzcXF5e3tzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NzaWm9R9R-9E8AAAAASUVORK5CYII=';
 
 // --- Core Utility Functions ---
 
 export const mm2px = (mm: number) => Math.round((mm / MM_PER_INCH) * DPI);
 
 export const smartDownload = (imageUrl: string, fileName: string) => {
-    // This universal method works reliably on both modern desktop and mobile browsers
-    // by creating a temporary link and programmatically clicking it.
     const link = document.createElement('a');
     link.href = imageUrl;
     link.download = fileName;
@@ -49,7 +48,7 @@ export const smartDownload = (imageUrl: string, fileName: string) => {
     document.body.removeChild(link);
 };
 
-// --- NEW CLIENT-SIDE WATERMARKING FUNCTION ---
+// --- CLIENT-SIDE WATERMARKING FUNCTION ---
 export const applyWatermark = (baseImageSrc: string): Promise<string> => {
     return new Promise((resolve, reject) => {
         const watermark = new Image();
@@ -65,18 +64,16 @@ export const applyWatermark = (baseImageSrc: string): Promise<string> => {
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 console.error('Failed to get canvas context, returning original image.');
-                return resolve(baseImageSrc); // Fallback to original image
+                return resolve(baseImageSrc); 
             }
 
             canvas.width = baseImage.naturalWidth;
             canvas.height = baseImage.naturalHeight;
 
-            // Draw the base image
             ctx.drawImage(baseImage, 0, 0);
 
-            // Calculate watermark size and position
             const watermarkAspectRatio = watermark.width / watermark.height;
-            let watermarkWidth = canvas.width * 0.25; // Watermark is 25% of the image width
+            let watermarkWidth = canvas.width * 0.25; 
             let watermarkHeight = watermarkWidth / watermarkAspectRatio;
             
             if (watermarkHeight > canvas.height * 0.25) {
@@ -84,14 +81,13 @@ export const applyWatermark = (baseImageSrc: string): Promise<string> => {
                 watermarkWidth = watermarkHeight * watermarkAspectRatio;
             }
 
-            const margin = canvas.width * 0.02; // 2% margin from edges
+            const margin = canvas.width * 0.02; 
             const x = canvas.width - watermarkWidth - margin;
             const y = canvas.height - watermarkHeight - margin;
 
-            // Draw the watermark with opacity
             ctx.globalAlpha = 0.7;
             ctx.drawImage(watermark, x, y, watermarkWidth, watermarkHeight);
-            ctx.globalAlpha = 1.0; // Reset alpha
+            ctx.globalAlpha = 1.0;
 
             resolve(canvas.toDataURL('image/png'));
         };
@@ -99,14 +95,8 @@ export const applyWatermark = (baseImageSrc: string): Promise<string> => {
         watermark.onload = onLoaded;
         baseImage.onload = onLoaded;
         
-        watermark.onerror = () => {
-            console.error('Failed to load watermark image, returning original image.');
-            resolve(baseImageSrc); // Fallback
-        };
-        baseImage.onerror = () => {
-            console.error('Failed to load base image for watermarking, returning original image.');
-            resolve(baseImageSrc); // Fallback
-        };
+        watermark.onerror = () => resolve(baseImageSrc);
+        baseImage.onerror = () => resolve(baseImageSrc);
 
         watermark.src = `data:image/png;base64,${WATERMARK_BASE64}`;
         baseImage.src = baseImageSrc;
@@ -117,23 +107,21 @@ export const applyWatermark = (baseImageSrc: string): Promise<string> => {
 // --- Layout Engine ---
 
 /**
- * Calculates how many photos of a given aspect ratio can fit onto a specific paper size.
- * This is a dynamic calculation based on physical dimensions.
+ * Calculates how many photos fit.
+ * Standard: 2mm gap.
  */
 export function getFixedCount(paper: Exclude<PrintLayout, 'none'>, ratio: AspectRatio): FixedCountMap {
-    const paperDim = PAPER_MM[paper]; // e.g., {w: 100, h: 150}
-    const photoDim = PHOTO_SIZES_MM[ratio]; // e.g., {width: 50, height: 50}
-    const gap = 2; // A 2mm gap between photos for easier cutting.
+    const paperDim = PAPER_MM[paper]; 
+    const photoDim = PHOTO_SIZES_MM[ratio];
+    const gap = 2; // 2mm gap
 
-    // Total width used by 'n' columns = (n * photo_width) + ((n - 1) * gap)
-    // To find 'n', we can rearrange: n * (photo_width + gap) - gap <= paper_width
-    // So, n <= (paper_width + gap) / (photo_width + gap)
+    // Calculation: (PhotoW + Gap) * Cols - Gap <= PaperW
+    // Cols <= (PaperW + Gap) / (PhotoW + Gap)
     
-    // We assume the paper is held in portrait orientation (e.g., 100mm wide, 150mm tall).
-    // We calculate how many photos fit without rotating them.
     const cols = Math.floor((paperDim.w + gap) / (photoDim.width + gap));
     const rows = Math.floor((paperDim.h + gap) / (photoDim.height + gap));
 
+    // Fallback to 1 if dimensions are somehow flipped or weird, though standard sizes shouldn't fail.
     return { cols: Math.max(1, cols), rows: Math.max(1, rows) };
 }
 
@@ -141,44 +129,38 @@ export function getFixedCount(paper: Exclude<PrintLayout, 'none'>, ratio: Aspect
 function calculateLayout({ pageW, pageH, passRatio, paper, minPad, minGap, ratio }: {
   pageW: number; pageH: number; passRatio: number; paper: Exclude<PrintLayout, 'none'>; minPad: number; minGap: number; ratio: AspectRatio;
 }): LayoutResult {
+    // 1. EXACT DIMENSIONS: Calculate cell size based on strict millimeter definition
+    // This ensures 3x4 is exactly 30mm x 40mm, not "fit to page".
+    const photoDimMM = PHOTO_SIZES_MM[ratio];
+    const cellW = mm2px(photoDimMM.width);
+    const cellH = mm2px(photoDimMM.height);
+
+    // 2. Get grid capacity
     const { cols, rows } = getFixedCount(paper, ratio);
 
-    const availableW = pageW - 2 * minPad - (cols - 1) * minGap;
-    const availableH = pageH - 2 * minPad - (rows - 1) * minGap;
-
-    // Calculate cell size based on width constraint
-    const cellW_fromWidth = availableW / cols;
-    const cellH_fromWidth = cellW_fromWidth / passRatio;
-
-    // Calculate cell size based on height constraint
-    const cellH_fromHeight = availableH / rows;
-    const cellW_fromHeight = cellH_fromHeight * passRatio;
-
-    let cellW: number, cellH: number;
-
-    // Determine which constraint is more limiting to maintain aspect ratio
-    if (cellH_fromWidth * rows <= availableH) {
-        // Width is the limiting factor
-        cellW = Math.floor(cellW_fromWidth);
-        cellH = Math.floor(cellH_fromWidth);
-    } else {
-        // Height is the limiting factor
-        cellH = Math.floor(cellH_fromHeight);
-        cellW = Math.floor(cellW_fromHeight);
-    }
-
-    if (cellW <= 0 || cellH <= 0) {
-        console.error("Layout calculation resulted in zero or negative cell size.", {cellW, cellH, pageW, pageH});
-        return { cols: 0, rows: 0, cellW: 1, cellH: 1, gap: minGap, padX: minPad, padY: minPad, x0: minPad, y0: minPad };
-    }
-    
-    // Recalculate padding to center the grid of photos
+    // 3. Calculate total grid size
     const totalGridW = cols * cellW + (cols - 1) * minGap;
     const totalGridH = rows * cellH + (rows - 1) * minGap;
+
+    // 4. Center the grid on the page
     const padX = Math.floor((pageW - totalGridW) / 2);
     const padY = Math.floor((pageH - totalGridH) / 2);
 
-    return { cols, rows, cellW, cellH, gap: minGap, padX, padY, x0: padX, y0: padY };
+    // Guard against negative padding (though getFixedCount should prevent this)
+    const safePadX = Math.max(0, padX);
+    const safePadY = Math.max(0, padY);
+
+    return { 
+        cols, 
+        rows, 
+        cellW, 
+        cellH, 
+        gap: minGap, 
+        padX: safePadX, 
+        padY: safePadY, 
+        x0: safePadX, 
+        y0: safePadY 
+    };
 }
 
 
@@ -199,8 +181,7 @@ const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, wi
 };
 
 /**
- * Draws an image inside a destination box on a canvas, maintaining the image's aspect ratio.
- * It scales the image to fit completely within the box and centers it.
+ * Draws image with contain fit inside the destination rect.
  */
 const drawImageWithContain = (
     ctx: CanvasRenderingContext2D,
@@ -215,13 +196,11 @@ const drawImageWithContain = (
     let finalWidth: number, finalHeight: number, finalX: number, finalY: number;
 
     if (imgRatio > destRatio) {
-        // Image is wider than the destination box, so fit to width
         finalWidth = dWidth;
         finalHeight = dWidth / imgRatio;
         finalX = dx;
         finalY = dy + (dHeight - finalHeight) / 2;
     } else {
-        // Image is taller than or has the same ratio as the destination box, so fit to height
         finalHeight = dHeight;
         finalWidth = dHeight * imgRatio;
         finalY = dy;
@@ -254,17 +233,21 @@ export const generatePaperPreview = (
                 const previewW = previewTargetWidth;
                 const previewH = previewTargetWidth / paperRatio;
 
-                const layout = calculateLayout({
-                    pageW: previewW,
-                    pageH: previewH,
-                    passRatio: PASS_RATIO[aspectRatio],
-                    paper: printLayout,
-                    minPad: Math.round(previewW * 0.02),
-                    minGap: Math.round(previewW * 0.015),
-                    ratio: aspectRatio,
-                });
+                // Determine pixels per mm for this preview scale
+                const previewMM2PX = (mm: number) => (mm / paperConfig.w) * previewW;
+
+                // Calculate layout using preview scale units
+                const photoDimMM = PHOTO_SIZES_MM[aspectRatio];
+                const cellW = Math.round(previewMM2PX(photoDimMM.width));
+                const cellH = Math.round(previewMM2PX(photoDimMM.height));
+                const minGap = Math.round(previewMM2PX(2)); // 2mm gap
+
+                const { cols, rows } = getFixedCount(printLayout, aspectRatio);
                 
-                console.log("Preview Layout:", { mode: aspectRatio, ...layout });
+                const totalGridW = cols * cellW + (cols - 1) * minGap;
+                const totalGridH = rows * cellH + (rows - 1) * minGap;
+                const padX = Math.floor((previewW - totalGridW) / 2);
+                const padY = Math.floor((previewH - totalGridH) / 2);
 
                 const canvas = document.createElement('canvas');
                 canvas.width = previewW;
@@ -281,11 +264,14 @@ export const generatePaperPreview = (
                 ctx.fill();
                 ctx.restore();
                 
-                for (let r = 0; r < layout.rows; r++) {
-                    for (let c = 0; c < layout.cols; c++) {
-                        const x = layout.x0 + c * (layout.cellW + layout.gap);
-                        const y = layout.y0 + r * (layout.cellH + layout.gap);
-                        drawImageWithContain(ctx, img, x, y, layout.cellW, layout.cellH);
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const x = padX + c * (cellW + minGap);
+                        const y = padY + r * (cellH + minGap);
+                        // Draw photo background (white) for cutting guides if needed, or just the image
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(x, y, cellW, cellH);
+                        drawImageWithContain(ctx, img, x, y, cellW, cellH);
                     }
                 }
                 
@@ -319,14 +305,16 @@ export const generatePrintSheet = (
                 const paperConfig = PAPER_MM[printLayout];
                 const pageW_px = mm2px(paperConfig.w);
                 const pageH_px = mm2px(paperConfig.h);
-                
+                const gap_px = mm2px(2); // 2mm gap standard
+
+                // Use strict layout calculation
                 const layout = calculateLayout({
                     pageW: pageW_px,
                     pageH: pageH_px,
                     passRatio: PASS_RATIO[aspectRatio],
                     paper: printLayout,
-                    minPad: mm2px(4),
-                    minGap: mm2px(2),
+                    minPad: 0, // Pad calculated internally by centering
+                    minGap: gap_px,
                     ratio: aspectRatio,
                 });
                 
@@ -345,6 +333,11 @@ export const generatePrintSheet = (
                     for (let c = 0; c < layout.cols; c++) {
                         const x = layout.x0 + c * (layout.cellW + layout.gap);
                         const y = layout.y0 + r * (layout.cellH + layout.gap);
+                        
+                        // Optional: Draw a faint crop line or white bg behind image if transparency exists
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(x, y, layout.cellW, layout.cellH);
+
                         drawImageWithContain(ctx, img, x, y, layout.cellW, layout.cellH);
                     }
                 }
