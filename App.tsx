@@ -444,6 +444,9 @@ const App: React.FC = () => {
             setIdPhotoError(t('errors.apiKeyInvalid'));
         } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
             setIdPhotoError(t('errors.timeout'));
+        } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+            // Check for Google Internal Server Error
+            setIdPhotoError(t('errors.generationOverloaded'));
         } else {
             const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
             setIdPhotoError(t('errors.generationFailed', { error: displayMessage }));
@@ -594,6 +597,8 @@ const App: React.FC = () => {
                 let errorStringForSearch = String(err);
                 if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
                     job.error = t('errors.timeout');
+                } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+                    job.error = t('errors.generationOverloaded');
                 } else {
                     job.error = err instanceof Error ? err.message : t('errors.unknownError');
                 }
@@ -657,6 +662,8 @@ const App: React.FC = () => {
                 setHeadshotError(t('errors.apiKeyInvalid'));
             } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
                 setHeadshotError(t('errors.timeout'));
+            } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+                setHeadshotError(t('errors.generationOverloaded'));
             } else {
                 const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
                 setHeadshotError(t('errors.headshotGenerationFailed', { error: displayMessage }));
@@ -711,6 +718,8 @@ const App: React.FC = () => {
                 setFashionStudioError(t('errors.apiKeyInvalid'));
             } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
                 setFashionStudioError(t('errors.timeout'));
+            } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+                setFashionStudioError(t('errors.generationOverloaded'));
             } else {
                 const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
                 setFashionStudioError(t('errors.generationFailed', { error: displayMessage }));
