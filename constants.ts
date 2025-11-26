@@ -1,4 +1,5 @@
-import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle } from './types';
+
+import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings } from './types';
 
 export * from './constants/familyStudioConstants';
 
@@ -26,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   safe5x5Layout: true,
   printLayout: 'none',
   paperBackground: '#ffffff',
+  highQuality: false, // Default to standard/fast quality
 };
 
 // OUTFIT_PRESETS now uses keys for names, which will be translated by the UI, and includes a previewUrl
@@ -474,5 +476,5 @@ export const DEFAULT_FASHION_STUDIO_SETTINGS: {
     style: FASHION_FEMALE_STYLES[0].promptValue,
     aspectRatio: '4:3',
     description: '',
-    highQuality: false
+    highQuality: false, // Default to standard/fast quality
 };

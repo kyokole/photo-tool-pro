@@ -38,6 +38,7 @@ export interface Settings {
   safe5x5Layout: boolean;
   printLayout: PrintLayout;
   paperBackground: PaperBackground;
+  highQuality?: boolean; // New property for quality control
 }
 
 export interface HistoryItem {
@@ -77,6 +78,7 @@ export interface RestorationOptions {
   gender: 'auto' | 'male' | 'female';
   age: 'auto' | 'child' | 'young_adult' | 'adult' | 'elderly';
   context: string;
+  highQuality?: boolean; // New property
 }
 
 export interface DocumentRestorationOptions {
@@ -86,6 +88,7 @@ export interface DocumentRestorationOptions {
   enhanceText: boolean;
   preserveSignatures: boolean;
   customPrompt: string;
+  highQuality?: boolean; // New property
 }
 
 
@@ -138,6 +141,7 @@ export interface FootballStudioSettings {
   aspectRatio: string;
   style: string;
   customPrompt: string;
+  highQuality?: boolean; // New property
 }
 
 export interface FootballStudioResult {
@@ -267,6 +271,7 @@ export interface ThumbnailInputs {
   outfit: string;
   action: string;
   extra: string;
+  highQuality?: boolean; // New property
 }
 
 export interface ThumbnailImageData {
@@ -363,6 +368,7 @@ export interface FamilyStudioSettings {
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
     faceConsistency: boolean;
+    highQuality?: boolean; // New property
 }
 
 export interface ROI {
@@ -416,6 +422,7 @@ export interface SerializedFamilyStudioSettings {
     customPrompt: string;
     aspectRatio: '4:3' | '16:9';
     faceConsistency: boolean;
+    highQuality?: boolean; // New property
     rois?: ROI[]; // Make optional for backend compatibility
 }
 

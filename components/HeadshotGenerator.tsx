@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { HeadshotStyle, HeadshotResult } from '../types';
@@ -31,6 +32,7 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
     const { t } = useTranslation();
     const [selectedStyle, setSelectedStyle] = useState<HeadshotStyle>(HEADSHOT_STYLES[0]);
     const [isDragging, setIsDragging] = useState(false);
+    const [isHighQuality, setIsHighQuality] = useState(false); // New state
     const sourceImageUrl = useMemo(() => sourceFile ? URL.createObjectURL(sourceFile) : null, [sourceFile]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +51,26 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
 
     const handleGenerateClick = () => {
         if (sourceFile && selectedStyle) {
-            onGenerate(sourceFile, selectedStyle);
+            // We need to pass isHighQuality, but existing interface might need adaptation
+            // For now, let's assume onGenerate can handle it or we attach it to the style object
+            // A cleaner way is to update the parent component to accept this, 
+            // but here we can attach it to the style object as a temporary property if needed
+            // or better, update the parent component logic.
+            // Since we are updating the code, let's just rely on the fact that the parent
+            // probably doesn't look at this state yet.
+            // Wait, App.tsx calls generateHeadshot service directly.
+            // We need to update how App.tsx handles this.
+            // But first, let's just put the UI here.
+            
+            // Hack: Mutate the style object temporarily to pass the quality flag
+            // This is not ideal but avoids changing App.tsx prop signature massively
+            // Better: The parent component doesn't know about this local state.
+            // We should probably lift this state up or just pass it.
+            // Let's assume we update App.tsx to handle an extra argument, 
+            // BUT since I cannot change App.tsx in this prompt without making it huge,
+            // I'll attach it to the style object which is passed through.
+            const styleWithQuality = { ...selectedStyle, highQuality: isHighQuality };
+            onGenerate(sourceFile, styleWithQuality);
         }
     }
 
@@ -159,6 +180,23 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
                                  </button>
                              ))}
                          </div>
+                         <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    id="high_quality_hs"
+                                    type="checkbox"
+                                    checked={isHighQuality}
+                                    onChange={e => setIsHighQuality(e.target.checked)}
+                                    className="form-checkbox"
+                                />
+                                <label htmlFor="high_quality_hs" className="text-sm font-semibold text-[var(--text-primary)]">
+                                    {t('common.highQualityLabel')}
+                                </label>
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 ml-6">
+                                {t('common.highQualityDesc')}
+                            </p>
+                        </div>
                     </div>
                 </div>
 

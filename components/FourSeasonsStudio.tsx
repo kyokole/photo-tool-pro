@@ -44,6 +44,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
     const [customDescription, setCustomDescription] = useState<string>('');
     const [isDragging, setIsDragging] = useState(false);
     const [hoveredRatio, setHoveredRatio] = useState<AspectRatio | null>(null);
+    const [isHighQuality, setIsHighQuality] = useState(false);
 
     // State for the new outfit editor
     const [outfitEditPrompt, setOutfitEditPrompt] = useState<string>('');
@@ -151,7 +152,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             const imagePart = await fileToGenerativePart(sourceFile);
             if (!imagePart) throw new Error(t('errors.fileProcessingError'));
             
-            let generatedImage = await generateFourSeasonsPhoto(imagePart, selectedScene, activeSeason, aspectRatio, customDescription);
+            let generatedImage = await generateFourSeasonsPhoto(imagePart, selectedScene, activeSeason, aspectRatio, customDescription, isHighQuality);
             
             if (!isVip) {
                 generatedImage = await applyWatermark(generatedImage);
@@ -164,7 +165,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
         } finally {
             setIsLoading(false);
         }
-    }, [sourceFile, selectedScene, activeSeason, aspectRatio, customDescription, t, isVip]);
+    }, [sourceFile, selectedScene, activeSeason, aspectRatio, customDescription, t, isVip, isHighQuality]);
 
      const handleEditOutfit = useCallback(async () => {
         if (!resultImage || !outfitEditPrompt.trim()) return;
@@ -333,6 +334,20 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
                             className={`w-full p-3 rounded-lg border border-[var(--border-color)] bg-[var(--bg-interactive)] focus:ring-2 focus:${currentSeasonTheme.ring} transition duration-200`}
                         />
                     </div>
+                    {/* High Quality Checkbox */}
+                    <div className="flex items-center space-x-2 p-2 bg-[var(--bg-interactive)] rounded-lg border border-[var(--border-color)]">
+                        <input
+                            id="high_quality_fs"
+                            type="checkbox"
+                            checked={isHighQuality}
+                            onChange={e => setIsHighQuality(e.target.checked)}
+                            className="form-checkbox"
+                        />
+                        <label htmlFor="high_quality_fs" className="text-sm font-semibold text-[var(--text-primary)]">
+                            {t('common.highQualityLabel')}
+                        </label>
+                    </div>
+
                      <button onClick={handleGenerate} disabled={isLoading || !sourceFile || !selectedScene} className={`w-full text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all duration-300 disabled:bg-gray-400/50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${currentSeasonTheme.accentBg}`}>
                         {isLoading ? <><Spinner size="h-5 w-5" /> <span>{t('fourSeasons.generating')}</span></> : <><i className="fas fa-magic"></i> {t(currentSeasonTheme.generateButtonKey)}</>}
                     </button>

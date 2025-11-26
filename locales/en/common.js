@@ -1,3 +1,4 @@
+
 export default {
   "common": {
     "note": "Note",
@@ -13,7 +14,9 @@ export default {
     "edit": "Edit",
     "delete": "Delete",
     "save": "Save",
-    "uploadPrompt": "Drag & drop or click to select file"
+    "uploadPrompt": "Drag & drop or click to select file",
+    "highQualityLabel": "High Quality (4K)",
+    "highQualityDesc": "Enable for sharpest 4K output (slower). Disable for fast generation."
   },
   "footer": {
     "credit": "Designed & Developed by Kyoko Le",

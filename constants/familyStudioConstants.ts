@@ -1,3 +1,4 @@
+
 import type { FamilyStudioSettings, FamilyMember } from '../types';
 
 export const FAMILY_ASPECT_RATIOS: { value: '4:3' | '16:9', labelKey: string }[] = [
@@ -59,4 +60,5 @@ export const DEFAULT_FAMILY_STUDIO_SETTINGS: FamilyStudioSettings = {
     customPrompt: '',
     aspectRatio: '4:3',
     faceConsistency: true,
+    highQuality: false, // Default to false (Standard)
 };

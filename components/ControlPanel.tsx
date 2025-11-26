@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Settings, AspectRatio, BackgroundMode, OutfitMode, HairStyle, PrintLayout, PaperBackground, AccordionSection } from '../types';
@@ -149,6 +150,23 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                                 {ratio}
                             </button>
                         ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                id="high_quality_id"
+                                type="checkbox"
+                                checked={settings.highQuality || false}
+                                onChange={e => onDestructiveSettingChange(prev => ({...prev, highQuality: e.target.checked}))}
+                                className="form-checkbox"
+                            />
+                            <label htmlFor="high_quality_id" className="text-sm font-semibold text-[var(--text-primary)]">
+                                {t('common.highQualityLabel')}
+                            </label>
+                        </div>
+                        <p className="text-xs text-[var(--text-secondary)] mt-1 ml-6">
+                            {t('common.highQualityDesc')}
+                        </p>
                     </div>
                 </div>
             );

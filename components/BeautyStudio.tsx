@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
@@ -30,6 +31,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isHighQuality, setIsHighQuality] = useState(false); // New state
 
   const [history, setHistory] = useState<BeautyHistoryItem[]>([]);
  
@@ -55,12 +57,26 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     setIsLoading(true);
     setError(null);
 
+    // Temporarily attach highQuality to payload style or tool, 
+    // or update generateBeautyPhoto signature.
+    // Since I am modifying everything, I'll assume the service will be updated (it is in api/gemini.ts which reads payload)
+    // But I need to pass it. `generateBeautyPhoto` takes specific args.
+    // I will overload `generateBeautyPhoto` or attach quality to one of the objects.
+    // Let's attach it to the 'style' object for transport if simpler, 
+    // OR better: modify the service call in geminiService.ts? No, that file wasn't fully requested to be changed but I can change it.
+    // Actually, `generateBeautyPhoto` signature in `services/geminiService.ts` takes specific arguments.
+    // I will modify `services/geminiService.ts` as well to accept an options object or just piggyback.
+    
+    // Strategy: Piggyback on `style` object which is passed to backend.
+    const styleWithQuality = style ? { ...style, highQuality: isHighQuality } : { highQuality: isHighQuality } as any;
+    const toolWithQuality = { ...tool, highQuality: isHighQuality }; // For single click actions
+
     try {
       const imageDataFromServer = await generateBeautyPhoto(
         imageToModify,
-        tool,
+        toolWithQuality,
         subFeature,
-        style
+        styleWithQuality
       );
       
       const newImageDataUrl = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
@@ -82,7 +98,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     } finally {
       setIsLoading(false);
     }
-  }, [activePreview, currentBaseImage, isVip, t]);
+  }, [activePreview, currentBaseImage, isVip, t, isHighQuality]);
  
   const handleToolSelect = useCallback((tool: BeautyFeature) => {
     if (activePreview) {
@@ -273,6 +289,21 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                         onSave={handleSave}
                         canSave={!!currentBaseImage}
                     />
+                </div>
+
+                <div className="flex justify-center">
+                    <div className="flex items-center space-x-2 p-2 bg-[var(--bg-component)] rounded-lg shadow border border-[var(--border-color)]">
+                        <input
+                            id="high_quality_beauty"
+                            type="checkbox"
+                            checked={isHighQuality}
+                            onChange={e => setIsHighQuality(e.target.checked)}
+                            className="form-checkbox"
+                        />
+                        <label htmlFor="high_quality_beauty" className="text-sm font-semibold text-[var(--text-primary)]">
+                            {t('common.highQualityLabel')}
+                        </label>
+                    </div>
                 </div>
 
                 {error && (

@@ -123,9 +123,10 @@ export const generateFourSeasonsPhoto = async (
     scene: Scene,
     season: string,
     aspectRatio: string,
-    customDescription: string
+    customDescription: string,
+    highQuality: boolean
 ): Promise<string> => {
-    const { imageData } = await callBackendApi('generateFourSeasonsPhoto', { imagePart, scene, season, aspectRatio, customDescription });
+    const { imageData } = await callBackendApi('generateFourSeasonsPhoto', { imagePart, scene, season, aspectRatio, customDescription, highQuality });
     return imageData;
 };
 

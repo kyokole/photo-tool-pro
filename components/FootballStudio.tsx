@@ -253,6 +253,25 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                             </select>
                         )}
                         {renderSetting(t('footballStudio.customPrompt'), <input type="text" value={settings.customPrompt} onChange={e => updateSettings({ customPrompt: e.target.value })} placeholder={t('footballStudio.customPromptPlaceholder')} className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-md px-3 py-2 text-sm" />)}
+                    
+                        {/* Quality Toggle */}
+                        <div className="mt-2 p-3 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    id="high_quality_fb"
+                                    type="checkbox"
+                                    checked={settings.highQuality || false}
+                                    onChange={e => updateSettings({ highQuality: e.target.checked })}
+                                    className="form-checkbox"
+                                />
+                                <label htmlFor="high_quality_fb" className="text-sm font-semibold text-[var(--text-primary)]">
+                                    {t('common.highQualityLabel')}
+                                </label>
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] mt-1 ml-6">
+                                {t('common.highQualityDesc')}
+                            </p>
+                        </div>
                     </div>
                     <div className="mt-auto pt-4">
                          <button onClick={handleGenerate} disabled={!canGenerate} className={`w-full btn-gradient text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${canGenerate ? 'animate-pulse-glow' : ''}`}>

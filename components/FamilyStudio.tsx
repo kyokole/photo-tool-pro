@@ -424,6 +424,19 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                     </label>
                                     <textarea value={settings.customPrompt} onChange={e => updateSettings({ customPrompt: e.target.value })} placeholder={t('familyStudio.customPromptPlaceholder')} rows={3} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded-md p-2 focus:ring-1 focus:ring-[var(--accent-blue)] resize-y"></textarea>
                                 </div>
+                                {/* High Quality Checkbox */}
+                                <div className="flex items-center space-x-2 p-2 bg-[var(--bg-interactive)] rounded-lg border border-[var(--border-color)]">
+                                    <input
+                                        id="high_quality_fam"
+                                        type="checkbox"
+                                        checked={settings.highQuality || false}
+                                        onChange={e => updateSettings({ highQuality: e.target.checked })}
+                                        className="form-checkbox"
+                                    />
+                                    <label htmlFor="high_quality_fam" className="text-sm font-semibold text-[var(--text-primary)]">
+                                        {t('common.highQualityLabel')}
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>

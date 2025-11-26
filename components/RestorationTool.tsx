@@ -1,3 +1,4 @@
+
 // components/RestorationTool.tsx
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -29,6 +30,7 @@ const DEFAULT_PHOTO_OPTIONS: RestorationOptions = {
     gender: 'auto',
     age: 'auto',
     context: '',
+    highQuality: false, // Default to fast mode
 };
 
 const DEFAULT_DOC_OPTIONS: DocumentRestorationOptions = {
@@ -38,6 +40,7 @@ const DEFAULT_DOC_OPTIONS: DocumentRestorationOptions = {
     enhanceText: true,
     preserveSignatures: true,
     customPrompt: '',
+    highQuality: false, // Default to fast mode
 };
 
 const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVip }) => {
@@ -277,6 +280,23 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
                                     </div>
                                      <textarea value={photoOptions.context} onChange={e => setPhotoOptions(p => ({...p, context: e.target.value}))} placeholder={t('restoration.options.context.placeholder')} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={2}></textarea>
                                 </div>
+                                <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            id="high_quality_res"
+                                            type="checkbox"
+                                            checked={photoOptions.highQuality || false}
+                                            onChange={e => setPhotoOptions(p => ({...p, highQuality: e.target.checked}))}
+                                            className="form-checkbox"
+                                        />
+                                        <label htmlFor="high_quality_res" className="text-sm font-semibold text-[var(--text-primary)]">
+                                            {t('common.highQualityLabel')}
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-1 ml-6">
+                                        {t('common.highQualityDesc')}
+                                    </p>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-6 animate-fade-in">
@@ -302,6 +322,23 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
                                 <div className="border-t border-[var(--border-color)] pt-4">
                                     <h3 className="text-base font-bold text-center mb-3 animated-gradient-text uppercase tracking-wider">{t('restoration.options.context.title')}</h3>
                                     <textarea value={documentOptions.customPrompt} onChange={e => setDocumentOptions(p => ({...p, customPrompt: e.target.value}))} placeholder={t('restoration.docOptions.customPromptPlaceholder')} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={3}></textarea>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            id="high_quality_doc"
+                                            type="checkbox"
+                                            checked={documentOptions.highQuality || false}
+                                            onChange={e => setDocumentOptions(p => ({...p, highQuality: e.target.checked}))}
+                                            className="form-checkbox"
+                                        />
+                                        <label htmlFor="high_quality_doc" className="text-sm font-semibold text-[var(--text-primary)]">
+                                            {t('common.highQualityLabel')}
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-1 ml-6">
+                                        {t('common.highQualityDesc')}
+                                    </p>
                                 </div>
                             </div>
                         )}

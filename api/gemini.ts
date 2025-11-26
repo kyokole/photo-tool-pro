@@ -23,6 +23,18 @@ const getFramingInstruction = (style: string): string => {
     }
 };
 
+// --- HELPER: RESOLUTION RESOLVER ---
+const resolveImageSize = (payload: any): string => {
+    // Check various locations where highQuality might be stored in the payload
+    if (payload.quality === 'high' || payload.quality === 'ultra') return '4K';
+    if (payload.settings?.highQuality === true) return '4K';
+    if (payload.options?.highQuality === true) return '4K';
+    if (payload.highQuality === true) return '4K';
+    
+    // Default to 1K for speed if not explicitly requested
+    return '1K';
+};
+
 // --- PROMPT BUILDERS ---
 const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
@@ -94,6 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!action) return res.status(400).json({ error: 'Missing action' });
 
     const ai = getAi();
+    const imageSize = resolveImageSize(payload);
 
     try {
         switch (action) {
@@ -117,7 +130,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     config: { 
                         responseModalities: [Modality.IMAGE], 
                         imageConfig: { 
-                            imageSize: '4K',
+                            imageSize: imageSize,
                             aspectRatio: modelRatio
                         } 
                     }
@@ -132,7 +145,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -146,7 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -159,7 +172,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -171,7 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -183,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -196,7 +209,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -268,7 +281,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  if (!data) throw new Error("No image returned.");
@@ -280,7 +293,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const generateOne = () => ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [{ text: `[TASK] Image Generation. [PROMPT] ${prompt}. [ASPECT] ${aspectRatio}. [QUALITY] 8K, Nano Banana Pro. 4K OUTPUT.` }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
 
                 const count = Math.min(numOutputs || 1, 4);
@@ -302,7 +315,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ image: `data:image/png;base64,${data}` });
@@ -324,7 +337,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: NANO_BANANA_PRO,
                     contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: '4K' } }
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -470,7 +483,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
-                        imageConfig: { imageSize: '4K' } // Explicitly requesting 4K for detail
+                        imageConfig: { imageSize: imageSize }
                     }
                 });
 

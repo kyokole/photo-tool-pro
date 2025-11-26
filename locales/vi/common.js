@@ -1,3 +1,4 @@
+
 export default {
   "common": {
     "note": "Lưu ý",
@@ -13,7 +14,9 @@ export default {
     "edit": "Sửa",
     "delete": "Xóa",
     "save": "Lưu",
-    "uploadPrompt": "Kéo & thả hoặc nhấp để chọn tệp"
+    "uploadPrompt": "Kéo & thả hoặc nhấp để chọn tệp",
+    "highQualityLabel": "Chất lượng cao (4K)",
+    "highQualityDesc": "Bật để tạo ảnh 4K sắc nét nhất (xử lý lâu hơn). Tắt để tạo nhanh."
   },
   "footer": {
     "credit": "Thiết kế & Phát triển bởi Kyoko Le",

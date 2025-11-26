@@ -506,17 +506,34 @@ export const InputSection: React.FC<InputSectionProps> = ({
 
       <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
          {!isSpecialFeature ? (
-            <div>
-                <label htmlFor="num-images" className="text-sm font-semibold text-[var(--text-secondary)] mr-2">{t('aiStudio.numImages')}:</label>
-                <select id="num-images" value={numImages} onChange={e => setNumImages(parseInt(e.target.value))} className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg p-2 appearance-none">
-                    {[1, 2, 4, 8].map(num => <option key={num} value={num}>{num}</option>)}
-                </select>
+            <div className="flex gap-4">
+                <div>
+                    <label htmlFor="num-images" className="text-sm font-semibold text-[var(--text-secondary)] mr-2">{t('aiStudio.numImages')}:</label>
+                    <select id="num-images" value={numImages} onChange={e => setNumImages(parseInt(e.target.value))} className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg p-2 appearance-none">
+                        {[1, 2, 4, 8].map(num => <option key={num} value={num}>{num}</option>)}
+                    </select>
+                </div>
             </div>
          ) : (
             <div className="text-center text-[var(--accent-text-start)] font-semibold bg-[var(--bg-interactive)] px-4 py-2 rounded-lg">
                 {t('aiStudio.generateCount', { count: calculateImagesToGenerate() })}
             </div>
          )}
+         
+         {/* Common Quality Toggle */}
+         <div className="flex items-center space-x-2 p-2 bg-[var(--bg-interactive)] rounded-lg">
+            <input
+                id="high_quality_studio"
+                type="checkbox"
+                checked={formData.highQuality || false}
+                onChange={e => handleFormChange('highQuality', e.target.checked)}
+                className="form-checkbox"
+            />
+            <label htmlFor="high_quality_studio" className="text-sm font-semibold text-[var(--text-primary)]">
+                {t('common.highQualityLabel')}
+            </label>
+         </div>
+
         <button
           type="submit"
           disabled={isGenerateDisabled()}
