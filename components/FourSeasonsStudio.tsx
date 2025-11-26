@@ -161,7 +161,12 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             setResultImage(generatedImage);
 
         } catch (err) {
-            setError(err instanceof Error ? err.message : t('errors.unknownError'));
+            const errorString = String(err);
+            if (errorString.includes('FUNCTION_INVOCATION_TIMEOUT') || errorString.includes('504')) {
+                setError(t('errors.timeout'));
+            } else {
+                setError(err instanceof Error ? err.message : t('errors.unknownError'));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -185,7 +190,12 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             setResultImage(newImage); 
             setOutfitEditPrompt(''); 
         } catch (err) {
-            setError(err instanceof Error ? err.message : t('errors.unknownError'));
+            const errorString = String(err);
+            if (errorString.includes('FUNCTION_INVOCATION_TIMEOUT') || errorString.includes('504')) {
+                setError(t('errors.timeout'));
+            } else {
+                setError(err instanceof Error ? err.message : t('errors.unknownError'));
+            }
         } finally {
             setIsEditingOutfit(false);
         }

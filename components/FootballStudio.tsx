@@ -110,7 +110,12 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
             const imageUrl = await generateFootballPhoto(promptSettings);
             setResult({ id: `football-${Date.now()}`, imageUrl });
         } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
+            const errorString = String(e);
+            if (errorString.includes('FUNCTION_INVOCATION_TIMEOUT') || errorString.includes('504')) {
+                setError(t('errors.timeout'));
+            } else {
+                setError(e instanceof Error ? e.message : errorString);
+            }
         } finally {
             setIsLoading(false);
         }

@@ -1,3 +1,4 @@
+
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -441,6 +442,8 @@ const App: React.FC = () => {
             setIdPhotoError(t('errors.quotaExceeded'));
         } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
             setIdPhotoError(t('errors.apiKeyInvalid'));
+        } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+            setIdPhotoError(t('errors.timeout'));
         } else {
             const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
             setIdPhotoError(t('errors.generationFailed', { error: displayMessage }));
@@ -588,7 +591,12 @@ const App: React.FC = () => {
 
             } catch (err) {
                 job.status = 'error';
-                job.error = err instanceof Error ? err.message : t('errors.unknownError');
+                let errorStringForSearch = String(err);
+                if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+                    job.error = t('errors.timeout');
+                } else {
+                    job.error = err instanceof Error ? err.message : t('errors.unknownError');
+                }
             } finally {
                 setIdPhotoJobs([...newJobs]);
             }
@@ -647,6 +655,8 @@ const App: React.FC = () => {
                 setHeadshotError(t('errors.quotaExceeded'));
             } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
                 setHeadshotError(t('errors.apiKeyInvalid'));
+            } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+                setHeadshotError(t('errors.timeout'));
             } else {
                 const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
                 setHeadshotError(t('errors.headshotGenerationFailed', { error: displayMessage }));
@@ -699,6 +709,8 @@ const App: React.FC = () => {
                 setFashionStudioError(t('errors.quotaExceeded'));
             } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
                 setFashionStudioError(t('errors.apiKeyInvalid'));
+            } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+                setFashionStudioError(t('errors.timeout'));
             } else {
                 const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
                 setFashionStudioError(t('errors.generationFailed', { error: displayMessage }));

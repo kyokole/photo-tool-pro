@@ -92,8 +92,13 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
 
     } catch (e) {
       console.error(e);
-      const errorMessage = e instanceof Error ? e.message : t('errors.unknownError');
-      setError(t('errors.beautyGenerationFailed', { error: errorMessage }));
+      const errorString = String(e);
+      if (errorString.includes('FUNCTION_INVOCATION_TIMEOUT') || errorString.includes('504')) {
+          setError(t('errors.timeout'));
+      } else {
+          const errorMessage = e instanceof Error ? e.message : t('errors.unknownError');
+          setError(t('errors.beautyGenerationFailed', { error: errorMessage }));
+      }
       setActivePreview(null);
     } finally {
       setIsLoading(false);

@@ -111,8 +111,13 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
             });
 
         } catch (err) {
-            const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
-            setError(t('errors.restorationPipelineFailed', { error: displayMessage }));
+            let errorString = String(err);
+            if (errorString.includes('FUNCTION_INVOCATION_TIMEOUT') || errorString.includes('504')) {
+                setError(t('errors.timeout'));
+            } else {
+                const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
+                setError(t('errors.restorationPipelineFailed', { error: displayMessage }));
+            }
         } finally {
             setIsLoading(false);
         }

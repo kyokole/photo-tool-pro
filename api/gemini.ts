@@ -8,7 +8,11 @@ import sharp from 'sharp';
 import { Buffer } from 'node:buffer';
 
 // --- CONSTANTS ---
-const NANO_BANANA_PRO = 'gemini-3-pro-image-preview';
+// PRO model: Slower, higher logic, supports 4K. Use only when necessary.
+const MODEL_PRO = 'gemini-3-pro-image-preview';
+// FLASH model: Very fast, good for standard tasks. Use by default to prevent timeouts.
+const MODEL_FLASH = 'gemini-2.5-flash-image';
+
 const TEXT_MODEL = 'gemini-2.5-flash';
 const VEO_MODEL = 'veo-3.1-fast-generate-preview';
 
@@ -31,8 +35,21 @@ const resolveImageSize = (payload: any): string => {
     if (payload.options?.highQuality === true) return '4K';
     if (payload.highQuality === true) return '4K';
     
+    // Deep checks for nested features
+    if (payload.formData?.highQuality === true) return '4K'; // Creative Studio
+    if (payload.style?.highQuality === true) return '4K'; // Beauty Studio (Style level)
+    if (payload.tool?.highQuality === true) return '4K'; // Beauty Studio (Tool level)
+    
     // Default to 1K for speed if not explicitly requested
     return '1K';
+};
+
+// --- HELPER: MODEL SELECTOR ---
+const selectModel = (imageSize: string): string => {
+    // If 4K is requested, we MUST use the Pro model (Flash might not support 4K or high logic)
+    if (imageSize === '4K') return MODEL_PRO;
+    // For standard 1K generation, use Flash to prevent Vercel Timeouts (Hobby plan limit 10s)
+    return MODEL_FLASH;
 };
 
 // --- PROMPT BUILDERS ---
@@ -107,6 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const ai = getAi();
     const imageSize = resolveImageSize(payload);
+    const selectedModel = selectModel(imageSize);
 
     try {
         switch (action) {
@@ -125,7 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  }
 
                  const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
@@ -141,9 +159,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateHeadshot': {
                  const { imagePart, prompt: p } = payload;
-                 const prompt = `[TASK] Headshot. ${p}. [QUALITY] 8K, Nano Banana Pro.`;
+                 const prompt = `[TASK] Headshot. ${p}. [QUALITY] ${imageSize}, Photorealistic.`;
                  const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
@@ -157,7 +175,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { imagePart, options } = payload;
                 const prompt = buildRestorationPrompt(options);
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
@@ -168,9 +186,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // --- CREATIVE STUDIOS (Fashion, Football, Four Seasons, Beauty) ---
             case 'generateFashionPhoto': {
                 const { imagePart, settings } = payload;
-                const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}. [QUALITY] 8K UHD, Nano Banana Pro. 4K Output.`;
+                const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}. [QUALITY] Photorealistic. ${imageSize} Output.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
@@ -180,9 +198,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFourSeasonsPhoto': {
                 const { imagePart, scene, season, aspectRatio, customDescription } = payload;
-                const prompt = `[TASK] Four Seasons Photo. Season: ${season}. Scene: ${scene.title}. ${scene.desc}. ${customDescription}. [QUALITY] 8K UHD, Nano Banana Pro. [ASPECT] ${aspectRatio}.`;
+                const prompt = `[TASK] Four Seasons Photo. Season: ${season}. Scene: ${scene.title}. ${scene.desc}. ${customDescription}. [QUALITY] Photorealistic. [ASPECT] ${aspectRatio}.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
@@ -192,9 +210,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFootballPhoto': {
                 const { settings } = payload;
-                const prompt = `[TASK] Football Photo. Mode: ${settings.mode}. Team: ${settings.team}. Player: ${settings.player}. Scene: ${settings.scene}. Style: ${settings.style}. ${settings.customPrompt}. [QUALITY] 8K UHD, Nano Banana Pro.`;
+                const prompt = `[TASK] Football Photo. Mode: ${settings.mode}. Team: ${settings.team}. Player: ${settings.player}. Scene: ${settings.scene}. Style: ${settings.style}. ${settings.customPrompt}. [QUALITY] Photorealistic.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
@@ -207,7 +225,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const prompt = buildBeautyPrompt(tool, subFeature, style);
                 const parts = [{ inlineData: { data: baseImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
@@ -273,13 +291,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  [LANGUAGE INSTRUCTION] The input data contains descriptions in VIETNAMESE. You MUST interpret them accurately. Translate contextually to English internal logic for image generation if necessary, but preserve specific cultural nuances (e.g., "Ao Dai", "Non La").
                  
                  [OUTPUT CONFIG] 
-                 - Quality: 8K, Nano Banana Pro, photorealistic, highly detailed. 
+                 - Quality: ${imageSize}, Photorealistic, highly detailed. 
                  - Aspect Ratio: ${textData.aspect_ratio || '3:4'}.
                  `;
                  parts.push({ text: prompt });
 
                  const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
@@ -291,8 +309,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateBatchImages': {
                 const { prompt, aspectRatio, numOutputs } = payload;
                 const generateOne = () => ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
-                    contents: { parts: [{ text: `[TASK] Image Generation. [PROMPT] ${prompt}. [ASPECT] ${aspectRatio}. [QUALITY] 8K, Nano Banana Pro. 4K OUTPUT.` }] },
+                    model: selectedModel,
+                    contents: { parts: [{ text: `[TASK] Image Generation. [PROMPT] ${prompt}. [ASPECT] ${aspectRatio}. [QUALITY] ${imageSize}.` }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
 
@@ -313,7 +331,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  parts.push({ text: prompt });
 
                  const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel, // Use standard model selection logic (likely Flash for speed unless High Quality specified in input)
                     contents: { parts },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                  });
@@ -333,9 +351,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'editOutfitOnImage': {
                 const { base64Image, mimeType, newOutfitPrompt } = payload;
-                const prompt = `[TASK] Edit Outfit. Change outfit to: "${newOutfitPrompt}". Preserve face, pose, and background. [QUALITY] 4K, photorealistic.`;
+                const prompt = `[TASK] Edit Outfit. Change outfit to: "${newOutfitPrompt}". Preserve face, pose, and background. [QUALITY] ${imageSize}, photorealistic.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
                 });
@@ -471,7 +489,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 [COMPOSITION INSTRUCTIONS]
                 1. Arrange the members naturally in the scene based on their designated positions.
                 2. Interaction: Ensure natural interaction (eye contact, touching, lighting consistency) so they look like they are truly in the same space.
-                3. Quality: 8K resolution, photorealistic texture, perfect eyes, skin texture preservation.
+                3. Quality: ${imageSize}, photorealistic texture, perfect eyes, skin texture preservation.
                 
                 Generate the final composite image now.
                 `;
@@ -479,7 +497,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 parts.push({ text: prompt });
 
                 const geminiRes = await ai.models.generateContent({
-                    model: NANO_BANANA_PRO,
+                    model: selectedModel,
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 

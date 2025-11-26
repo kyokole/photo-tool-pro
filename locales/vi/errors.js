@@ -1,3 +1,4 @@
+
 export default {
   "errors": {
     "uploadRequired": "Vui lòng tải ảnh lên trước khi tạo.",
@@ -46,6 +47,7 @@ export default {
     "quotaExceeded": "Bạn đã vượt quá hạn ngạch sử dụng miễn phí cho hôm nay. Vui lòng thử lại sau 24 giờ hoặc liên hệ quản trị viên để nâng cấp.",
     "loginFailedServer": "Đăng nhập thất bại do lỗi phía máy chủ",
     "loginFailedHelp": "Vui lòng kiểm tra lại kết nối mạng hoặc liên hệ hỗ trợ. Bạn sẽ được đăng xuất.",
-    "firestorePermissionDenied": "Lỗi quyền truy cập cơ sở dữ liệu (Firestore). Nguyên nhân khả năng cao là do 'Quy tắc Bảo mật' (Security Rules) của dự án Firebase chưa cho phép người dùng mới tạo hồ sơ. Vui lòng liên hệ quản trị viên để cấu hình lại."
+    "firestorePermissionDenied": "Lỗi quyền truy cập cơ sở dữ liệu (Firestore). Nguyên nhân khả năng cao là do 'Quy tắc Bảo mật' (Security Rules) của dự án Firebase chưa cho phép người dùng mới tạo hồ sơ. Vui lòng liên hệ quản trị viên để cấu hình lại.",
+    "timeout": "Hệ thống đang phản hồi chậm. Vui lòng thử lại hoặc bỏ chọn chế độ 'Chất lượng cao' để xử lý nhanh hơn."
   }
 }

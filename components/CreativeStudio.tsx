@@ -1,3 +1,4 @@
+
 // components/CreativeStudio.tsx
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -245,7 +246,12 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
             setUsageCount(prev => prev - 1);
         } catch (err: any) {
             console.error("Error generating images:", err);
-            setError(err.message || t('errors.unknownError'));
+            let errorString = err.message || String(err);
+            if (errorString.includes('FUNCTION_INVOCATION_TIMEOUT') || errorString.includes('504')) {
+                setError(t('errors.timeout'));
+            } else {
+                setError(errorString || t('errors.unknownError'));
+            }
         } finally {
             setIsLoading(false);
         }
