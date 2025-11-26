@@ -429,22 +429,24 @@ const App: React.FC = () => {
          console.log('Generation was aborted by the user.');
          setIdPhotoError(t('errors.generationCancelled'));
       } else {
-        let errorStringForSearch: string;
+        // Robust error extraction to catch Google's 500 error JSON string
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        let errorStringForSearch = '';
         try {
-            errorStringForSearch = JSON.stringify(err);
+            errorStringForSearch = (JSON.stringify(err) + ' ' + errorMsg).toLowerCase();
         } catch {
-            errorStringForSearch = String(err);
+            errorStringForSearch = errorMsg.toLowerCase();
         }
 
         console.error("Generation failed with error:", errorStringForSearch);
 
-        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
             setIdPhotoError(t('errors.quotaExceeded'));
-        } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
+        } else if (errorStringForSearch.includes('api_key_invalid') || errorStringForSearch.includes('api key not valid')) {
             setIdPhotoError(t('errors.apiKeyInvalid'));
-        } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+        } else if (errorStringForSearch.includes('function_invocation_timeout') || errorStringForSearch.includes('504')) {
             setIdPhotoError(t('errors.timeout'));
-        } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+        } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('internal') || errorStringForSearch.includes('an internal error has occurred')) {
             // Check for Google Internal Server Error
             setIdPhotoError(t('errors.generationOverloaded'));
         } else {
@@ -594,10 +596,17 @@ const App: React.FC = () => {
 
             } catch (err) {
                 job.status = 'error';
-                let errorStringForSearch = String(err);
-                if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+                const errorMsg = err instanceof Error ? err.message : String(err);
+                let errorStringForSearch = '';
+                try {
+                    errorStringForSearch = (JSON.stringify(err) + ' ' + errorMsg).toLowerCase();
+                } catch {
+                    errorStringForSearch = errorMsg.toLowerCase();
+                }
+
+                if (errorStringForSearch.includes('function_invocation_timeout') || errorStringForSearch.includes('504')) {
                     job.error = t('errors.timeout');
-                } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+                } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('internal') || errorStringForSearch.includes('an internal error has occurred')) {
                     job.error = t('errors.generationOverloaded');
                 } else {
                     job.error = err instanceof Error ? err.message : t('errors.unknownError');
@@ -647,22 +656,23 @@ const App: React.FC = () => {
             console.log('Headshot generation was aborted by the user.');
             setHeadshotError(t('errors.generationCancelled'));
         } else {
-            let errorStringForSearch: string;
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            let errorStringForSearch = '';
             try {
-                errorStringForSearch = JSON.stringify(err);
+                errorStringForSearch = (JSON.stringify(err) + ' ' + errorMsg).toLowerCase();
             } catch {
-                errorStringForSearch = String(err);
+                errorStringForSearch = errorMsg.toLowerCase();
             }
     
             console.error("Headshot generation failed with error:", errorStringForSearch);
     
-            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
                 setHeadshotError(t('errors.quotaExceeded'));
-            } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
+            } else if (errorStringForSearch.includes('api_key_invalid') || errorStringForSearch.includes('api key not valid')) {
                 setHeadshotError(t('errors.apiKeyInvalid'));
-            } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+            } else if (errorStringForSearch.includes('function_invocation_timeout') || errorStringForSearch.includes('504')) {
                 setHeadshotError(t('errors.timeout'));
-            } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+            } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('internal') || errorStringForSearch.includes('an internal error has occurred')) {
                 setHeadshotError(t('errors.generationOverloaded'));
             } else {
                 const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
@@ -703,22 +713,23 @@ const App: React.FC = () => {
               console.log('Fashion Studio generation was aborted.');
               setFashionStudioError(t('errors.generationCancelled'));
           } else {
-            let errorStringForSearch: string;
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            let errorStringForSearch = '';
             try {
-                errorStringForSearch = JSON.stringify(err);
+                errorStringForSearch = (JSON.stringify(err) + ' ' + errorMsg).toLowerCase();
             } catch {
-                errorStringForSearch = String(err);
+                errorStringForSearch = errorMsg.toLowerCase();
             }
     
             console.error("Fashion Studio generation failed with error:", errorStringForSearch);
     
-            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('RESOURCE_EXHAUSTED') || errorStringForSearch.includes('rate limit'))) {
+            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
                 setFashionStudioError(t('errors.quotaExceeded'));
-            } else if (errorStringForSearch.includes('API_KEY_INVALID') || errorStringForSearch.includes('API key not valid')) {
+            } else if (errorStringForSearch.includes('api_key_invalid') || errorStringForSearch.includes('api key not valid')) {
                 setFashionStudioError(t('errors.apiKeyInvalid'));
-            } else if (errorStringForSearch.includes('FUNCTION_INVOCATION_TIMEOUT') || errorStringForSearch.includes('504')) {
+            } else if (errorStringForSearch.includes('function_invocation_timeout') || errorStringForSearch.includes('504')) {
                 setFashionStudioError(t('errors.timeout'));
-            } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('INTERNAL') || errorStringForSearch.includes('An internal error has occurred')) {
+            } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('internal') || errorStringForSearch.includes('an internal error has occurred')) {
                 setFashionStudioError(t('errors.generationOverloaded'));
             } else {
                 const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
