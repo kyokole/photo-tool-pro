@@ -52,6 +52,24 @@ const selectModel = (imageSize: string): string => {
     return MODEL_FLASH;
 };
 
+// --- HELPER: CONFIG BUILDER (CRITICAL FIX) ---
+// Only add imageSize if using the PRO model. Flash model crashes if imageSize is present.
+const getImageConfig = (model: string, imageSize: string, aspectRatio?: string) => {
+    const config: any = {};
+    
+    if (aspectRatio) {
+        config.aspectRatio = aspectRatio;
+    }
+
+    // CRITICAL FIX: Only gemini-3-pro-image-preview supports imageSize.
+    // gemini-2.5-flash-image will throw an error if this is present.
+    if (model === MODEL_PRO) {
+        config.imageSize = imageSize;
+    }
+
+    return config;
+};
+
 // --- PROMPT BUILDERS ---
 const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
@@ -147,10 +165,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
-                        imageConfig: { 
-                            imageSize: imageSize,
-                            aspectRatio: modelRatio
-                        } 
+                        imageConfig: getImageConfig(selectedModel, imageSize, modelRatio)
                     }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
@@ -163,7 +178,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -177,7 +195,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
                  });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -190,7 +211,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize) 
+                    }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -202,7 +226,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize, aspectRatio) 
+                    }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -214,7 +241,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize) 
+                    }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -227,7 +257,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize) 
+                    }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -299,7 +332,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  if (!data) throw new Error("No image returned.");
@@ -311,7 +347,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const generateOne = () => ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [{ text: `[TASK] Image Generation. [PROMPT] ${prompt}. [ASPECT] ${aspectRatio}. [QUALITY] ${imageSize}.` }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
                 });
 
                 const count = Math.min(numOutputs || 1, 4);
@@ -331,9 +370,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  parts.push({ text: prompt });
 
                  const geminiRes = await ai.models.generateContent({
-                    model: selectedModel, // Use standard model selection logic (likely Flash for speed unless High Quality specified in input)
+                    model: selectedModel, // Use standard model selection logic
                     contents: { parts },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
                  });
                  const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                  return res.json({ image: `data:image/png;base64,${data}` });
@@ -355,7 +397,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
                     contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
-                    config: { responseModalities: [Modality.IMAGE], imageConfig: { imageSize: imageSize } }
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
                 });
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 return res.json({ imageData: `data:image/png;base64,${data}` });
@@ -501,7 +546,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
-                        imageConfig: { imageSize: imageSize }
+                        imageConfig: getImageConfig(selectedModel, imageSize)
                     }
                 });
 
