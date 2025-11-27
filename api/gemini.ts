@@ -185,9 +185,32 @@ const buildIdPhotoPrompt = (settings: any): string => {
         prompt += `**2. Trang phục:** Thay thành "${settings.outfit.mode === 'preset' ? settings.outfit.preset : settings.outfit.customPrompt}". Phải khớp cổ và vai.\n`;
     }
 
-    prompt += `**3. Mặt & Tóc:** Kiểu tóc: ${settings.face.hairStyle}. ${settings.face.otherCustom}. `;
-    if (!settings.face.keepOriginalFeatures) prompt += `Tinh chỉnh nhẹ cho chuyên nghiệp. `;
+    // FIX: Logic xử lý tóc mạnh mẽ hơn
+    const hairStyleMap: Record<string, string> = {
+        'auto': 'Gọn gàng, lịch sự, lộ rõ trán và tai (chuẩn ảnh thẻ)',
+        'down': 'Tóc thả tự nhiên, mềm mại, vén gọn gàng',
+        'slicked_back': 'Chải vuốt ngược ra sau (Slicked back), gọn gàng',
+        'keep_original': 'Giữ nguyên kiểu tóc gốc'
+    };
+
+    const hairDesc = hairStyleMap[settings.face.hairStyle] || settings.face.hairStyle;
+
+    if (settings.face.hairStyle !== 'keep_original') {
+         // Nếu chọn đổi tóc, ra lệnh cho AI thay đổi tóc ngay cả khi Face-Lock bật
+         prompt += `**3. TÓC (ƯU TIÊN THAY ĐỔI):** Thay đổi kiểu tóc thành: "${hairDesc}". `;
+         if (settings.face.keepOriginalFeatures) {
+             // Ràng buộc: Giữ mặt nhưng phải đổi tóc
+             prompt += `LƯU Ý: Giữ nguyên 100% đặc điểm ngũ quan (mắt, mũi, miệng, cấu trúc mặt) của ảnh gốc, NHƯNG PHẢI THAY ĐỔI TÓC theo yêu cầu. `;
+         } else {
+             prompt += `Tinh chỉnh nhẹ gương mặt cho chuyên nghiệp. `;
+         }
+    } else {
+         prompt += `**3. Tóc:** Giữ nguyên tóc gốc. `;
+         if (!settings.face.keepOriginalFeatures) prompt += `Tinh chỉnh nhẹ cho chuyên nghiệp. `;
+    }
+
     if (settings.face.smoothSkin) prompt += `Làm mịn da tự nhiên (giữ kết cấu). `;
+    if (settings.face.otherCustom) prompt += `Yêu cầu thêm: ${settings.face.otherCustom}. `;
     
     prompt += `**4. Xuất bản:** Canvas tỷ lệ chân dung chuẩn. Có padding xung quanh. Độ phân giải cao.`;
     return prompt;
