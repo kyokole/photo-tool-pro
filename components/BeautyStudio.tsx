@@ -5,7 +5,8 @@ import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { BeautyFeature, BeautyStyle, BeautySubFeature, BeautyHistoryItem } from '../types';
 import { BEAUTY_FEATURES } from '../constants/beautyStudioConstants';
 import { generateBeautyPhoto } from '../services/geminiService';
-import { applyWatermark, dataUrlToBlob } from '../utils/canvasUtils';
+import { dataUrlToBlob } from '../utils/canvasUtils';
+// REMOVED: import { applyWatermark } from '../utils/canvasUtils';
 
 import { BeautyStudioImageProcessor } from './beautystudio/BeautyStudioImageProcessor';
 import { BeautyStudioMainToolbar } from './beautystudio/BeautyStudioMainToolbar';
@@ -57,17 +58,6 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
     setIsLoading(true);
     setError(null);
 
-    // Temporarily attach highQuality to payload style or tool, 
-    // or update generateBeautyPhoto signature.
-    // Since I am modifying everything, I'll assume the service will be updated (it is in api/gemini.ts which reads payload)
-    // But I need to pass it. `generateBeautyPhoto` takes specific args.
-    // I will overload `generateBeautyPhoto` or attach quality to one of the objects.
-    // Let's attach it to the 'style' object for transport if simpler, 
-    // OR better: modify the service call in geminiService.ts? No, that file wasn't fully requested to be changed but I can change it.
-    // Actually, `generateBeautyPhoto` signature in `services/geminiService.ts` takes specific arguments.
-    // I will modify `services/geminiService.ts` as well to accept an options object or just piggyback.
-    
-    // Strategy: Piggyback on `style` object which is passed to backend.
     const styleWithQuality = style ? { ...style, highQuality: isHighQuality } : { highQuality: isHighQuality } as any;
     const toolWithQuality = { ...tool, highQuality: isHighQuality }; // For single click actions
 
@@ -79,7 +69,9 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
         styleWithQuality
       );
       
-      const newImageDataUrl = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
+      // REMOVED: Client-side watermarking
+      // const newImageDataUrl = !isVip ? await applyWatermark(imageDataFromServer) : imageDataFromServer;
+      const newImageDataUrl = imageDataFromServer;
 
       if (isSingleClickAction) {
         const newHistoryItem: BeautyHistoryItem = { id: Date.now().toString(), imageDataUrl: newImageDataUrl };

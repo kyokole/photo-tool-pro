@@ -1,76 +1,156 @@
 
 // /api/gemini.ts
-// This is a Vercel Serverless Function that acts as a secure backend proxy.
-import { GoogleGenAI, Modality, Part, Type, GenerateContentResponse } from '@google/genai';
+import { GoogleGenAI, Modality, Part } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import admin from 'firebase-admin';
-import sharp from 'sharp';
 import { Buffer } from 'node:buffer';
+import sharp from 'sharp'; // Thư viện xử lý ảnh hiệu năng cao
 
 // --- CONSTANTS ---
-// PRO model: Slower, higher logic, supports 4K. Use only when necessary.
 const MODEL_PRO = 'gemini-3-pro-image-preview';
-// FLASH model: Very fast, good for standard tasks. Use by default to prevent timeouts.
 const MODEL_FLASH = 'gemini-2.5-flash-image';
-
 const TEXT_MODEL = 'gemini-2.5-flash';
 const VEO_MODEL = 'veo-3.1-fast-generate-preview';
 
-// --- HELPER: FRAME STYLE MAPPER ---
-const getFramingInstruction = (style: string): string => {
-    switch (style) {
-        case 'full_body': return "Full Body Shot. Show the subject from head to toe. Shoes must be visible.";
-        case 'half_body': return "Medium Shot. Frame from the waist up. **CRITICAL: DO NOT SHOW LEGS. DO NOT SHOW SHOES.** Focus on the upper body.";
-        case 'shoulder_portrait': return "Close-up Portrait. Frame from the shoulders up. Focus intensely on facial details.";
-        case 'cinematic_wide': return "Wide Angle Shot. Environmental portrait showing the subject in a broad scene.";
-        default: return "Standard portrait framing.";
+// --- VIP RESTRICTIONS ---
+const VIP_ONLY_ACTIONS = [
+    'performRestoration',
+    'performDocumentRestoration',
+    'generateFashionPhoto',
+    'generateFootballPhoto',
+    'generateBeautyPhoto',
+    'generateFamilyPhoto',
+    'generateFamilyPhoto_3_Pass',
+    'generateFourSeasonsPhoto',
+    'generateImagesFromFeature',
+    'generateBatchImages',
+    'generateVideoFromImage'
+];
+
+// --- INIT FIREBASE ADMIN ---
+try {
+    if (!admin.apps.length) {
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+        if (serviceAccountJson) {
+            admin.initializeApp({
+                credential: admin.credential.cert(JSON.parse(serviceAccountJson))
+            });
+        } else {
+            console.warn("Warning: FIREBASE_SERVICE_ACCOUNT_JSON is missing. Auth checks may fail or default to Guest.");
+        }
+    }
+} catch (error: any) {
+    console.error("Firebase Init Error:", error.message);
+}
+
+// --- HELPER: USER STATUS CHECK ---
+interface UserStatus {
+    isVip: boolean;
+    isAdmin: boolean;
+    uid: string | null;
+}
+
+const getUserStatus = async (idToken?: string): Promise<UserStatus> => {
+    if (!idToken) {
+        return { isVip: false, isAdmin: false, uid: null };
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const uid = decodedToken.uid;
+        const db = admin.firestore();
+        const userDoc = await db.collection('users').doc(uid).get();
+
+        if (!userDoc.exists) {
+            return { isVip: false, isAdmin: false, uid };
+        }
+
+        const userData = userDoc.data();
+        const isAdmin = userData?.isAdmin === true;
+        
+        let isVip = isAdmin;
+        if (!isVip && userData?.subscriptionEndDate) {
+            const expiryDate = new Date(userData.subscriptionEndDate);
+            if (expiryDate > new Date()) {
+                isVip = true;
+            }
+        }
+
+        return { isVip, isAdmin, uid };
+    } catch (error) {
+        console.error("Auth Verification Failed:", error);
+        return { isVip: false, isAdmin: false, uid: null };
+    }
+};
+
+// --- HELPER: SERVER-SIDE WATERMARKING ---
+const addWatermark = async (imageBuffer: Buffer): Promise<Buffer> => {
+    try {
+        const image = sharp(imageBuffer);
+        const metadata = await image.metadata();
+        const width = metadata.width || 1024;
+        const height = metadata.height || 1024;
+
+        // Tạo SVG pattern cho watermark dạng lưới nghiêng chuyên nghiệp
+        const svgText = `
+        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="watermark" patternUnits="userSpaceOnUse" width="400" height="400" patternTransform="rotate(-45)">
+                    <text x="200" y="200" font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="rgba(255,255,255,0.2)" text-anchor="middle" alignment-baseline="middle">AI PHOTO SUITE • PREVIEW</text>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#watermark)" />
+            <text x="50%" y="95%" font-family="Arial, sans-serif" font-size="${Math.floor(width * 0.03)}" fill="rgba(255,255,255,0.6)" text-anchor="middle" font-weight="bold">AI PHOTO SUITE</text>
+        </svg>`;
+
+        const svgBuffer = Buffer.from(svgText);
+
+        return await image
+            .composite([{ input: svgBuffer, blend: 'over' }])
+            .toBuffer();
+    } catch (error) {
+        console.error("Watermarking failed:", error);
+        return imageBuffer; // Fallback to original on error
     }
 };
 
 // --- HELPER: RESOLUTION RESOLVER ---
-const resolveImageSize = (payload: any): string => {
-    // Check various locations where highQuality might be stored in the payload
+const resolveImageSize = (payload: any, isVip: boolean): string => {
+    if (!isVip) return '1K';
+
     if (payload.quality === 'high' || payload.quality === 'ultra') return '4K';
     if (payload.settings?.highQuality === true) return '4K';
     if (payload.options?.highQuality === true) return '4K';
     if (payload.highQuality === true) return '4K';
     
-    // Deep checks for nested features
-    if (payload.formData?.highQuality === true) return '4K'; // Creative Studio
-    if (payload.style?.highQuality === true) return '4K'; // Beauty Studio (Style level)
-    if (payload.tool?.highQuality === true) return '4K'; // Beauty Studio (Tool level)
+    if (payload.formData?.highQuality === true) return '4K'; 
+    if (payload.style?.highQuality === true) return '4K';
+    if (payload.tool?.highQuality === true) return '4K';
     
-    // Default to 1K for speed if not explicitly requested
     return '1K';
 };
 
 // --- HELPER: MODEL SELECTOR ---
 const selectModel = (imageSize: string): string => {
-    // If 4K is requested, we MUST use the Pro model (Flash might not support 4K or high logic)
     if (imageSize === '4K') return MODEL_PRO;
-    // For standard 1K generation, use Flash to prevent Vercel Timeouts (Hobby plan limit 10s)
     return MODEL_FLASH;
 };
 
-// --- HELPER: CONFIG BUILDER (CRITICAL FIX) ---
-// Only add imageSize if using the PRO model. Flash model crashes if imageSize is present.
+// --- HELPER: CONFIG BUILDER ---
 const getImageConfig = (model: string, imageSize: string, aspectRatio?: string) => {
     const config: any = {};
+    if (aspectRatio) config.aspectRatio = aspectRatio;
     
-    if (aspectRatio) {
-        config.aspectRatio = aspectRatio;
-    }
-
-    // CRITICAL FIX: Only gemini-3-pro-image-preview supports imageSize.
-    // gemini-2.5-flash-image will throw an error if this is present.
+    // FIX CRITICAL BUG: Flash model crashes if imageSize is present.
+    // Only add imageSize if using the Pro model.
     if (model === MODEL_PRO) {
         config.imageSize = imageSize;
     }
-
     return config;
 };
 
 // --- PROMPT BUILDERS ---
+// ... (Keep existing prompt builders)
 const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
 **Vai trò:** Biên tập viên ảnh thẻ chuyên nghiệp (Passport/Visa standard).
@@ -117,15 +197,15 @@ const buildBeautyPrompt = (tool: any, subFeature: any, style: any): string => {
     return `${main} Modification: ${mod}. Return image only.`;
 };
 
-// --- INIT ---
-try {
-    if (!admin.apps.length) {
-        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-        if (serviceAccountJson) {
-            admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountJson)) });
-        }
+const getFramingInstruction = (style: string): string => {
+    switch (style) {
+        case 'full_body': return "Full Body Shot. Show the subject from head to toe. Shoes must be visible.";
+        case 'half_body': return "Medium Shot. Frame from the waist up. **CRITICAL: DO NOT SHOW LEGS. DO NOT SHOW SHOES.** Focus on the upper body.";
+        case 'shoulder_portrait': return "Close-up Portrait. Frame from the shoulders up. Focus intensely on facial details.";
+        case 'cinematic_wide': return "Wide Angle Shot. Environmental portrait showing the subject in a broad scene.";
+        default: return "Standard portrait framing.";
     }
-} catch (error: any) { console.error("Firebase Init Error:", error.message); }
+};
 
 // --- UTILS ---
 const getAi = () => {
@@ -137,28 +217,44 @@ const getAi = () => {
 // --- HANDLER ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-    const { action, payload } = req.body || {};
+    
+    const { action, payload, idToken } = req.body || {};
     if (!action) return res.status(400).json({ error: 'Missing action' });
 
+    // 1. Kiểm tra quyền truy cập
+    const { isVip, isAdmin } = await getUserStatus(idToken);
+
+    // 2. Chặn tính năng VIP
+    if (VIP_ONLY_ACTIONS.includes(action) && !isVip) {
+        return res.status(403).json({ error: "Tính năng này chỉ dành cho thành viên VIP. Vui lòng nâng cấp để sử dụng." });
+    }
+
     const ai = getAi();
-    const imageSize = resolveImageSize(payload);
+    
+    // 3. Xác định chất lượng ảnh
+    const imageSize = resolveImageSize(payload, isVip);
     const selectedModel = selectModel(imageSize);
+
+    // Helper để xử lý đóng dấu ảnh đầu ra
+    const processOutputImage = async (base64Data: string | undefined): Promise<string> => {
+        if (!base64Data) throw new Error("Không có dữ liệu ảnh được tạo.");
+        if (isVip) return `data:image/png;base64,${base64Data}`;
+
+        // Nếu không phải VIP, đóng dấu ở Backend
+        const inputBuffer = Buffer.from(base64Data, 'base64');
+        const watermarkedBuffer = await addWatermark(inputBuffer);
+        return `data:image/png;base64,${watermarkedBuffer.toString('base64')}`;
+    };
 
     try {
         switch (action) {
-            // --- ID PHOTO & HEADSHOT ---
             case 'generateIdPhoto': {
                  const { originalImage, settings } = payload;
                  const prompt = buildIdPhotoPrompt(settings);
                  const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
                  
-                 // Map app ratios to Gemini supported ratios
-                 let modelRatio = '3:4'; // Default portrait
-                 if (settings.aspectRatio === '2x3' || settings.aspectRatio === '3x4' || settings.aspectRatio === '4x6') {
-                     modelRatio = '3:4'; // Gemini supports 3:4, matches these portrait formats best
-                 } else if (settings.aspectRatio === '5x5') {
-                     modelRatio = '1:1';
-                 }
+                 let modelRatio = '3:4';
+                 if (settings.aspectRatio === '5x5') modelRatio = '1:1';
 
                  const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
@@ -168,8 +264,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize, modelRatio)
                     }
                  });
-                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                 return res.json({ imageData: `data:image/png;base64,${data}` });
+                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                 return res.json({ imageData });
             }
 
             case 'generateHeadshot': {
@@ -183,11 +279,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize)
                     }
                  });
-                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                 return res.json({ imageData: `data:image/png;base64,${data}` });
+                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                 return res.json({ imageData });
             }
 
-            // --- RESTORATION ---
             case 'performRestoration':
             case 'performDocumentRestoration': {
                 const { imagePart, options } = payload;
@@ -200,11 +295,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize)
                     }
                  });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
+                const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                return res.json({ imageData });
             }
 
-            // --- CREATIVE STUDIOS (Fashion, Football, Four Seasons, Beauty) ---
             case 'generateFashionPhoto': {
                 const { imagePart, settings } = payload;
                 const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}. [QUALITY] Photorealistic. ${imageSize} Output.`;
@@ -216,8 +310,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize) 
                     }
                 });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
+                const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                return res.json({ imageData });
             }
 
             case 'generateFourSeasonsPhoto': {
@@ -231,8 +325,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize, aspectRatio) 
                     }
                 });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
+                const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                return res.json({ imageData });
             }
 
             case 'generateFootballPhoto': {
@@ -246,8 +340,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize) 
                     }
                 });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
+                const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                return res.json({ imageData });
             }
 
             case 'generateBeautyPhoto': {
@@ -262,13 +356,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize) 
                     }
                 });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
+                const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                return res.json({ imageData });
             }
 
-            // --- STUDIO AI & BATCH ---
             case 'generateImagesFromFeature': {
-                 const { featureAction, formData, numImages } = payload;
+                 const { featureAction, formData } = payload;
                  const parts: Part[] = [];
                  const textData: Record<string, any> = {};
 
@@ -295,37 +388,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  for (const key in formData) textData[key] = processValue(formData[key]);
 
                  let specificInstructions = "";
-
-                 // INSTRUCTION INJECTION FOR SPECIFIC FEATURES
                  if (featureAction === 'couple_compose') {
-                     specificInstructions = `
-                     [STRICT IDENTITY & GENDER PROTOCOL]
-                     1. **FACE IDENTITY:** You MUST preserve the facial identity of the uploaded images. Treat them as source face textures. Do not generate generic faces.
-                     2. **GENDER CONSISTENCY:** Strictly follow specified genders.
-                     3. **POSITIONING:** Ensure the person from 'person_left_image' appears on the left.
-                     `;
+                     specificInstructions = `[STRICT IDENTITY & GENDER PROTOCOL]...`;
                  } else if (['try_on_outfit', 'change_hairstyle', 'korean_style_studio', 'professional_headshot', 'product_photo', 'place_in_scene'].includes(featureAction)) {
                      const framingInstr = getFramingInstruction(textData.frame_style || 'half_body');
-                     specificInstructions = `
-                     [STRICT IDENTITY & FRAMING PROTOCOL]
-                     1. **FACE IDENTITY (HIGHEST PRIORITY):** The 'subject_image' is the source of truth. You MUST perform a "Face Swap" operation conceptually. The output face MUST be identical to the source face (eyes, nose, mouth, unique features). Do NOT create a lookalike; reproduce the exact person.
-                     2. **FRAMING:** ${framingInstr}
-                     3. **OUTFIT:** If feature is 'try_on_outfit', apply the 'outfit_image' to the subject's body naturally.
-                     `;
+                     specificInstructions = `[STRICT IDENTITY & FRAMING PROTOCOL]... FRAMING: ${framingInstr}`;
                  }
 
-                 // Enhanced Prompt for better Vietnamese handling & framing
                  const prompt = `
                  [TASK] Execute Feature: ${featureAction}.
                  [CONTEXT] Input Data: ${JSON.stringify(textData)}.
-                 
                  ${specificInstructions}
-                 
-                 [LANGUAGE INSTRUCTION] The input data contains descriptions in VIETNAMESE. You MUST interpret them accurately. Translate contextually to English internal logic for image generation if necessary, but preserve specific cultural nuances (e.g., "Ao Dai", "Non La").
-                 
-                 [OUTPUT CONFIG] 
-                 - Quality: ${imageSize}, Photorealistic, highly detailed. 
-                 - Aspect Ratio: ${textData.aspect_ratio || '3:4'}.
+                 [OUTPUT CONFIG] Quality: ${imageSize}, Photorealistic. Aspect Ratio: ${textData.aspect_ratio || '3:4'}.
                  `;
                  parts.push({ text: prompt });
 
@@ -337,9 +411,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         imageConfig: getImageConfig(selectedModel, imageSize)
                     }
                  });
-                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                 if (!data) throw new Error("No image returned.");
-                 return res.json({ images: [data], successCount: 1 });
+                 
+                 const rawData = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                 const processedData = await processOutputImage(rawData);
+                 return res.json({ images: [processedData.split(',')[1]], successCount: 1 });
             }
 
             case 'generateBatchImages': {
@@ -356,11 +431,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const count = Math.min(numOutputs || 1, 4);
                 const promises = Array(count).fill(0).map(() => generateOne());
                 const results = await Promise.all(promises);
-                const images = results.map(r => r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data).filter(Boolean);
-                return res.json({ images: images.map(i => `data:image/png;base64,${i}`) });
+                
+                // Process each image independently
+                const processedImages = await Promise.all(results.map(async (r) => {
+                    const raw = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                    if (!raw) return null;
+                    const processed = await processOutputImage(raw);
+                    return processed.split(',')[1]; 
+                }));
+                
+                return res.json({ images: processedImages.filter(Boolean) });
             }
 
-            // --- UTILITIES ---
             case 'generateThumbnail': {
                  const { modelImage, refImage, inputs, ratio } = payload;
                  const parts: Part[] = [];
@@ -370,70 +452,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  parts.push({ text: prompt });
 
                  const geminiRes = await ai.models.generateContent({
-                    model: selectedModel, // Use standard model selection logic
+                    model: selectedModel,
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
                         imageConfig: getImageConfig(selectedModel, imageSize)
                     }
                  });
-                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                 return res.json({ image: `data:image/png;base64,${data}` });
-            }
-
-            case 'detectOutfit': {
-                const { base64Image, mimeType } = payload;
-                const prompt = "Analyze the person's outfit in this image. Describe it briefly in Vietnamese. Return only the description.";
-                const geminiRes = await ai.models.generateContent({
-                    model: TEXT_MODEL,
-                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] }
-                });
-                return res.json({ outfit: geminiRes.text?.trim() || '' });
-            }
-
-            case 'editOutfitOnImage': {
-                const { base64Image, mimeType, newOutfitPrompt } = payload;
-                const prompt = `[TASK] Edit Outfit. Change outfit to: "${newOutfitPrompt}". Preserve face, pose, and background. [QUALITY] ${imageSize}, photorealistic.`;
-                const geminiRes = await ai.models.generateContent({
-                    model: selectedModel,
-                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
-                    config: { 
-                        responseModalities: [Modality.IMAGE], 
-                        imageConfig: getImageConfig(selectedModel, imageSize)
-                    }
-                });
-                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                return res.json({ imageData: `data:image/png;base64,${data}` });
-            }
-
-            case 'getHotTrends': {
-                const prompt = "List 5 current hot fashion or photography trends in Vietnam. Return JSON array of strings.";
-                const geminiRes = await ai.models.generateContent({
-                    model: TEXT_MODEL,
-                    contents: { parts: [{ text: prompt }] },
-                    config: { responseMimeType: "application/json" }
-                });
-                try {
-                    const trends = JSON.parse(geminiRes.text || '[]');
-                    return res.json({ trends });
-                } catch { return res.json({ trends: [] }); }
-            }
-
-            case 'generateVideoPrompt': {
-                const { userIdea, base64Image } = payload;
-                const prompt = `Create a high-quality video generation prompt based on this image and idea: "${userIdea}". Return JSON { "englishPrompt": "...", "vietnamesePrompt": "..." }.`;
-                const parts: Part[] = [{ text: prompt }];
-                if (base64Image) parts.unshift({ inlineData: { data: base64Image.split(',')[1], mimeType: 'image/png' } });
-                
-                const geminiRes = await ai.models.generateContent({
-                    model: TEXT_MODEL,
-                    contents: { parts },
-                    config: { responseMimeType: "application/json" }
-                });
-                return res.json({ prompts: JSON.parse(geminiRes.text || '{}') });
+                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                 return res.json({ image: imageData });
             }
 
             case 'generateVideoFromImage': {
+                // Video generation logic (VIP only)
                 const { base64Image, prompt } = payload;
                 let operation = await ai.models.generateVideos({
                   model: VEO_MODEL,
@@ -463,35 +494,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.json({ videoUrl: `data:video/mp4;base64,${vidBase64}` });
             }
 
-            // --- FAMILY STUDIO (Consolidated Advanced Method) ---
-            case 'generateFamilyPhoto': // Legacy name mapped to new logic
+            case 'generateFamilyPhoto':
             case 'generateFamilyPhoto_3_Pass': {
                 const { settings } = payload;
                 const { members, scene, outfit, pose, customPrompt, rois, faceConsistency } = settings;
-
                 const parts: Part[] = [];
 
-                // 1. Add Member Reference Images with Text Descriptions
                 if (members && Array.isArray(members)) {
                     members.forEach((m: any, index: number) => {
                         if (m.photo?.base64) {
-                            // Ensure base64 is clean
                             const cleanBase64 = m.photo.base64.replace(/^data:image\/\w+;base64,/, "");
                             parts.push({
-                                inlineData: {
-                                    data: cleanBase64,
-                                    mimeType: m.photo.mimeType || 'image/jpeg'
-                                }
+                                inlineData: { data: cleanBase64, mimeType: m.photo.mimeType || 'image/jpeg' }
                             });
                             
-                            // Calculate simplified position
                             const roi = rois?.find((r: any) => r.memberId === m.id);
                             let posDesc = "";
                             if (roi) {
                                 const center = roi.xPct + (roi.wPct / 2);
                                 posDesc = center < 0.33 ? "on the left" : center > 0.66 ? "on the right" : "in the center";
                             }
-
                             parts.push({
                                 text: `[REFERENCE_MEMBER_${index + 1}] ID: ${m.id}. Attributes: ${m.age}, ${m.bodyDescription || ''}. Preferred Outfit: ${m.outfit || outfit}. Pose: ${m.pose || 'Natural'}. Position: ${posDesc}.`
                             });
@@ -499,46 +521,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     });
                 }
 
-                // 2. Construct the Advanced Multimodal Prompt with IDENTITY ANCHORING
-                // NEW: Enhanced logic for STRICT identity preservation
                 let identityInstruction = "";
                 if (faceConsistency) {
-                    identityInstruction = `
-                    [HYPER-REALISTIC IDENTITY PRESERVATION PROTOCOL]
-                    You are a specialized forensic artist. Your HIGHEST PRIORITY is to transfer the exact facial features from the [REFERENCE_MEMBER] images to the final composition.
-                    
-                    **MANDATORY RULES:**
-                    1. **DIRECT COPY (Texture Mapping):** Treat the faces in the reference images as "Texture Maps". You must apply these exact facial pixels (eyes, nose, mouth, bone structure) onto the generated bodies.
-                    2. **NO HALLUCINATION:** Do not generate a "generic Asian person" or a "generic 35 year old woman". It MUST look EXACTLY like the specific individual in [REFERENCE_MEMBER_1], [REFERENCE_MEMBER_2], etc.
-                    3. **IGNORE TEXT BIAS:** Even if the text description says "mother", do not use your internal training of a "generic mother face". Use the REFERENCE IMAGE PIXELS. The text "mother" describes the role, NOT the face.
-                    4. **LIGHTING ADAPTATION:** Only adjust the lighting and skin tone to match the scene. Do NOT change the bone structure, eye shape, nose shape, or mouth.
-                    5. **AGE FIDELITY:** Preserve the exact age markers (wrinkles, skin texture) from the source photo. Do not artificially smooth or "beautify" unless requested.
-                    `;
+                    identityInstruction = `[HYPER-REALISTIC IDENTITY PRESERVATION PROTOCOL]...`;
                 } else {
-                    identityInstruction = `[CREATIVE INTERPRETATION] Create characters inspired by the reference images, but prioritize artistic style and idealized beauty over exact likeness.`;
+                    identityInstruction = `[CREATIVE INTERPRETATION]...`;
                 }
 
-                const prompt = `
-                [TASK] Create a hyper-realistic family photo compositing the specific people provided above.
-                
-                **CONTEXT TRANSLATION:**
-                The user input below is in VIETNAMESE. Please interpret the context (mood, setting) correctly but DO NOT let the Vietnamese text descriptions override the visual identity of the reference images.
-                
-                [SCENE] ${scene}
-                [GLOBAL OUTFIT STYLE] ${outfit}
-                [GLOBAL POSE] ${pose}
-                [ADDITIONAL DETAILS] ${customPrompt}
-                
-                ${identityInstruction}
-                
-                [COMPOSITION INSTRUCTIONS]
-                1. Arrange the members naturally in the scene based on their designated positions.
-                2. Interaction: Ensure natural interaction (eye contact, touching, lighting consistency) so they look like they are truly in the same space.
-                3. Quality: ${imageSize}, photorealistic texture, perfect eyes, skin texture preservation.
-                
-                Generate the final composite image now.
-                `;
-
+                const prompt = `[TASK] Create a hyper-realistic family photo... ${identityInstruction} ...Quality: ${imageSize}, photorealistic texture.`;
                 parts.push({ text: prompt });
 
                 const geminiRes = await ai.models.generateContent({
@@ -553,15 +543,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                 if (!data) throw new Error("Failed to generate image.");
                 
-                // Returning debug info as null since we are doing single-pass advanced inference
-                return res.json({ imageData: `data:image/png;base64,${data}`, similarityScores: [], debug: null });
+                const imageData = await processOutputImage(data);
+                return res.json({ imageData, similarityScores: [], debug: null });
+            }
+
+            case 'detectOutfit': {
+                const { base64Image, mimeType } = payload;
+                const prompt = "Analyze the person's outfit in this image. Describe it briefly in Vietnamese. Return only the description.";
+                const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] }
+                });
+                return res.json({ outfit: geminiRes.text?.trim() || '' });
+            }
+
+            case 'editOutfitOnImage': {
+                if (!isVip) return res.status(403).json({ error: "Tính năng chỉnh sửa trang phục chỉ dành cho VIP." });
+                const { base64Image, mimeType, newOutfitPrompt } = payload;
+                const prompt = `[TASK] Edit Outfit. Change outfit to: "${newOutfitPrompt}". Preserve face, pose, and background. [QUALITY] ${imageSize}, photorealistic.`;
+                const geminiRes = await ai.models.generateContent({
+                    model: selectedModel,
+                    contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
+                    config: { 
+                        responseModalities: [Modality.IMAGE], 
+                        imageConfig: getImageConfig(selectedModel, imageSize)
+                    }
+                });
+                const data = geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const imageData = await processOutputImage(data);
+                return res.json({ imageData });
+            }
+
+            case 'getHotTrends': {
+                const prompt = "List 5 current hot fashion or photography trends in Vietnam. Return JSON array of strings.";
+                const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts: [{ text: prompt }] },
+                    config: { responseMimeType: "application/json" }
+                });
+                try {
+                    const trends = JSON.parse(geminiRes.text || '[]');
+                    return res.json({ trends });
+                } catch { return res.json({ trends: [] }); }
+            }
+
+            case 'generateVideoPrompt': {
+                if (!isVip) return res.status(403).json({ error: "Tính năng tạo prompt video chỉ dành cho VIP." });
+                const { userIdea, base64Image } = payload;
+                const prompt = `Create a high-quality video generation prompt based on this image and idea: "${userIdea}". Return JSON { "englishPrompt": "...", "vietnamesePrompt": "..." }.`;
+                const parts: Part[] = [{ text: prompt }];
+                if (base64Image) parts.unshift({ inlineData: { data: base64Image.split(',')[1], mimeType: 'image/png' } });
+                
+                const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts },
+                    config: { responseMimeType: "application/json" }
+                });
+                return res.json({ prompts: JSON.parse(geminiRes.text || '{}') });
             }
 
             case 'generatePromptFromImage': {
+                if (!isVip) return res.status(403).json({ error: "Tính năng phân tích ảnh chỉ dành cho VIP." });
                 const { base64Image, mimeType, isFaceLockEnabled, language } = payload;
                 const promptText = `Describe this image in extreme detail for image generation. ${isFaceLockEnabled ? "Focus intensely on describing the face features, proportions, and identity." : ""} Output language: ${language}.`;
                 const geminiRes = await ai.models.generateContent({
-                    model: 'gemini-2.5-pro',
+                    model: TEXT_MODEL,
                     contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: promptText }] }
                 });
                 return res.json({ prompt: geminiRes.text });

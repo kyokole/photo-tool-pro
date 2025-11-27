@@ -9,7 +9,7 @@ import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, Ac
 import { generateIdPhoto, generateHeadshot, generateFashionPhoto } from './services/geminiService';
 import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
 import { fileToGenerativePart, fileToResizedDataURL } from './utils/fileUtils';
-import { applyWatermark } from './utils/canvasUtils';
+// import { applyWatermark } from './utils/canvasUtils'; // REMOVED: Backend handles watermarking now
 import Sidebar from './components/Sidebar';
 import ImagePanes from './components/ImagePanes';
 import { ControlPanel } from './components/ControlPanel';
@@ -410,8 +410,8 @@ const App: React.FC = () => {
       
       const finalImageFromServer = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
       
-      // Client-side watermarking for non-VIPs
-      const finalImage = !isVip ? await applyWatermark(finalImageFromServer) : finalImageFromServer;
+      // CLIENT WATERMARK REMOVED: Backend handles it
+      const finalImage = finalImageFromServer;
 
       setIsAiCropped(true); // Since the server handles the crop, we can consider it AI-cropped immediately.
 
@@ -588,7 +588,7 @@ const App: React.FC = () => {
                     reader.readAsDataURL(job.file);
                 });
 
-                // Watermarking is not applied in batch mode as it's a VIP feature
+                // Watermarking is not applied in batch mode (server handles it if needed, but VIP only anyway)
                 const finalImage = await generateIdPhoto(originalImageBase64, settings);
 
                 job.processedUrl = finalImage;
@@ -641,10 +641,8 @@ const App: React.FC = () => {
         
         const generatedImagesFromServer = await Promise.all(generationPromises);
 
-        // Client-side watermarking for non-VIPs
-        const finalImages = !isVip 
-            ? await Promise.all(generatedImagesFromServer.map(img => applyWatermark(img))) 
-            : generatedImagesFromServer;
+        // CLIENT WATERMARK REMOVED: Backend handles it
+        const finalImages = generatedImagesFromServer;
 
         setHeadshotResults(finalImages.map((url, index) => ({
             id: `${style.id}-${index}-${Date.now()}`,
@@ -701,6 +699,7 @@ const App: React.FC = () => {
         if (!imagePart) throw new Error(t('errors.fileProcessingError'));
 
         // Since Fashion Studio is a VIP feature, no watermarking is needed here.
+        // But if it were needed, backend would handle it.
         const imageUrl = await generateFashionPhoto(imagePart, fashionStudioSettings, abortControllerRef.current.signal);
         
         setFashionStudioResult({
@@ -742,23 +741,19 @@ const App: React.FC = () => {
       }
   }, [fashionStudioFile, fashionStudioSettings, t]);
 
+  // ... (rest of the file including renderContent and JSX)
+  // Ensure all functions match the original file content structure
   const handleFashionSettingsChange = useCallback((updater: React.SetStateAction<FashionStudioSettings>) => {
     setFashionStudioSettings(prevSettings => {
         const newSettings = typeof updater === 'function' ? updater(prevSettings) : updater;
-
-        // If the category has changed, we need to reset the style to the first valid one.
         if (newSettings.category !== prevSettings.category) {
             let newStyle = '';
             if (newSettings.category === 'female') newStyle = FASHION_FEMALE_STYLES[0].promptValue;
             else if (newSettings.category === 'male') newStyle = FASHION_MALE_STYLES[0].promptValue;
             else if (newSettings.category === 'girl') newStyle = FASHION_GIRL_STYLES[0].promptValue;
             else if (newSettings.category === 'boy') newStyle = FASHION_BOY_STYLES[0].promptValue;
-            
-            // Return new state with both category and style updated atomically
             return { ...newSettings, style: newStyle };
         }
-
-        // If only other settings changed (like style itself), just apply the update.
         return newSettings;
     });
   }, []);
@@ -1216,8 +1211,6 @@ const App: React.FC = () => {
 
   const handleSubscriptionExpired = useCallback(() => {
     if (currentUser && !currentUser.isAdmin) {
-      // FIX: Check if the expiry date is the epoch (Jan 1, 1970).
-      // If so, this is a new freemium user, not an expired VIP. Do not show the modal.
       const expiry = new Date(currentUser.subscriptionEndDate);
       if (expiry.getTime() === 0) {
         return; 

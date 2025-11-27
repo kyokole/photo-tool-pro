@@ -7,7 +7,8 @@ import type { FamilyMember, FamilyStudioSettings, FamilyStudioResult, ROI, Seria
 import { FAMILY_SCENES, FAMILY_OUTFITS, FAMILY_POSES, DEFAULT_FAMILY_STUDIO_SETTINGS, FAMILY_ASPECT_RATIOS } from '../constants/familyStudioConstants';
 import { serializeFamilyMembers } from '../utils/fileUtils';
 import { generateFamilyPhoto_3_Pass } from '../services/geminiService';
-import { applyWatermark, dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
+import { dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
+// REMOVED: import { applyWatermark } from '../utils/canvasUtils';
 import { ZoomModal } from './creativestudio/ZoomModal';
 
 interface FamilyStudioProps {
@@ -285,7 +286,10 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
             const { imageData, similarityScores, debug } =
             await generateFamilyPhoto_3_Pass(settingsPayload, setProgressMessage);
 
-            const finalImage = !isVip ? await applyWatermark(imageData) : imageData;
+            // REMOVED: Client-side watermarking
+            // const finalImage = !isVip ? await applyWatermark(imageData) : imageData;
+            const finalImage = imageData;
+
             setResult({ id: `family-${Date.now()}`, imageUrl: finalImage, similarityScores, debug });
         } catch (err: any) {
             console.error(err);

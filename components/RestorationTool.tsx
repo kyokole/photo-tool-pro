@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next';
 import type { RestorationResult, RestorationOptions, DocumentRestorationOptions } from '../types';
 import { performRestoration, performDocumentRestoration } from '../services/geminiService';
 import { fileToGenerativePart } from '../utils/fileUtils';
-import { applyWatermark } from '../utils/canvasUtils';
+import { smartDownload } from '../utils/canvasUtils';
+// REMOVED: import { applyWatermark } from '../utils/canvasUtils';
 import { ImageUploader } from './ImageUploader';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
-import { smartDownload } from '../utils/canvasUtils';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 
 interface RestorationToolProps {
@@ -101,9 +101,8 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
                 restoredDataUrl = await performDocumentRestoration(imagePart, documentOptions);
             }
 
-            if (!isVip) {
-                restoredDataUrl = await applyWatermark(restoredDataUrl);
-            }
+            // REMOVED: Client-side watermarking
+            // if (!isVip) { restoredDataUrl = await applyWatermark(restoredDataUrl); }
 
             setResult({
                 originalUrl: URL.createObjectURL(originalFile),

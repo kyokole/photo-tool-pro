@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { generateFourSeasonsPhoto, detectOutfit, editOutfitOnImage } from '../services/geminiService';
 import { fileToGenerativePart } from '../utils/fileUtils';
-import { applyWatermark, dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
+import { dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
+// REMOVED: import { applyWatermark } from '../utils/canvasUtils';
 import type { Scene, FilePart } from '../types';
 
 type Season = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -154,9 +155,8 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             
             let generatedImage = await generateFourSeasonsPhoto(imagePart, selectedScene, activeSeason, aspectRatio, customDescription, isHighQuality);
             
-            if (!isVip) {
-                generatedImage = await applyWatermark(generatedImage);
-            }
+            // REMOVED: Client-side watermarking
+            // if (!isVip) { generatedImage = await applyWatermark(generatedImage); }
 
             setResultImage(generatedImage);
 
@@ -183,9 +183,8 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
             const mimeType = resultImage.match(/data:([^;]+);/)?.[1] || 'image/png';
             let newImage = await editOutfitOnImage(base64Data, mimeType, outfitEditPrompt);
 
-            if (!isVip) {
-                newImage = await applyWatermark(newImage);
-            }
+            // REMOVED: Client-side watermarking
+            // if (!isVip) { newImage = await applyWatermark(newImage); }
 
             setResultImage(newImage); 
             setOutfitEditPrompt(''); 
