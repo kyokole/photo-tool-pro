@@ -1,39 +1,8 @@
+
 // services/creativeStudioService.ts
 import { FeatureAction } from "../types";
 import { fileToBase64 } from "../utils/fileUtils";
-
-/**
- * A generic API client to communicate with our own Vercel Serverless Function backend.
- * This function acts as a secure proxy for all Gemini API calls.
- * @param action The specific Gemini action to perform (e.g., 'generateImagesFromFeature').
- * @param payload The data required for that action.
- * @returns The result from the backend.
- */
-const callBackendApi = async (action: string, payload: any): Promise<any> => {
-    const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, payload }),
-    });
-
-    if (!response.ok) {
-        // Read the body ONCE as text.
-        const errorText = await response.text();
-        let errorMessage = errorText;
-
-        try {
-            // Then, TRY to parse that text as JSON.
-            const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error || JSON.stringify(errorData);
-        } catch (e) {
-            // If parsing fails, it was plain text. We already have the error message.
-            // No extra action needed.
-        }
-        throw new Error(errorMessage);
-    }
-
-    return response.json();
-};
+import { callGeminiApi } from "./geminiService";
 
 // This function now prepares the data and sends it to our backend,
 // rather than directly calling the Gemini API.
@@ -79,7 +48,7 @@ export const generateImagesFromFeature = async (
 
     const serializedFormData = await serializeFiles(formData);
 
-    const { images, successCount } = await callBackendApi('generateImagesFromFeature', {
+    const { images, successCount } = await callGeminiApi('generateImagesFromFeature', {
         featureAction,
         formData: serializedFormData,
         numImages,
@@ -88,12 +57,12 @@ export const generateImagesFromFeature = async (
 };
 
 export const getHotTrends = async (): Promise<string[]> => {
-    const { trends } = await callBackendApi('getHotTrends', {});
+    const { trends } = await callGeminiApi('getHotTrends', {});
     return trends;
 };
 
 export const generateVideoPrompt = async (userIdea: string, base64Image: string): Promise<{ englishPrompt: string, vietnamesePrompt: string }> => {
-    const { prompts } = await callBackendApi('generateVideoPrompt', { userIdea, base64Image });
+    const { prompts } = await callGeminiApi('generateVideoPrompt', { userIdea, base64Image });
     return prompts;
 };
 
@@ -105,7 +74,7 @@ export const generateVideoFromImage = async (
      // The progress logic might need to be adapted since the long-running task is now on the backend.
      // For now, we'll just proxy the call. A more advanced solution would use web sockets or polling.
     setProgress('Đang gửi yêu cầu tạo video...');
-    const { videoUrl, error } = await callBackendApi('generateVideoFromImage', { base64Image, prompt });
+    const { videoUrl, error } = await callGeminiApi('generateVideoFromImage', { base64Image, prompt });
     if (error) {
         throw new Error(error);
     }

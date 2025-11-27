@@ -1416,6 +1416,7 @@ const App: React.FC = () => {
                     setTheme={setTheme} 
                     initialState={creativeStudioInitialState}
                     onInitialStateConsumed={handleCreativeStudioStateConsumed}
+                    isVip={isVip}
                 />;
       case 'four_seasons_studio':
           return <FourSeasonsStudio theme={theme} setTheme={setTheme} isVip={isVip} />;

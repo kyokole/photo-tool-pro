@@ -7,11 +7,12 @@ import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, Thumbn
 /**
  * A generic API client to communicate with our own Vercel Serverless Function backend.
  * This function acts as a secure proxy for all Gemini API calls.
+ * Includes user authentication and VIP status verification.
  * @param action The specific Gemini action to perform (e.g., 'generateIdPhoto').
  * @param payload The data required for that action.
  * @returns The result from the backend.
  */
-const callBackendApi = async (action: string, payload: any): Promise<any> => {
+export const callGeminiApi = async (action: string, payload: any): Promise<any> => {
     const auth = getAuthInstance();
     const db = getDbInstance();
     const user = auth.currentUser;
@@ -79,25 +80,25 @@ export const generateIdPhoto = async (originalImage: string, settings: Settings,
     // However, we can check for abort before making the call.
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
     
-    const { imageData } = await callBackendApi('generateIdPhoto', { originalImage, settings, outfitImagePart });
+    const { imageData } = await callGeminiApi('generateIdPhoto', { originalImage, settings, outfitImagePart });
     return imageData;
 };
 
 // --- Headshot Generator ---
 export const generateHeadshot = async (imagePart: FilePart, prompt: string, signal?: AbortSignal): Promise<string> => {
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
-    const { imageData } = await callBackendApi('generateHeadshot', { imagePart, prompt });
+    const { imageData } = await callGeminiApi('generateHeadshot', { imagePart, prompt });
     return imageData;
 };
 
 // --- Restoration Tool (New Unified Function) ---
 export const performRestoration = async (imagePart: FilePart, options: RestorationOptions): Promise<string> => {
-    const { imageData } = await callBackendApi('performRestoration', { imagePart, options });
+    const { imageData } = await callGeminiApi('performRestoration', { imagePart, options });
     return imageData;
 };
 
 export const performDocumentRestoration = async (imagePart: FilePart, options: DocumentRestorationOptions): Promise<string> => {
-    const { imageData } = await callBackendApi('performDocumentRestoration', { imagePart, options });
+    const { imageData } = await callGeminiApi('performDocumentRestoration', { imagePart, options });
     return imageData;
 };
 
@@ -105,7 +106,7 @@ export const performDocumentRestoration = async (imagePart: FilePart, options: D
 // --- Fashion Studio ---
 export const generateFashionPhoto = async (imagePart: FilePart, settings: FashionStudioSettings, signal?: AbortSignal): Promise<string> => {
     if (signal?.aborted) throw new DOMException('Aborted by user', 'AbortError');
-    const { imageData } = await callBackendApi('generateFashionPhoto', { imagePart, settings });
+    const { imageData } = await callGeminiApi('generateFashionPhoto', { imagePart, settings });
     return imageData;
 };
 
@@ -113,7 +114,7 @@ export const generateFashionPhoto = async (imagePart: FilePart, settings: Fashio
 // This is the legacy 1-pass method. Kept for A/B testing or fallback.
 export const generateFamilyPhoto = async (settings: Omit<SerializedFamilyStudioSettings, 'rois'>, setProgress: (message: string) => void): Promise<string> => {
     setProgress('Đang gửi yêu cầu tạo ảnh gia đình...');
-    const { imageData } = await callBackendApi('generateFamilyPhoto', { settings });
+    const { imageData } = await callGeminiApi('generateFamilyPhoto', { settings });
     return imageData;
 };
 
@@ -125,7 +126,7 @@ export const generateFamilyPhoto_3_Pass = async (
     // Polling could be implemented here to get progress updates from the server,
     // but for now, we just pass a simple initial message.
     setProgressMessage('Đang khởi tạo quy trình tạo ảnh 3 bước...');
-    const result = await callBackendApi('generateFamilyPhoto_3_Pass', { settings });
+    const result = await callGeminiApi('generateFamilyPhoto_3_Pass', { settings });
     return result;
 };
 
@@ -137,7 +138,7 @@ export const generateBeautyPhoto = async (
     subFeature: BeautySubFeature | null,
     style: BeautyStyle | null
 ): Promise<string> => {
-    const { imageData } = await callBackendApi('generateBeautyPhoto', { baseImage, tool, subFeature, style });
+    const { imageData } = await callGeminiApi('generateBeautyPhoto', { baseImage, tool, subFeature, style });
     return imageData;
 };
 
@@ -150,7 +151,7 @@ export const generateFourSeasonsPhoto = async (
     customDescription: string,
     highQuality: boolean
 ): Promise<string> => {
-    const { imageData } = await callBackendApi('generateFourSeasonsPhoto', { imagePart, scene, season, aspectRatio, customDescription, highQuality });
+    const { imageData } = await callGeminiApi('generateFourSeasonsPhoto', { imagePart, scene, season, aspectRatio, customDescription, highQuality });
     return imageData;
 };
 
@@ -160,7 +161,7 @@ export const generateBatchImages = async (
   aspectRatio: BatchAspectRatio,
   numOutputs: number
 ): Promise<string[]> => {
-    const { images } = await callBackendApi('generateBatchImages', { prompt, aspectRatio, numOutputs });
+    const { images } = await callGeminiApi('generateBatchImages', { prompt, aspectRatio, numOutputs });
     return images;
 };
 
@@ -176,16 +177,16 @@ export const generateThumbnail = async ({
     inputs: ThumbnailInputs;
     ratio: ThumbnailRatio;
 }): Promise<{ image?: string; error?: string; }> => {
-    return callBackendApi('generateThumbnail', { modelImage, refImage, inputs, ratio });
+    return callGeminiApi('generateThumbnail', { modelImage, refImage, inputs, ratio });
 };
 
 // --- OUTFIT EDITOR (from Four Seasons) ---
 export const detectOutfit = async (base64Image: string, mimeType: string): Promise<string> => {
-    const { outfit } = await callBackendApi('detectOutfit', { base64Image, mimeType });
+    const { outfit } = await callGeminiApi('detectOutfit', { base64Image, mimeType });
     return outfit;
 };
 
 export const editOutfitOnImage = async (base64Image: string, mimeType: string, newOutfitPrompt: string): Promise<string> => {
-    const { imageData } = await callBackendApi('editOutfitOnImage', { base64Image, mimeType, newOutfitPrompt });
+    const { imageData } = await callGeminiApi('editOutfitOnImage', { base64Image, mimeType, newOutfitPrompt });
     return imageData;
 };

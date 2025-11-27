@@ -25,9 +25,10 @@ interface CreativeStudioProps {
     setTheme: (theme: string) => void;
     initialState?: { image: File, prompt: string } | null;
     onInitialStateConsumed?: () => void;
+    isVip: boolean; // Add isVip prop
 }
 
-const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initialState, onInitialStateConsumed }) => {
+const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initialState, onInitialStateConsumed, isVip }) => {
     const { t } = useTranslation();
     const [selectedFeature, setSelectedFeature] = useState<FeatureAction>(FeatureAction.BATCH_GENERATOR);
     const [formData, setFormData] = useState<Record<string, any>>({});
@@ -308,7 +309,7 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
 
                 {error && (
                     <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-center my-4" role="alert">
-                        <strong className="font-bold">{t('common.error')}!</strong>
+                        <strong className="font-bold">{t('common.error')}:</strong>
                         <span className="block sm:inline ml-2">{error}</span>
                     </div>
                 )}
