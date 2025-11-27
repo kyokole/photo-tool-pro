@@ -430,6 +430,7 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                     </label>
                                     <textarea value={settings.customPrompt} onChange={e => updateSettings({ customPrompt: e.target.value })} placeholder={t('familyStudio.customPromptPlaceholder')} rows={3} className="w-full bg-[var(--bg-deep-space)] text-sm border border-white/20 rounded-md p-2 focus:ring-1 focus:ring-[var(--accent-blue)] resize-y"></textarea>
                                 </div>
+                                {/* Removed checkbox, enforced visually with a badge */}
                                 <div className="text-center mt-2">
                                     <span className="text-xs text-green-400 font-bold border border-green-500/50 bg-green-500/10 px-2 py-1 rounded">
                                         <i className="fas fa-check-circle mr-1"></i> {t('common.highQualityLabel')} (4K) Enabled
