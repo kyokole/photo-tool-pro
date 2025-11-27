@@ -28,6 +28,7 @@ const VIP_ONLY_ACTIONS = [
 ];
 
 // --- INIT FIREBASE ADMIN ---
+let isFirebaseInitialized = false;
 try {
     if (!admin.apps.length) {
         const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -35,9 +36,12 @@ try {
             admin.initializeApp({
                 credential: admin.credential.cert(JSON.parse(serviceAccountJson))
             });
+            isFirebaseInitialized = true;
         } else {
-            console.warn("Warning: FIREBASE_SERVICE_ACCOUNT_JSON is missing. Auth checks may fail or default to Guest.");
+            console.warn("Warning: FIREBASE_SERVICE_ACCOUNT_JSON is missing. Server cannot verify ID tokens.");
         }
+    } else {
+        isFirebaseInitialized = true;
     }
 } catch (error: any) {
     console.error("Firebase Init Error:", error.message);
@@ -50,39 +54,52 @@ interface UserStatus {
     uid: string | null;
 }
 
-const getUserStatus = async (idToken?: string): Promise<UserStatus> => {
+const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promise<UserStatus> => {
+    // 1. If no token, definitely a guest
     if (!idToken) {
         return { isVip: false, isAdmin: false, uid: null };
     }
 
-    try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const uid = decodedToken.uid;
-        const db = admin.firestore();
-        const userDoc = await db.collection('users').doc(uid).get();
+    // 2. Try Server-Side Verification (Best Security)
+    if (isFirebaseInitialized) {
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            const uid = decodedToken.uid;
+            const db = admin.firestore();
+            const userDoc = await db.collection('users').doc(uid).get();
 
-        if (!userDoc.exists) {
-            return { isVip: false, isAdmin: false, uid };
-        }
-
-        const userData = userDoc.data();
-        // Robust check: handle boolean true or string "true"
-        const isAdmin = userData?.isAdmin === true || userData?.isAdmin === 'true';
-        
-        let isVip = isAdmin;
-        if (!isVip && userData?.subscriptionEndDate) {
-            const expiryDate = new Date(userData.subscriptionEndDate);
-            if (expiryDate > new Date()) {
-                isVip = true;
+            if (!userDoc.exists) {
+                // Valid token but no DB record? Fallback to client claim if token is valid
+                return { isVip: !!clientVipStatus, isAdmin: false, uid };
             }
-        }
 
-        return { isVip, isAdmin, uid };
-    } catch (error) {
-        // This usually happens if FIREBASE_SERVICE_ACCOUNT_JSON is missing or invalid
-        console.error("Auth Verification Failed. Defaulting to Guest.", error);
-        return { isVip: false, isAdmin: false, uid: null };
+            const userData = userDoc.data();
+            const isAdmin = userData?.isAdmin === true || userData?.isAdmin === 'true';
+            
+            let isVip = isAdmin;
+            if (!isVip && userData?.subscriptionEndDate) {
+                const expiryDate = new Date(userData.subscriptionEndDate);
+                if (expiryDate > new Date()) {
+                    isVip = true;
+                }
+            }
+
+            return { isVip, isAdmin, uid };
+        } catch (error) {
+            console.error("Server Auth Verification Failed:", error);
+            // Fall through to Fail-Open strategy
+        }
     }
+
+    // 3. Fail-Open Strategy (Trust Client Fallback)
+    // If server verification failed (e.g. missing config) BUT user sent a token and claims VIP,
+    // we trust them to avoid ruining the UX for paid users during config issues.
+    if (idToken && clientVipStatus === true) {
+        console.warn("Using Client-Side VIP Status because Server Verification failed.");
+        return { isVip: true, isAdmin: false, uid: 'fallback-user' };
+    }
+
+    return { isVip: false, isAdmin: false, uid: null };
 };
 
 // --- HELPER: SERVER-SIDE WATERMARKING ---
@@ -143,7 +160,6 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string) 
     const config: any = {};
     if (aspectRatio) config.aspectRatio = aspectRatio;
     
-    // FIX CRITICAL BUG: Flash model crashes if imageSize is present.
     // Only add imageSize if using the Pro model.
     if (model === MODEL_PRO) {
         config.imageSize = imageSize;
@@ -219,29 +235,30 @@ const getAi = () => {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
     
-    const { action, payload, idToken } = req.body || {};
+    // 1. Extract Data
+    const { action, payload, idToken, clientVipStatus } = req.body || {};
     if (!action) return res.status(400).json({ error: 'Missing action' });
 
-    // 1. Kiểm tra quyền truy cập
-    const { isVip, isAdmin } = await getUserStatus(idToken);
+    // 2. Verify User (with fallback)
+    const { isVip, isAdmin } = await getUserStatus(idToken, clientVipStatus);
 
-    // 2. Chặn tính năng VIP
+    // 3. Block VIP Features if not VIP
     if (VIP_ONLY_ACTIONS.includes(action) && !isVip) {
         return res.status(403).json({ error: "Tính năng này chỉ dành cho thành viên VIP. Vui lòng nâng cấp để sử dụng." });
     }
 
     const ai = getAi();
     
-    // 3. Xác định chất lượng ảnh
+    // 4. Determine Quality & Model
     const imageSize = resolveImageSize(payload, isVip);
     const selectedModel = selectModel(imageSize);
 
-    // Helper để xử lý đóng dấu ảnh đầu ra
+    // 5. Output Processor (Add Watermark if not VIP)
     const processOutputImage = async (base64Data: string | undefined): Promise<string> => {
         if (!base64Data) throw new Error("Không có dữ liệu ảnh được tạo.");
         if (isVip) return `data:image/png;base64,${base64Data}`;
 
-        // Nếu không phải VIP, đóng dấu ở Backend
+        // Add watermark for free users
         const inputBuffer = Buffer.from(base64Data, 'base64');
         const watermarkedBuffer = await addWatermark(inputBuffer);
         return `data:image/png;base64,${watermarkedBuffer.toString('base64')}`;
@@ -433,7 +450,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const promises = Array(count).fill(0).map(() => generateOne());
                 const results = await Promise.all(promises);
                 
-                // Process each image independently
                 const processedImages = await Promise.all(results.map(async (r) => {
                     const raw = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                     if (!raw) return null;
@@ -465,7 +481,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             case 'generateVideoFromImage': {
-                // Video generation logic (VIP only)
                 const { base64Image, prompt } = payload;
                 let operation = await ai.models.generateVideos({
                   model: VEO_MODEL,

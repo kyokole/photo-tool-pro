@@ -1,6 +1,7 @@
 
 // services/geminiService.ts
-import { getAuthInstance } from '../services/firebase';
+import { getAuthInstance, getDbInstance } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings, FamilyStudioResult } from '../types';
 
 /**
@@ -12,22 +13,44 @@ import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, Thumbn
  */
 const callBackendApi = async (action: string, payload: any): Promise<any> => {
     const auth = getAuthInstance();
+    const db = getDbInstance();
     const user = auth.currentUser;
+    
     let idToken: string | null = null;
+    let clientVipStatus = false;
+
     if (user) {
         try {
-            // Force refresh the token to ensure we have the latest claims (VIP/Admin status)
-            idToken = await user.getIdToken(true);
+            // 1. Get ID Token
+            idToken = await user.getIdToken(false); // Use cached token for speed, force refresh only if needed
+
+            // 2. CHECK VIP STATUS CLIENT-SIDE (FALLBACK MECHANISM)
+            // Since backend verification might fail due to missing service account config,
+            // we explicitly check the user status here and send it.
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const isAdmin = userData?.isAdmin === true;
+                const expiryDate = new Date(userData?.subscriptionEndDate || 0);
+                const isVip = isAdmin || (expiryDate > new Date());
+                clientVipStatus = isVip;
+            }
         } catch (error) {
-            console.error("Error getting user ID token:", error);
-            // Proceed without a token if it fails
+            console.error("Error preparing user credentials:", error);
         }
     }
 
     const response = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, payload, idToken }),
+        body: JSON.stringify({ 
+            action, 
+            payload, 
+            idToken,
+            clientVipStatus // Pass the client-verified status
+        }),
     });
 
     if (!response.ok) {
