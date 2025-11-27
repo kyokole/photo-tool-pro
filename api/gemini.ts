@@ -66,7 +66,8 @@ const getUserStatus = async (idToken?: string): Promise<UserStatus> => {
         }
 
         const userData = userDoc.data();
-        const isAdmin = userData?.isAdmin === true;
+        // Robust check: handle boolean true or string "true"
+        const isAdmin = userData?.isAdmin === true || userData?.isAdmin === 'true';
         
         let isVip = isAdmin;
         if (!isVip && userData?.subscriptionEndDate) {
@@ -78,7 +79,8 @@ const getUserStatus = async (idToken?: string): Promise<UserStatus> => {
 
         return { isVip, isAdmin, uid };
     } catch (error) {
-        console.error("Auth Verification Failed:", error);
+        // This usually happens if FIREBASE_SERVICE_ACCOUNT_JSON is missing or invalid
+        console.error("Auth Verification Failed. Defaulting to Guest.", error);
         return { isVip: false, isAdmin: false, uid: null };
     }
 };
@@ -150,7 +152,6 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string) 
 };
 
 // --- PROMPT BUILDERS ---
-// ... (Keep existing prompt builders)
 const buildIdPhotoPrompt = (settings: any): string => {
     let prompt = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp.
 **Vai trò:** Biên tập viên ảnh thẻ chuyên nghiệp (Passport/Visa standard).

@@ -16,7 +16,8 @@ const callBackendApi = async (action: string, payload: any): Promise<any> => {
     let idToken: string | null = null;
     if (user) {
         try {
-            idToken = await user.getIdToken();
+            // Force refresh the token to ensure we have the latest claims (VIP/Admin status)
+            idToken = await user.getIdToken(true);
         } catch (error) {
             console.error("Error getting user ID token:", error);
             // Proceed without a token if it fails
