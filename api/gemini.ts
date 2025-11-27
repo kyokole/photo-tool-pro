@@ -185,7 +185,6 @@ const buildIdPhotoPrompt = (settings: any): string => {
         prompt += `**2. Trang phục:** Thay thành "${settings.outfit.mode === 'preset' ? settings.outfit.preset : settings.outfit.customPrompt}". Phải khớp cổ và vai.\n`;
     }
 
-    // FIX: Logic xử lý tóc mạnh mẽ hơn
     const hairStyleMap: Record<string, string> = {
         'auto': 'Gọn gàng, lịch sự, lộ rõ trán và tai (chuẩn ảnh thẻ)',
         'down': 'Tóc thả tự nhiên, mềm mại, vén gọn gàng',
@@ -196,10 +195,8 @@ const buildIdPhotoPrompt = (settings: any): string => {
     const hairDesc = hairStyleMap[settings.face.hairStyle] || settings.face.hairStyle;
 
     if (settings.face.hairStyle !== 'keep_original') {
-         // Nếu chọn đổi tóc, ra lệnh cho AI thay đổi tóc ngay cả khi Face-Lock bật
          prompt += `**3. TÓC (ƯU TIÊN THAY ĐỔI):** Thay đổi kiểu tóc thành: "${hairDesc}". `;
          if (settings.face.keepOriginalFeatures) {
-             // Ràng buộc: Giữ mặt nhưng phải đổi tóc
              prompt += `LƯU Ý: Giữ nguyên 100% đặc điểm ngũ quan (mắt, mũi, miệng, cấu trúc mặt) của ảnh gốc, NHƯNG PHẢI THAY ĐỔI TÓC theo yêu cầu. `;
          } else {
              prompt += `Tinh chỉnh nhẹ gương mặt cho chuyên nghiệp. `;
@@ -535,13 +532,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFamilyPhoto':
             case 'generateFamilyPhoto_3_Pass': {
-                // IMPORTANT: The key to "Banana Pro" / Gemini 3 Pro consistency is mapping input tokens 
-                // directly to the output using specific identity prompts, rather than just style transfer.
-                
                 const { settings } = payload;
                 const { members, scene, outfit, pose, customPrompt, faceConsistency } = settings;
                 
-                // Force High Quality/Pro Model for Family Photo regardless of settings to ensure consistency
+                // Force High Quality/Pro Model for Family Photo
                 const familyModel = MODEL_PRO;
                 const familySize = '4K'; 
 
@@ -557,13 +551,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                 inlineData: { data: cleanBase64, mimeType: m.photo.mimeType || 'image/jpeg' }
                             });
                             
-                            // Map the previous inline image (which is at parts.length - 1) to this ID contextually
-                            // In Gemini API, text and images are interleaved.
                             parts.push({
                                 text: `This is ${memberLabel}.`
                             });
 
-                            memberDescriptions += `- Person ${index + 1}: Based strictly on ${memberLabel}. Attributes: ${m.age}. ${m.bodyDescription ? `Body: ${m.bodyDescription}.` : ''} ${m.outfit ? `Individual Outfit: ${m.outfit}.` : ''} ${m.pose ? `Individual Pose: ${m.pose}.` : ''}\n`;
+                            memberDescriptions += `- Person ${index + 1}: Based strictly on ${memberLabel}. Age: ${m.age}. ${m.bodyDescription ? `Body: ${m.bodyDescription}.` : ''} ${m.outfit ? `Individual Outfit: ${m.outfit}.` : ''} ${m.pose ? `Individual Pose: ${m.pose}.` : ''}\n`;
                         }
                     });
                 }
@@ -572,12 +564,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 **ROLE:** Expert Family Photographer & Digital Compositor using "Banana Pro" Identity Protocol.
                 **TASK:** Compose a hyper-realistic family photo based on the provided ${members.length} reference images.
                 
-                **IDENTITY PRESERVATION PROTOCOL (CRITICAL):**
+                **IDENTITY PRESERVATION PROTOCOL (CRITICAL - STRICT):**
                 1. You must map each [REFERENCE_FACE_ID_X] to a person in the final image.
                 2. **DO NOT MIX FACES.** Person 1 must look like Reference 1. Person 2 must look like Reference 2.
-                3. Maintain exact facial structure, eye shape, nose shape, and mouth of the references.
-                4. Do not "beautify" faces to the point of losing their unique identity. Keep them recognizable.
-                ${faceConsistency ? '5. **STRICT MODE:** Face consistency is the highest priority. If a reference face is blurry, try to enhance it while keeping identity.' : ''}
+                3. **ADULTS (ESPECIALLY WOMEN/MOTHERS): DO NOT "BEAUTIFY", "REJUVENATE" OR "FILTER" THE FACE.**
+                   - Preserve distinctive facial marks, nasolabial folds, natural skin texture, and bone structure.
+                   - Do not turn a 40-year-old mother into a 20-year-old model. Respect the input age and features.
+                   - Ensure the face looks like a real person, not a wax figure or AI drawing.
+                4. **CHILDREN:** Maintain their likeness but allow for natural expressions.
+                ${faceConsistency ? '5. **STRICT MODE:** Face consistency is the highest priority over style. If lighting clashes with identity, prioritize identity.' : ''}
 
                 **SCENE CONFIGURATION:**
                 - **Scene/Background:** ${scene}.
