@@ -60,5 +60,5 @@ export const DEFAULT_FAMILY_STUDIO_SETTINGS: FamilyStudioSettings = {
     customPrompt: '',
     aspectRatio: '4:3',
     faceConsistency: true,
-    highQuality: false, // Default to false (Standard)
+    highQuality: true, // Forces High Quality (4K) by default
 };

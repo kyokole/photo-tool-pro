@@ -535,47 +535,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             case 'generateFamilyPhoto':
             case 'generateFamilyPhoto_3_Pass': {
+                // IMPORTANT: The key to "Banana Pro" / Gemini 3 Pro consistency is mapping input tokens 
+                // directly to the output using specific identity prompts, rather than just style transfer.
+                
                 const { settings } = payload;
-                const { members, scene, outfit, pose, customPrompt, rois, faceConsistency } = settings;
+                const { members, scene, outfit, pose, customPrompt, faceConsistency } = settings;
+                
+                // Force High Quality/Pro Model for Family Photo regardless of settings to ensure consistency
+                const familyModel = MODEL_PRO;
+                const familySize = '4K'; 
+
                 const parts: Part[] = [];
+                let memberDescriptions = "";
 
                 if (members && Array.isArray(members)) {
                     members.forEach((m: any, index: number) => {
+                        const memberLabel = `[REFERENCE_FACE_ID_${index + 1}]`;
                         if (m.photo?.base64) {
                             const cleanBase64 = m.photo.base64.replace(/^data:image\/\w+;base64,/, "");
                             parts.push({
                                 inlineData: { data: cleanBase64, mimeType: m.photo.mimeType || 'image/jpeg' }
                             });
                             
-                            const roi = rois?.find((r: any) => r.memberId === m.id);
-                            let posDesc = "";
-                            if (roi) {
-                                const center = roi.xPct + (roi.wPct / 2);
-                                posDesc = center < 0.33 ? "on the left" : center > 0.66 ? "on the right" : "in the center";
-                            }
+                            // Map the previous inline image (which is at parts.length - 1) to this ID contextually
+                            // In Gemini API, text and images are interleaved.
                             parts.push({
-                                text: `[REFERENCE_MEMBER_${index + 1}] ID: ${m.id}. Attributes: ${m.age}, ${m.bodyDescription || ''}. Preferred Outfit: ${m.outfit || outfit}. Pose: ${m.pose || 'Natural'}. Position: ${posDesc}.`
+                                text: `This is ${memberLabel}.`
                             });
+
+                            memberDescriptions += `- Person ${index + 1}: Based strictly on ${memberLabel}. Attributes: ${m.age}. ${m.bodyDescription ? `Body: ${m.bodyDescription}.` : ''} ${m.outfit ? `Individual Outfit: ${m.outfit}.` : ''} ${m.pose ? `Individual Pose: ${m.pose}.` : ''}\n`;
                         }
                     });
                 }
 
-                let identityInstruction = "";
-                if (faceConsistency) {
-                    identityInstruction = `[HYPER-REALISTIC IDENTITY PRESERVATION PROTOCOL]...`;
-                } else {
-                    identityInstruction = `[CREATIVE INTERPRETATION]...`;
-                }
+                let systemInstruction = `
+                **ROLE:** Expert Family Photographer & Digital Compositor using "Banana Pro" Identity Protocol.
+                **TASK:** Compose a hyper-realistic family photo based on the provided ${members.length} reference images.
+                
+                **IDENTITY PRESERVATION PROTOCOL (CRITICAL):**
+                1. You must map each [REFERENCE_FACE_ID_X] to a person in the final image.
+                2. **DO NOT MIX FACES.** Person 1 must look like Reference 1. Person 2 must look like Reference 2.
+                3. Maintain exact facial structure, eye shape, nose shape, and mouth of the references.
+                4. Do not "beautify" faces to the point of losing their unique identity. Keep them recognizable.
+                ${faceConsistency ? '5. **STRICT MODE:** Face consistency is the highest priority. If a reference face is blurry, try to enhance it while keeping identity.' : ''}
 
-                const prompt = `[TASK] Create a hyper-realistic family photo... ${identityInstruction} ...Quality: ${imageSize}, photorealistic texture.`;
-                parts.push({ text: prompt });
+                **SCENE CONFIGURATION:**
+                - **Scene/Background:** ${scene}.
+                - **Global Outfit Theme:** ${outfit} (unless overridden by individual settings).
+                - **Global Pose/Vibe:** ${pose}.
+                - **Additional Requests:** ${customPrompt}.
+
+                **MEMBER MAPPING:**
+                ${memberDescriptions}
+
+                **OUTPUT SPEC:**
+                - Resolution: 4K (Ultra High Definition).
+                - Style: Photorealistic, cinematic lighting, sharp focus on all faces.
+                - Aspect Ratio: ${settings.aspectRatio || '4:3'}.
+                `;
+
+                parts.push({ text: systemInstruction });
 
                 const geminiRes = await ai.models.generateContent({
-                    model: selectedModel,
+                    model: familyModel,
                     contents: { parts },
                     config: { 
                         responseModalities: [Modality.IMAGE], 
-                        imageConfig: getImageConfig(selectedModel, imageSize)
+                        imageConfig: getImageConfig(familyModel, familySize, settings.aspectRatio || '4:3')
                     }
                 });
 
