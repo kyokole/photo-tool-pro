@@ -35,7 +35,7 @@ import LegalModal from './components/LegalModal';
 import VerificationModal from './components/VerificationModal';
 import BeautyStudio from './components/BeautyStudio';
 import HistoryPanel from './components/HistoryPanel';
-import FamilyStudio from './components/FamilyStudio';
+import FamilyStudio from './components/FamilyStudio'; // Correct default import
 
 const loadSettingsFromSession = (): Settings => {
     try {
