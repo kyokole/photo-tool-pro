@@ -386,7 +386,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize, settings.aspectRatio) }
                 });
                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
-                return res.json({ imageData });
+                // **CHANGED:** Return both imageData and the prompt used
+                return res.json({ imageData, prompt });
             }
 
             case 'generateArtStyleImages': {

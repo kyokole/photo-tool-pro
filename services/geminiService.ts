@@ -1,3 +1,4 @@
+
 // services/geminiService.ts
 import { getAuthInstance, getDbInstance } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -177,14 +178,15 @@ export const generateMarketingImage = async (
     referenceImagePart: FilePart | null,
     productDetails: Record<string, string>,
     settings: MarketingSettings
-): Promise<string> => {
-    const { imageData } = await callGeminiApi('generateMarketingImage', {
+): Promise<{ imageData: string, prompt: string }> => {
+    const { imageData, prompt } = await callGeminiApi('generateMarketingImage', {
         productImagePart,
         referenceImagePart,
         productDetails,
         settings
     });
-    return imageData;
+    // Return both image data and prompt
+    return { imageData, prompt };
 };
 
 // NEW: Dedicated function for Marketing Video Generation (Veo)

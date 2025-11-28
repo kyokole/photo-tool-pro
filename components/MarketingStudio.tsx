@@ -52,6 +52,9 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
     const [activeTab, setActiveTab] = useState<'image' | 'ad' | 'video'>('image');
     const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
     
+    // New error state to display feedback to user
+    const [error, setError] = useState<string | null>(null);
+    
     const productInputRef = useRef<HTMLInputElement>(null);
     const refInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,6 +101,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
     const generateAd = async () => {
         if (!product.name) return alert(t('errors.fillAllFields'));
         setIsLoading(prev => ({ ...prev, ad: true }));
+        setError(null);
         try {
             const imageData = await getActiveImageBase64();
             const imagePart = imageData ? { inlineData: { data: imageData.base64, mimeType: imageData.mimeType } } : undefined;
@@ -110,13 +114,17 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
             const copy = await generateMarketingAdCopy(textProduct, imagePart);
             setResult(prev => ({ ...prev, adCopy: copy }));
             setActiveTab('ad');
-        } catch (e) { console.error(e); }
+        } catch (e: any) { 
+            console.error(e);
+            setError(e.message || "Lỗi tạo nội dung quảng cáo.");
+        }
         finally { setIsLoading(prev => ({ ...prev, ad: false })); }
     };
 
     const generateVideoScript = async () => {
         if (!product.name) return alert(t('errors.fillAllFields'));
         setIsLoading(prev => ({ ...prev, video: true }));
+        setError(null);
         try {
             const imageData = await getActiveImageBase64();
             const imagePart = imageData ? { inlineData: { data: imageData.base64, mimeType: imageData.mimeType } } : undefined;
@@ -129,31 +137,40 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
             const script = await generateMarketingVideoScript(textProduct, settings.tone, settings.customAngle, imagePart);
             setResult(prev => ({ ...prev, videoScript: script }));
             setActiveTab('video');
-        } catch (e) { console.error(e); }
+        } catch (e: any) { 
+            console.error(e); 
+            setError(e.message || "Lỗi tạo kịch bản video.");
+        }
         finally { setIsLoading(prev => ({ ...prev, video: false })); }
     };
 
     const generateImage = async () => {
         if (!product.productImage) return alert(t('errors.uploadRequired'));
         setIsLoading(prev => ({ ...prev, image: true }));
+        setError(null);
         try {
             const prodImg = await fileToBase64(product.productImage);
             const refImg = product.referenceImage ? await fileToBase64(product.referenceImage) : null;
             
-            // Mock setting the prompt for display purposes (since the real prompt is built server side)
-            // In a real app we might return this from the server
-            setGeneratedPrompt(`[Generating for ${product.name} with template ${settings.templateId}]...`);
+            setGeneratedPrompt(t('marketingStudio.actions.generating'));
 
-            const url = await generateMarketingImage(
+            const { imageData: url, prompt } = await generateMarketingImage(
                 { inlineData: { data: prodImg.base64, mimeType: prodImg.mimeType } },
                 refImg ? { inlineData: { data: refImg.base64, mimeType: refImg.mimeType } } : null,
                 { name: product.name, brand: product.brand, category: product.category, features: product.features },
                 settings
             );
+            
             setResult(prev => ({ ...prev, generatedImageUrl: url }));
             setActiveTab('image');
-            setGeneratedPrompt(t('marketingStudio.results.imagePlaceholder')); // Reset prompt or update with real one if returned
-        } catch (e) { console.error(e); }
+            
+            // Set the real prompt returned from server
+            setGeneratedPrompt(prompt);
+        } catch (e: any) { 
+            console.error(e);
+            setError(e.message || "Lỗi tạo hình ảnh.");
+            setGeneratedPrompt(''); // Clear pending prompt on error
+        }
         finally { setIsLoading(prev => ({ ...prev, image: false })); }
     };
 
@@ -171,6 +188,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
         setIsLoading(prev => ({ ...prev, videoRender: true }));
         setResult(prev => ({ ...prev, generatedVideoUrl: null }));
+        setError(null);
 
         try {
             const videoUrl = await generateMarketingVideo(
@@ -185,7 +203,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                 alert("API Key không hợp lệ hoặc đã hết hạn. Vui lòng chọn lại.");
                 setShowApiKeyPrompt(true);
             } else {
-                alert("Lỗi tạo video: " + e.message);
+                setError("Lỗi tạo video: " + e.message);
             }
         } finally {
             setIsLoading(prev => ({ ...prev, videoRender: false }));
@@ -427,6 +445,13 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
                     {/* Content Area */}
                     <div className="flex-1 p-6 relative flex flex-col">
+                        {error && (
+                            <div className="mb-4 bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm" role="alert">
+                                <strong className="font-bold">{t('common.error')}: </strong>
+                                <span className="block sm:inline">{error}</span>
+                            </div>
+                        )}
+
                         {activeTab === 'image' && (
                             <div className="h-full flex flex-col items-center justify-center gap-6">
                                 <div className="flex-1 w-full flex items-center justify-center bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] overflow-hidden relative group shadow-inner">
