@@ -71,15 +71,12 @@ export const generateVideoFromImage = async (
     prompt: string,
     setProgress: (message: string) => void
 ): Promise<string> => {
-     // The progress logic might need to be adapted since the long-running task is now on the backend.
-     // For now, we'll just proxy the call. A more advanced solution would use web sockets or polling.
-    setProgress('Đang gửi yêu cầu tạo video...');
-    const { videoUrl, error } = await callGeminiApi('generateVideoFromImage', { base64Image, prompt });
+    // Updated to use the new unified Veo action
+    setProgress('Đang kết nối máy chủ Veo...');
+    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', { base64Image, prompt });
     if (error) {
         throw new Error(error);
     }
-    // Since the actual generation happens on the backend, we can't provide detailed progress.
-    // We update the message after the backend returns the final URL.
     setProgress('Video đã tạo xong! Đang tải...'); 
     return videoUrl;
 };

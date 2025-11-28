@@ -35,7 +35,9 @@ import LegalModal from './components/LegalModal';
 import VerificationModal from './components/VerificationModal';
 import BeautyStudio from './components/BeautyStudio';
 import HistoryPanel from './components/HistoryPanel';
-import FamilyStudio from './components/FamilyStudio'; // Correct default import
+import FamilyStudio from './components/FamilyStudio';
+import MarketingStudio from './components/MarketingStudio';
+import ArtStyleStudio from './components/ArtStyleStudio'; // New import
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -244,6 +246,16 @@ const App: React.FC = () => {
     handleAbort();
     // Logic for this new tool will be added here
   }, []);
+  
+  const handleResetMarketingStudioTool = useCallback(() => {
+    console.log("Resetting Marketing Studio tool state.");
+    handleAbort();
+  }, []);
+  
+  const handleResetArtStyleStudioTool = useCallback(() => {
+    console.log("Resetting Art Style Studio tool state.");
+    handleAbort();
+  }, []);
 
 
   const resetAllTools = useCallback(() => {
@@ -257,8 +269,10 @@ const App: React.FC = () => {
     handleResetFourSeasonsTool();
     handleResetBeautyStudioTool();
     handleResetFamilyStudioTool();
+    handleResetMarketingStudioTool();
+    handleResetArtStyleStudioTool();
     setIsFreeTierLocked(false);
-  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool]);
+  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool]);
 
   const handleModeChange = useCallback((newMode: AppMode) => {
     handleAbort();
@@ -330,7 +344,7 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio', 'family_studio'];
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio', 'family_studio', 'marketing_studio', 'art_style_studio'];
                 const targetIsVipTool = vipModes.includes(postLoginRedirect);
                 const userIsVip = appUser.isAdmin || (new Date(appUser.subscriptionEndDate) > new Date());
 
@@ -1036,6 +1050,32 @@ const App: React.FC = () => {
     }
   };
 
+  const handleMarketingStudioSelect = () => {
+    if (currentUser) {
+        if (isVip) {
+            if (appMode !== 'marketing_studio') handleModeChange('marketing_studio');
+        } else {
+            setIsSubscriptionModalVisible(true);
+        }
+    } else {
+        setPostLoginRedirect('marketing_studio');
+        setIsAuthModalVisible(true);
+    }
+  };
+  
+  const handleArtStyleStudioSelect = () => {
+    if (currentUser) {
+        if (isVip) {
+            if (appMode !== 'art_style_studio') handleModeChange('art_style_studio');
+        } else {
+            setIsSubscriptionModalVisible(true);
+        }
+    } else {
+        setPostLoginRedirect('art_style_studio');
+        setIsAuthModalVisible(true);
+    }
+  };
+
   const handleAdminPanelSelect = () => {
     if (currentUser?.isAdmin) {
         handleAbort();
@@ -1216,7 +1256,7 @@ const App: React.FC = () => {
         return; 
       }
 
-      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio', 'family_studio'];
+      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio', 'family_studio', 'marketing_studio', 'art_style_studio'];
       
       if (vipModes.includes(appMode) || isBatchMode) {
         handleModeChange('headshot');
@@ -1424,6 +1464,10 @@ const App: React.FC = () => {
           return <BeautyStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'family_studio':
           return <FamilyStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+      case 'marketing_studio':
+          return <MarketingStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+      case 'art_style_studio':
+          return <ArtStyleStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1505,6 +1549,8 @@ const App: React.FC = () => {
         onFourSeasonsClick={handleFourSeasonsSelect}
         onBeautyStudioClick={handleBeautyStudioSelect}
         onFamilyStudioClick={handleFamilyStudioSelect}
+        onMarketingStudioClick={handleMarketingStudioSelect}
+        onArtStyleStudioClick={handleArtStyleStudioSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
         onUndo={handleUndo}

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Settings, AppMode, User } from '../types';
@@ -53,6 +54,8 @@ interface SidebarProps {
   onFourSeasonsClick: () => void;
   onBeautyStudioClick: () => void;
   onFamilyStudioClick: () => void;
+  onMarketingStudioClick: () => void; 
+  onArtStyleStudioClick: () => void; // New prop
   onAdminPanelClick: () => void;
   onPresetSelect: (settings: Partial<Settings>) => void;
   onUndo: () => void;
@@ -79,6 +82,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     onFourSeasonsClick,
     onBeautyStudioClick,
     onFamilyStudioClick,
+    onMarketingStudioClick,
+    onArtStyleStudioClick,
     onAdminPanelClick,
     onPresetSelect, 
     onUndo, 
@@ -275,6 +280,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
               <nav className="space-y-1 pb-2">
+                <button onClick={onArtStyleStudioClick} className={getToolButtonClasses('art_style_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-palette"></i></div>
+                    <span>{t('artStyleStudio.title')}</span>
+                </button>
+                <button onClick={onMarketingStudioClick} className={getToolButtonClasses('marketing_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-bullhorn"></i></div>
+                    <span>{t('marketingStudio.title')}</span>
+                </button>
                 <button onClick={onRestorationClick} className={getToolButtonClasses('restoration')}>
                     <div className="w-5 h-5"><i className="fas fa-wand-magic"></i></div>
                     <span>{t('tools.restoration')}</span>

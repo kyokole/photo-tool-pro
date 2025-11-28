@@ -1,21 +1,11 @@
 
-import type { PrintLayout, AspectRatio, PaperBackground } from '../types';
+import type { PrintLayout, AspectRatio, PaperBackground, LayoutResult } from '../types';
 
 // --- Types ---
 export type CanvasMime = 'image/png' | 'image/jpeg';
 
 export type FixedCountMap = { cols:number; rows:number };
-export interface LayoutResult {
-  cols: number;
-  rows: number;
-  cellW: number;
-  cellH: number;
-  padX: number;
-  padY: number;
-  gap: number;
-  x0: number;
-  y0: number;
-}
+// LayoutResult is now imported from ../types.ts to avoid circular dependency
 
 // --- Constants ---
 export const DPI = 300;

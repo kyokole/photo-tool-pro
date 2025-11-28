@@ -1,3 +1,4 @@
+
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -23,6 +24,8 @@ import viImageVariation from './locales/vi/imageVariation.js';
 import viBeautyStudio from './locales/vi/beautyStudio.js';
 import viHistory from './locales/vi/history.js';
 import viFamilyStudio from './locales/vi/familyStudio.js';
+import viMarketingStudio from './locales/vi/marketingStudio.js';
+import viArtStyleStudio from './locales/vi/artStyleStudio.js';
 
 // English imports
 import enActionBar from './locales/en/actionBar.js';
@@ -46,6 +49,8 @@ import enImageVariation from './locales/en/imageVariation.js';
 import enBeautyStudio from './locales/en/beautyStudio.js';
 import enHistory from './locales/en/history.js';
 import enFamilyStudio from './locales/en/familyStudio.js';
+import enMarketingStudio from './locales/en/marketingStudio.js';
+import enArtStyleStudio from './locales/en/artStyleStudio.js';
 
 
 const resources = {
@@ -71,7 +76,9 @@ const resources = {
       ...enImageVariation,
       ...enBeautyStudio,
       ...enHistory,
-      ...enFamilyStudio
+      ...enFamilyStudio,
+      ...enMarketingStudio,
+      ...enArtStyleStudio
     }
   },
   vi: {
@@ -96,7 +103,9 @@ const resources = {
       ...viImageVariation,
       ...viBeautyStudio,
       ...viHistory,
-      ...viFamilyStudio
+      ...viFamilyStudio,
+      ...viMarketingStudio,
+      ...viArtStyleStudio
     }
   }
 };

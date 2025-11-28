@@ -2,7 +2,8 @@
 // services/geminiService.ts
 import { getAuthInstance, getDbInstance } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings, FamilyStudioResult } from '../types';
+import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings, FamilyStudioResult, MarketingProduct, MarketingSettings, MarketingResult, ArtStylePayload } from '../types';
+import { fileToBase64 } from '../utils/fileUtils';
 
 /**
  * A generic API client to communicate with our own Vercel Serverless Function backend.
@@ -155,6 +156,86 @@ export const generateFourSeasonsPhoto = async (
     return imageData;
 };
 
+// --- Football Studio ---
+export const generateFootballPhoto = async (settings: any): Promise<string> => {
+    const { imageData } = await callGeminiApi('generateFootballPhoto', { settings });
+    return imageData;
+};
+
+// --- Marketing Studio ---
+export const generateMarketingAdCopy = async (product: Record<string, string>, imagePart?: FilePart): Promise<string> => {
+    const { text } = await callGeminiApi('generateMarketingAdCopy', { product, imagePart });
+    return text;
+};
+
+export const generateMarketingVideoScript = async (product: Record<string, string>, tone: string, angle: string, imagePart?: FilePart): Promise<string> => {
+    const { text } = await callGeminiApi('generateMarketingVideoScript', { product, tone, angle, imagePart });
+    return text;
+};
+
+export const generateMarketingImage = async (
+    productImagePart: FilePart,
+    referenceImagePart: FilePart | null,
+    productDetails: Record<string, string>,
+    settings: MarketingSettings
+): Promise<string> => {
+    const { imageData } = await callGeminiApi('generateMarketingImage', {
+        productImagePart,
+        referenceImagePart,
+        productDetails,
+        settings
+    });
+    return imageData;
+};
+
+// NEW: Dedicated function for Marketing Video Generation (Veo)
+export const generateMarketingVideo = async (
+    base64Image: string, 
+    script: string,
+    setProgress: (message: string) => void
+): Promise<string> => {
+    setProgress('Đang kết nối máy chủ Veo (Video Gen)...');
+    // UPDATED: Uses the new 'generateVeoVideo' action
+    const { videoUrl } = await callGeminiApi('generateVeoVideo', { base64Image, prompt: script });
+    setProgress('Video đã hoàn tất! Đang tải xuống...');
+    return videoUrl;
+};
+
+// --- ART STYLE STUDIO ---
+export const generateArtStyleImages = async (payload: any): Promise<string[]> => {
+    const {
+        modelFile,
+        otherFiles,
+        styles,
+        quality,
+        aspect,
+        count,
+        userPrompt
+    } = payload;
+
+    // Convert all files to base64
+    const modelBase64 = await fileToBase64(modelFile.file);
+    const convertedOtherFiles: any = {};
+    
+    if (otherFiles.clothing?.file) convertedOtherFiles.clothing = await fileToBase64(otherFiles.clothing.file);
+    if (otherFiles.accessories?.file) convertedOtherFiles.accessories = await fileToBase64(otherFiles.accessories.file);
+    if (otherFiles.product?.file) convertedOtherFiles.product = await fileToBase64(otherFiles.product.file);
+
+    const apiPayload: ArtStylePayload = {
+        modelFile: modelBase64,
+        otherFiles: convertedOtherFiles,
+        styles,
+        quality,
+        aspect,
+        count,
+        userPrompt
+    };
+
+    const { images } = await callGeminiApi('generateArtStyleImages', apiPayload);
+    return images;
+};
+
+
 // --- BATCH GENERATOR SERVICE ---
 export const generateBatchImages = async (
   prompt: string,
@@ -189,4 +270,19 @@ export const detectOutfit = async (base64Image: string, mimeType: string): Promi
 export const editOutfitOnImage = async (base64Image: string, mimeType: string, newOutfitPrompt: string): Promise<string> => {
     const { imageData } = await callGeminiApi('editOutfitOnImage', { base64Image, mimeType, newOutfitPrompt });
     return imageData;
+};
+
+export const generateVideoFromImage = async (
+    base64Image: string,
+    prompt: string,
+    setProgress: (message: string) => void
+): Promise<string> => {
+    setProgress('Đang kết nối máy chủ Veo (Video Gen)...');
+    // UPDATED: Uses the new 'generateVeoVideo' action
+    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', { base64Image, prompt });
+    if (error) {
+        throw new Error(error);
+    }
+    setProgress('Video đã tạo xong! Đang tải...'); 
+    return videoUrl;
 };

@@ -1,5 +1,5 @@
 
-import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings } from './types';
+import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption } from './types';
 
 export * from './constants/familyStudioConstants';
 
@@ -478,3 +478,34 @@ export const DEFAULT_FASHION_STUDIO_SETTINGS: {
     description: '',
     highQuality: false, // Default to standard/fast quality
 };
+
+// --- Marketing Studio Constants ---
+
+export const MARKETING_TEMPLATES: TemplateOption[] = [
+  { id: "hero_studio", labelKey: "marketingStudio.templates.hero_studio", phrase: "Clean hero studio shot on seamless backdrop, premium softbox lighting, subtle reflection base, minimal composition" },
+  { id: "lifestyle_inuse", labelKey: "marketingStudio.templates.lifestyle_inuse", phrase: "Lifestyle scene showing real usage, natural window light, soft depth of field, candid hands interacting with the product" },
+  { id: "exploded_features", labelKey: "marketingStudio.templates.exploded_features", phrase: "Semi-exploded view highlighting components and key features, neat floating callouts, balanced symmetric layout" },
+  { id: "comparison", labelKey: "marketingStudio.templates.comparison", phrase: "Comparison layout with side-by-side panels, clear visual difference, consistent camera angle, tidy spacing" },
+  { id: "unboxing", labelKey: "marketingStudio.templates.unboxing", phrase: "Unboxing scene with box and accessories neatly arranged, overhead top-down shot, tidy grid composition" },
+  { id: "tet_holiday", labelKey: "marketingStudio.templates.tet_holiday", phrase: "Vietnamese Lunar New Year theme, red and gold accents, apricot and peach blossoms in background, festive atmosphere" },
+  { id: "luxury_black", labelKey: "marketingStudio.templates.luxury_black", phrase: "Luxury product photography on black background, golden rim lighting, elegant reflections, premium feel" },
+  { id: "nature_eco", labelKey: "marketingStudio.templates.nature_eco", phrase: "Natural setting with green leaves, wood textures, sunlight dappling, eco-friendly vibe" }
+];
+
+export const MARKETING_TONES: SelectOption[] = [
+  { id: "honest", labelKey: "marketingStudio.tones.honest" },
+  { id: "professional", labelKey: "marketingStudio.tones.professional" },
+  { id: "enthusiastic", labelKey: "marketingStudio.tones.enthusiastic" },
+  { id: "luxury", labelKey: "marketingStudio.tones.luxury" },
+  { id: "witty", labelKey: "marketingStudio.tones.witty" },
+  { id: "emotional", labelKey: "marketingStudio.tones.emotional" }
+];
+
+export const MARKETING_ANGLES: string[] = [
+  "key benefits: battery life, build quality, portability",
+  "value for money, what’s included in the box, who it’s for",
+  "material & finish, ergonomics, reliability",
+  "performance numbers (claims vs observed), pros / cons summary",
+  "brand trust, warranty, after-sales support",
+  "top 3 features visualized with icons/markers",
+];

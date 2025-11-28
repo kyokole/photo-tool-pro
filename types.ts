@@ -1,9 +1,8 @@
 
 // FIX: Import React to provide the 'React' namespace for React.ReactNode.
 import React from 'react';
-import type { LayoutResult as CoreLayoutResult } from './utils/canvasUtils';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';
@@ -426,6 +425,76 @@ export interface SerializedFamilyStudioSettings {
     rois?: ROI[]; // Make optional for backend compatibility
 }
 
+// --- MARKETING STUDIO TYPES ---
+export interface MarketingProduct {
+    name: string;
+    brand: string;
+    category: string;
+    price: string;
+    merchant: string;
+    rating: string;
+    features: string;
+    pros: string;
+    cons: string;
+    productImage: File | null;
+    referenceImage: File | null; // Model or context ref
+}
 
-// Re-export for use in other components if needed
-export type LayoutResult = CoreLayoutResult;
+export interface MarketingSettings {
+    templateId: string;
+    tone: string;
+    aspectRatio: FashionAspectRatio;
+    customAngle: string; // For reviews
+    highQuality: boolean;
+}
+
+export interface MarketingResult {
+    adCopy: string;
+    videoScript: string;
+    generatedImageUrl: string | null;
+    generatedVideoUrl: string | null;
+}
+
+export interface SelectOption {
+    id: string;
+    labelKey: string;
+}
+
+export interface TemplateOption {
+    id: string;
+    labelKey: string;
+    phrase: string;
+}
+
+// --- ART STYLE STUDIO TYPES ---
+export interface ArtStyleUploadedFile {
+  file: File;
+  previewUrl: string;
+}
+
+export interface ArtStylePayload {
+    modelFile: { base64: string, mimeType: string };
+    otherFiles: {
+        clothing?: { base64: string, mimeType: string };
+        accessories?: { base64: string, mimeType: string };
+        product?: { base64: string, mimeType: string };
+    };
+    styles: string[];
+    quality: string;
+    aspect: string;
+    count: number;
+    userPrompt: string;
+}
+
+// LayoutResult moved here to prevent circular dependency
+export interface LayoutResult {
+  cols: number;
+  rows: number;
+  cellW: number;
+  cellH: number;
+  padX: number;
+  padY: number;
+  gap: number;
+  x0: number;
+  y0: number;
+}
