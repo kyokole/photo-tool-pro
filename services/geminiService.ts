@@ -163,13 +163,13 @@ export const generateFootballPhoto = async (settings: any): Promise<string> => {
 };
 
 // --- Marketing Studio ---
-export const generateMarketingAdCopy = async (product: Record<string, string>, imagePart?: FilePart): Promise<string> => {
-    const { text } = await callGeminiApi('generateMarketingAdCopy', { product, imagePart });
+export const generateMarketingAdCopy = async (product: Record<string, string>, imagePart?: FilePart, language: string = 'vi'): Promise<string> => {
+    const { text } = await callGeminiApi('generateMarketingAdCopy', { product, imagePart, language });
     return text;
 };
 
-export const generateMarketingVideoScript = async (product: Record<string, string>, tone: string, angle: string, imagePart?: FilePart): Promise<string> => {
-    const { text } = await callGeminiApi('generateMarketingVideoScript', { product, tone, angle, imagePart });
+export const generateMarketingVideoScript = async (product: Record<string, string>, tone: string, angle: string, imagePart?: FilePart, language: string = 'vi'): Promise<string> => {
+    const { text } = await callGeminiApi('generateMarketingVideoScript', { product, tone, angle, imagePart, language });
     return text;
 };
 

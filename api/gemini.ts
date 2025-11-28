@@ -452,33 +452,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const parts: Part[] = [];
 
                  if (action === 'generateMarketingAdCopy') {
-                     // Updated Prompt for Vietnamese Ad Copy
-                     prompt = `Act as an expert Vietnamese Copywriter. Write a high-converting Facebook Ad for the following product in Vietnamese language (Tiếng Việt).
+                     // Dynamic Language and Mandatory Data Injection
+                     const isVietnamese = language && language.startsWith('vi');
+                     const targetLang = isVietnamese ? 'Vietnamese (Tiếng Việt)' : 'English';
+                     
+                     // Construct prompt with strong instructions
+                     prompt = `Act as an expert Copywriter fluent in ${targetLang}. Write a high-converting Facebook Ad for the product.
+                     
+                     INPUT DATA:
                      Product Name: ${product.name}
                      Brand: ${product.brand}
                      Category: ${product.category}
                      Key Features: ${product.features}
                      Pros: ${product.pros}
                      Cons: ${product.cons}
+                     Price: ${product.price}
+                     Merchant/Store: ${product.merchant}
                      
-                     Requirements:
-                     - Language: Vietnamese (Tiếng Việt)
-                     - Style: Engaging, professional, uses emojis.
-                     - Structure: Hook -> Problem -> Solution -> Benefits -> Call to Action.`;
+                     MANDATORY REQUIREMENTS:
+                     1. Language: Output strictly in ${targetLang}.
+                     2. Data Usage: You MUST include the 'Price', 'Merchant', and 'Pros' in the content if they are provided above. Do not ignore them.
+                     3. Style: Engaging, professional, use emojis.
+                     4. Structure: Hook -> Problem -> Solution -> Benefits -> Call to Action (CTA).`;
                      
                      if(imagePart) parts.push(imagePart);
                  } else if (action === 'generateMarketingVideoScript') {
-                     // Updated Prompt for Vietnamese Video Script
-                     prompt = `Act as an expert Video Scriptwriter for TikTok/Reels. Write a short video script for the following product in Vietnamese language (Tiếng Việt).
+                     // Dynamic Language and Mandatory Data Injection
+                     const isVietnamese = language && language.startsWith('vi');
+                     const targetLang = isVietnamese ? 'Vietnamese (Tiếng Việt)' : 'English';
+
+                     prompt = `Act as an expert Video Scriptwriter for TikTok/Reels fluent in ${targetLang}. Write a viral video script.
+                     
+                     INPUT DATA:
                      Product Name: ${product.name}
                      Tone: ${tone}
-                     Angle/Angle Hook: ${angle}
+                     Angle: ${angle}
                      Key Features: ${product.features}
+                     Price: ${product.price}
+                     Merchant: ${product.merchant}
                      
-                     Requirements:
-                     - Language: Vietnamese (Tiếng Việt)
-                     - Format: Split into Scenes with Visuals and Audio/Dialogue.
-                     - Style: Viral, fast-paced, engaging.`;
+                     MANDATORY REQUIREMENTS:
+                     1. Language: Output strictly in ${targetLang}.
+                     2. Data Usage: Incorporate 'Price' and 'Merchant' naturally into the dialogue or visual cues if provided.
+                     3. Format: Split into Scenes with Visuals and Audio/Dialogue.
+                     4. Style: Fast-paced, engaging hook.`;
                      
                      if(imagePart) parts.push(imagePart);
                  } else if (action === 'detectOutfit') {

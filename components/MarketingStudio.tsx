@@ -30,7 +30,7 @@ const InputField = ({ label, value, onChange, placeholder }: { label: string, va
 );
 
 const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVip }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [product, setProduct] = useState<MarketingProduct>({
         name: '', brand: '', category: '', price: '', merchant: '', rating: '4.5',
         features: '', pros: '', cons: '', productImage: null, referenceImage: null
@@ -118,7 +118,8 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                 price: product.price, merchant: product.merchant, rating: product.rating,
                 features: product.features, pros: product.pros, cons: product.cons
             };
-            const copy = await generateMarketingAdCopy(textProduct, imagePart);
+            // Pass current language to service
+            const copy = await generateMarketingAdCopy(textProduct, imagePart, i18n.language);
             setResult(prev => ({ ...prev, adCopy: copy }));
             setActiveTab('ad');
         } catch (e: any) { 
@@ -149,7 +150,8 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                 price: product.price, merchant: product.merchant, rating: product.rating,
                 features: product.features, pros: product.pros, cons: product.cons
             };
-            const script = await generateMarketingVideoScript(textProduct, settings.tone, settings.customAngle, imagePart);
+            // Pass current language to service
+            const script = await generateMarketingVideoScript(textProduct, settings.tone, settings.customAngle, imagePart, i18n.language);
             setResult(prev => ({ ...prev, videoScript: script }));
             setActiveTab('video');
         } catch (e: any) { 
