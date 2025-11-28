@@ -146,14 +146,15 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
     const generateImage = async () => {
         if (!product.productImage) return alert(t('errors.uploadRequired'));
+        
         setIsLoading(prev => ({ ...prev, image: true }));
         setError(null);
+        setGeneratedPrompt(t('marketingStudio.actions.generating')); // Show loading state in prompt box
+        
         try {
             const prodImg = await fileToBase64(product.productImage);
             const refImg = product.referenceImage ? await fileToBase64(product.referenceImage) : null;
             
-            setGeneratedPrompt(t('marketingStudio.actions.generating'));
-
             const { imageData: url, prompt } = await generateMarketingImage(
                 { inlineData: { data: prodImg.base64, mimeType: prodImg.mimeType } },
                 refImg ? { inlineData: { data: refImg.base64, mimeType: refImg.mimeType } } : null,
@@ -163,13 +164,19 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
             
             setResult(prev => ({ ...prev, generatedImageUrl: url }));
             setActiveTab('image');
-            
-            // Set the real prompt returned from server
-            setGeneratedPrompt(prompt);
+            setGeneratedPrompt(prompt); // Update with real prompt
         } catch (e: any) { 
             console.error(e);
-            setError(e.message || "Lỗi tạo hình ảnh.");
-            setGeneratedPrompt(''); // Clear pending prompt on error
+            // Translate common Vercel errors to user-friendly messages
+            let msg = e.message || "Lỗi tạo hình ảnh.";
+            if (msg.includes("Payload Too Large")) {
+                msg = "Ảnh tải lên quá lớn. Hệ thống đã tự động nén nhưng vẫn vượt quá giới hạn. Vui lòng thử ảnh nhỏ hơn.";
+            } else if (msg.includes("504")) {
+                msg = "Hệ thống phản hồi chậm. Vui lòng thử lại.";
+            }
+            
+            setError(msg);
+            setGeneratedPrompt(''); // Clear prompt on error so user knows it failed
         }
         finally { setIsLoading(prev => ({ ...prev, image: false })); }
     };

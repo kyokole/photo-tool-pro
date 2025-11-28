@@ -1,9 +1,9 @@
 
 import type { FilePart, FamilyMember, SerializedFamilyMember } from '../types';
 
-// GIẢM XUỐNG 1280px ĐỂ ĐẢM BẢO PAYLOAD < 4.5MB (VERCEL LIMIT)
-// ĐẶC BIỆT KHI GỬI 2 ẢNH CÙNG LÚC
-const MAX_DIMENSION = 1280; 
+// GIẢM XUỐNG 1024px ĐỂ ĐẢM BẢO PAYLOAD < 4.5MB (VERCEL LIMIT)
+// 1024px là mức an toàn cho việc gửi nhiều ảnh cùng lúc
+const MAX_DIMENSION = 1024; 
 
 // New resizing utility
 const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }> => {
@@ -40,9 +40,9 @@ const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }>
         ctx.drawImage(img, 0, 0, width, height);
         
         // Convert to JPEG for compression. Gemini handles JPEG fine.
-        // GIẢM CHẤT LƯỢNG XUỐNG 0.85 ĐỂ GIẢM DUNG LƯỢNG
+        // GIẢM CHẤT LƯỢNG XUỐNG 0.7 ĐỂ GIẢM DUNG LƯỢNG TỐI ĐA
         const mimeType = 'image/jpeg';
-        const dataUrl = canvas.toDataURL(mimeType, 0.85); 
+        const dataUrl = canvas.toDataURL(mimeType, 0.7); 
         resolve({ dataUrl, mimeType });
       };
       img.onerror = (err) => reject(new Error(`Image load error: ${String(err)}`));
