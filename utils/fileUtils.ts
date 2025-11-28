@@ -51,6 +51,44 @@ const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }>
   });
 };
 
+/**
+ * Resizes a base64 string image to a smaller size for Vision tasks.
+ * Helps prevent payload too large errors when sending generated images back to API.
+ */
+export const resizeBase64 = (base64Str: string, maxDim: number = 512): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = `data:image/jpeg;base64,${base64Str}`;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let { width, height } = img;
+
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error("Canvas context failed"));
+                return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            // Heavy compression for vision context (quality 0.6 is fine for AI understanding)
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+            resolve(dataUrl.split(',')[1]);
+        };
+        img.onerror = (e) => reject(e);
+    });
+};
+
 // --- Added Function: fileToDataURL (Standard FileReader) ---
 export const fileToDataURL = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {

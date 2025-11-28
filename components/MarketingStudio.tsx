@@ -5,7 +5,7 @@ import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { MarketingProduct, MarketingSettings, MarketingResult, FashionAspectRatio } from '../types';
 import { MARKETING_TEMPLATES, MARKETING_TONES, FASHION_ASPECT_RATIOS } from '../constants';
 import { generateMarketingAdCopy, generateMarketingImage, generateMarketingVideoScript, generateMarketingVideo } from '../services/geminiService';
-import { fileToBase64 } from '../utils/fileUtils';
+import { fileToBase64, resizeBase64 } from '../utils/fileUtils';
 import { Spinner } from './creativestudio/Spinner';
 import { smartDownload } from '../utils/canvasUtils';
 
@@ -103,8 +103,15 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
         setIsLoading(prev => ({ ...prev, ad: true }));
         setError(null);
         try {
-            const imageData = await getActiveImageBase64();
-            const imagePart = imageData ? { inlineData: { data: imageData.base64, mimeType: imageData.mimeType } } : undefined;
+            const rawImageData = await getActiveImageBase64();
+            let imagePart = undefined;
+
+            if (rawImageData) {
+                // OPTIMIZATION: Resize heavy images (especially generated ones) before sending back to API
+                // This prevents "Request Entity Too Large" errors
+                const resizedBase64 = await resizeBase64(rawImageData.base64, 512); 
+                imagePart = { inlineData: { data: resizedBase64, mimeType: 'image/jpeg' } };
+            }
 
             const textProduct = {
                 name: product.name, brand: product.brand, category: product.category,
@@ -116,7 +123,9 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
             setActiveTab('ad');
         } catch (e: any) { 
             console.error(e);
-            setError(e.message || "Lỗi tạo nội dung quảng cáo.");
+            let msg = e.message || "Lỗi tạo nội dung quảng cáo.";
+            if (msg.includes("Payload Too Large")) msg = "Ảnh quá lớn. Đang thử nén lại...";
+            setError(msg);
         }
         finally { setIsLoading(prev => ({ ...prev, ad: false })); }
     };
@@ -126,8 +135,14 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
         setIsLoading(prev => ({ ...prev, video: true }));
         setError(null);
         try {
-            const imageData = await getActiveImageBase64();
-            const imagePart = imageData ? { inlineData: { data: imageData.base64, mimeType: imageData.mimeType } } : undefined;
+            const rawImageData = await getActiveImageBase64();
+            let imagePart = undefined;
+
+            if (rawImageData) {
+                // OPTIMIZATION: Resize heavy images before sending back to API
+                const resizedBase64 = await resizeBase64(rawImageData.base64, 512);
+                imagePart = { inlineData: { data: resizedBase64, mimeType: 'image/jpeg' } };
+            }
 
             const textProduct = {
                 name: product.name, brand: product.brand, category: product.category,
