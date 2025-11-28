@@ -1,4 +1,3 @@
-
 // services/geminiService.ts
 import { getAuthInstance, getDbInstance } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -213,16 +212,28 @@ export const generateArtStyleImages = async (payload: any): Promise<string[]> =>
         userPrompt
     } = payload;
 
-    // Convert all files to base64
-    const modelBase64 = await fileToBase64(modelFile.file);
+    // Helper to ensure clean base64 data extraction
+    const extractBase64Data = async (file: File) => {
+        const { base64, mimeType } = await fileToBase64(file);
+        return { base64, mimeType };
+    };
+
+    const modelData = await extractBase64Data(modelFile.file);
+
     const convertedOtherFiles: any = {};
     
-    if (otherFiles.clothing?.file) convertedOtherFiles.clothing = await fileToBase64(otherFiles.clothing.file);
-    if (otherFiles.accessories?.file) convertedOtherFiles.accessories = await fileToBase64(otherFiles.accessories.file);
-    if (otherFiles.product?.file) convertedOtherFiles.product = await fileToBase64(otherFiles.product.file);
+    if (otherFiles.clothing?.file) {
+        convertedOtherFiles.clothing = await extractBase64Data(otherFiles.clothing.file);
+    }
+    if (otherFiles.accessories?.file) {
+        convertedOtherFiles.accessories = await extractBase64Data(otherFiles.accessories.file);
+    }
+    if (otherFiles.product?.file) {
+        convertedOtherFiles.product = await extractBase64Data(otherFiles.product.file);
+    }
 
     const apiPayload: ArtStylePayload = {
-        modelFile: modelBase64,
+        modelFile: modelData,
         otherFiles: convertedOtherFiles,
         styles,
         quality,

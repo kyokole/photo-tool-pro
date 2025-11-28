@@ -203,7 +203,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
         } catch (e: any) {
             console.error(e);
             const msg = e.message || t('errors.unknownError');
-            setError(t('errors.generationFailed', { error: msg }));
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -273,7 +273,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
                                     {aspectOptions.map(a => (
                                         <Chip 
                                             key={a.value} 
-                                            label={t(a.labelKey) + ` (${a.value})`} 
+                                            label={t(a.labelKey)} 
                                             active={aspect === a.value} 
                                             onClick={() => setAspect(a.value)} 
                                         />
@@ -319,7 +319,11 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
                                 )}
                             </button>
                         </div>
-                        {error && <p className="text-red-400 text-xs mt-3 text-center">{error}</p>}
+                        {error && (
+                            <div className="mt-3 p-3 bg-red-900/30 border border-red-500/50 rounded-lg">
+                                <p className="text-red-300 text-xs text-center font-medium">{error}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 

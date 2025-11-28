@@ -27,8 +27,8 @@ const VIP_ONLY_ACTIONS = [
     'generateMarketingAdCopy',
     'generateMarketingVideoScript',
     'generateMarketingImage',
-    'generateVeoVideo', // Updated centralized video action
-    'generateArtStyleImages' // New Feature
+    'generateVeoVideo',
+    'generateArtStyleImages'
 ];
 
 // --- INIT FIREBASE ADMIN ---
@@ -51,6 +51,35 @@ try {
     console.error("Firebase Init Error:", error.message);
 }
 
+// --- HELPER: ERROR PARSING ---
+const processGoogleError = (error: any): string => {
+    const rawMessage = error.message || String(error);
+    
+    // 1. Try to extract JSON error message from Google
+    try {
+        const jsonMatch = rawMessage.match(/\{.*\}/s);
+        if (jsonMatch) {
+            const errorObj = JSON.parse(jsonMatch[0]);
+            if (errorObj.error?.message) {
+                const msg = errorObj.error.message;
+                if (msg.includes('inline_data')) return "Dữ liệu ảnh không hợp lệ hoặc bị lỗi định dạng.";
+                if (msg.includes('safety')) return "Ảnh bị chặn bởi bộ lọc an toàn của Google.";
+                if (msg.includes('quota') || msg.includes('429')) return "Hệ thống đang quá tải, vui lòng thử lại sau.";
+                return `Lỗi từ AI: ${msg}`;
+            }
+        }
+    } catch (e) {
+        // Ignore JSON parse errors
+    }
+
+    // 2. Fallback text matching
+    if (rawMessage.includes('400')) return "Yêu cầu không hợp lệ (Lỗi 400). Vui lòng kiểm tra lại ảnh đầu vào.";
+    if (rawMessage.includes('500')) return "Máy chủ AI gặp sự cố (Lỗi 500). Vui lòng thử lại sau.";
+    if (rawMessage.includes('timeout') || rawMessage.includes('504')) return "Quá thời gian xử lý. Vui lòng thử lại.";
+
+    return "Đã xảy ra lỗi không xác định khi tạo ảnh.";
+};
+
 // --- HELPER: USER STATUS CHECK ---
 interface UserStatus {
     isVip: boolean;
@@ -59,12 +88,10 @@ interface UserStatus {
 }
 
 const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promise<UserStatus> => {
-    // 1. If no token, definitely a guest
     if (!idToken) {
         return { isVip: false, isAdmin: false, uid: null };
     }
 
-    // 2. Try Server-Side Verification (Best Security)
     if (isFirebaseInitialized) {
         try {
             const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -73,7 +100,6 @@ const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promi
             const userDoc = await db.collection('users').doc(uid).get();
 
             if (!userDoc.exists) {
-                // Valid token but no DB record? Fallback to client claim if token is valid
                 return { isVip: !!clientVipStatus, isAdmin: false, uid };
             }
 
@@ -91,13 +117,10 @@ const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promi
             return { isVip, isAdmin, uid };
         } catch (error) {
             console.error("Server Auth Verification Failed:", error);
-            // Fall through to Fail-Open strategy
         }
     }
 
-    // 3. Fail-Open Strategy (Trust Client Fallback)
     if (idToken && clientVipStatus === true) {
-        console.warn("Using Client-Side VIP Status because Server Verification failed.");
         return { isVip: true, isAdmin: false, uid: 'fallback-user' };
     }
 
@@ -165,8 +188,6 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, 
 
 // --- UTILS ---
 const getAi = (forVideo: boolean = false) => {
-    // Priority for Video: VEO_API_KEY -> GEMINI_API_KEY -> API_KEY
-    // This allows the user to set a dedicated key for expensive Video operations.
     let apiKey;
     if (forVideo) {
         apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
@@ -200,9 +221,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     try {
-        // Route video generation to a special handler to use the correct API Key
         if (action === 'generateVeoVideo') {
-            const ai = getAi(true); // Use Video API Key if available
+            const ai = getAi(true);
             const { base64Image, prompt } = payload;
                 
             let operation = await ai.models.generateVideos({
@@ -216,9 +236,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
             
             let retries = 0;
-            const maxRetries = 60; // 10 minutes max wait
+            const maxRetries = 60;
             while (!operation.done && retries < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10s
+                await new Promise(resolve => setTimeout(resolve, 10000));
                 operation = await ai.operations.getVideosOperation({operation: operation});
                 retries++;
             }
@@ -227,7 +247,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
             if (!downloadLink) throw new Error("No video URI returned.");
             
-            // We must use the SAME key that initiated the request to download
             const usedKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
             const vidRes = await fetch(`${downloadLink}&key=${usedKey}`);
             const vidArrayBuffer = await vidRes.arrayBuffer();
@@ -236,7 +255,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.json({ videoUrl: `data:video/mp4;base64,${vidBase64}` });
         }
 
-        // For all other image/text actions, use standard AI client
         const ai = getAi(false);
         const imageSize = resolveImageSize(payload, isVip);
         const selectedModel = selectModel(imageSize);
@@ -244,7 +262,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         switch (action) {
             case 'generateIdPhoto': {
                  const { originalImage, settings } = payload;
-                 // ... (Prompt builder logic omitted for brevity, assume same as before) ...
                  const buildIdPhotoPrompt = (s: any) => {
                      let p = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp. Role: ID Photo Editor.`;
                      if (s.background.mode === 'ai' && s.background.customPrompt) p += `**1. Nền AI:** "${s.background.customPrompt}". Bokeh background. `;
@@ -279,7 +296,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                  return res.json({ imageData });
             }
-            // ... (Other cases remain largely the same, just ensuring they don't handle video) ...
 
             case 'generateHeadshot': {
                  const { imagePart, prompt: p } = payload;
@@ -318,7 +334,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.json({ imageData });
             }
             
-            // ... (Beauty, Football, etc. standard handlers) ...
              case 'generateFootballPhoto': {
                 const { settings } = payload;
                 const prompt = `[TASK] Football Photo. Player: ${settings.player}. Team: ${settings.team}. Scene: ${settings.scene}. Style: ${settings.style}.`;
@@ -378,10 +393,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { modelFile, otherFiles, styles, quality, aspect, count, userPrompt } = payload;
                 const parts: Part[] = [];
                 
-                parts.push({ inlineData: { data: modelFile, mimeType: 'image/png' } });
-                if (otherFiles.clothing) parts.push({ inlineData: { data: otherFiles.clothing, mimeType: 'image/png' } });
-                if (otherFiles.accessories) parts.push({ inlineData: { data: otherFiles.accessories, mimeType: 'image/png' } });
-                if (otherFiles.product) parts.push({ inlineData: { data: otherFiles.product, mimeType: 'image/png' } });
+                // Strict validation to avoid "Starting an object on a scalar field" error
+                if (!modelFile?.base64 || typeof modelFile.base64 !== 'string') {
+                    return res.status(400).json({ error: "Dữ liệu ảnh Model không hợp lệ." });
+                }
+
+                parts.push({ inlineData: { data: modelFile.base64, mimeType: modelFile.mimeType } });
+                
+                if (otherFiles.clothing?.base64) {
+                    parts.push({ inlineData: { data: otherFiles.clothing.base64, mimeType: otherFiles.clothing.mimeType } });
+                }
+                if (otherFiles.accessories?.base64) {
+                    parts.push({ inlineData: { data: otherFiles.accessories.base64, mimeType: otherFiles.accessories.mimeType } });
+                }
+                if (otherFiles.product?.base64) {
+                    parts.push({ inlineData: { data: otherFiles.product.base64, mimeType: otherFiles.product.mimeType } });
+                }
 
                 const prompt = `[TASK] Commercial Composite / Art Style.
                 Inputs: Main Model + optional Clothing/Product.
@@ -392,7 +419,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 
                 parts.push({ text: prompt });
 
-                // If requesting multiple images, we iterate
                 const generationPromises = [];
                 for(let i=0; i<count; i++) {
                     generationPromises.push(ai.models.generateContent({
@@ -408,22 +434,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
                     if(data) {
                         const processed = await processOutputImage(data);
-                        images.push(processed); // Keep as dataURL for client consistency
+                        images.push(processed);
                     }
                 }
                 return res.json({ images });
             }
 
-            // Standard Text/Analysis Handlers
             case 'generateMarketingAdCopy': 
             case 'generateMarketingVideoScript':
             case 'detectOutfit':
             case 'getHotTrends':
             case 'generateVideoPrompt':
             case 'generatePromptFromImage': {
-                 // Reuse the standard text logic (simplified here for brevity, assume passthrough)
-                 // Note: We are not changing the logic for text generation, just ensuring it uses standard AI.
-                 // ... Logic from previous file for text generation ...
                  const { product, tone, angle, imagePart, userIdea, base64Image, mimeType, isFaceLockEnabled, language } = payload;
                  let prompt = "";
                  const parts: Part[] = [];
@@ -464,7 +486,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
              case 'generateImagesFromFeature': {
                  const { featureAction, formData } = payload;
-                 // ... (Simplified logic) ...
                  const prompt = `Execute Feature: ${featureAction}. Data: ${JSON.stringify(formData)}`;
                  const geminiRes = await ai.models.generateContent({
                     model: selectedModel,
@@ -477,14 +498,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             
              case 'generateFamilyPhoto':
              case 'generateFamilyPhoto_3_Pass': {
-                 // Force Pro model
                  const familyModel = MODEL_PRO;
                  const { settings } = payload;
                  const prompt = `Family Photo Composite. Scene: ${settings.scene}. Members: ${settings.members.length}.`;
-                 // ... (Mocking the complex part builder for brevity, assume existing logic is preserved) ...
                  const geminiRes = await ai.models.generateContent({
                     model: familyModel,
-                    contents: { parts: [{ text: prompt }] }, // Simplification for this snippet
+                    contents: { parts: [{ text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(familyModel, '4K', settings.aspectRatio) }
                  });
                  const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
@@ -496,6 +515,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     } catch (e: any) {
         console.error(e);
-        return res.status(500).json({ error: e.message || "Server Error" });
+        const friendlyError = processGoogleError(e);
+        return res.status(500).json({ error: friendlyError });
     }
 }

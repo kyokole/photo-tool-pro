@@ -15,6 +15,20 @@ interface MarketingStudioProps {
     isVip: boolean;
 }
 
+// FIX: Moved InputField outside of the component to prevent re-mounting on every render
+const InputField = ({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (e: any) => void, placeholder: string }) => (
+    <div>
+        <label className="block text-xs font-bold text-[var(--text-primary)] mb-1.5 uppercase tracking-wider">{label}</label>
+        <input 
+            type="text" 
+            placeholder={placeholder} 
+            value={value} 
+            onChange={onChange} 
+            className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-transparent transition-all placeholder-gray-600" 
+        />
+    </div>
+);
+
 const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVip }) => {
     const { t } = useTranslation();
     const [product, setProduct] = useState<MarketingProduct>({
@@ -180,20 +194,6 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
     const productImagePreview = useMemo(() => product.productImage ? URL.createObjectURL(product.productImage) : null, [product.productImage]);
     const refImagePreview = useMemo(() => product.referenceImage ? URL.createObjectURL(product.referenceImage) : null, [product.referenceImage]);
-
-    // Reusable Input Component with Explicit Label
-    const InputField = ({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (e: any) => void, placeholder: string }) => (
-        <div>
-            <label className="block text-xs font-bold text-[var(--text-primary)] mb-1.5 uppercase tracking-wider">{label}</label>
-            <input 
-                type="text" 
-                placeholder={placeholder} 
-                value={value} 
-                onChange={onChange} 
-                className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-transparent transition-all placeholder-gray-600" 
-            />
-        </div>
-    );
 
     return (
         <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 font-sans animate-fade-in h-full overflow-hidden">
