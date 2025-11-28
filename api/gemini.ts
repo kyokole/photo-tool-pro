@@ -452,10 +452,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const parts: Part[] = [];
 
                  if (action === 'generateMarketingAdCopy') {
-                     prompt = `Copywriting Task. Product: ${product.name}. Features: ${product.features}. Write a Facebook Ad.`;
+                     // Updated Prompt for Vietnamese Ad Copy
+                     prompt = `Act as an expert Vietnamese Copywriter. Write a high-converting Facebook Ad for the following product in Vietnamese language (Tiếng Việt).
+                     Product Name: ${product.name}
+                     Brand: ${product.brand}
+                     Category: ${product.category}
+                     Key Features: ${product.features}
+                     Pros: ${product.pros}
+                     Cons: ${product.cons}
+                     
+                     Requirements:
+                     - Language: Vietnamese (Tiếng Việt)
+                     - Style: Engaging, professional, uses emojis.
+                     - Structure: Hook -> Problem -> Solution -> Benefits -> Call to Action.`;
+                     
                      if(imagePart) parts.push(imagePart);
                  } else if (action === 'generateMarketingVideoScript') {
-                     prompt = `Video Script Task. Product: ${product.name}. Tone: ${tone}. Angle: ${angle}. Write a script.`;
+                     // Updated Prompt for Vietnamese Video Script
+                     prompt = `Act as an expert Video Scriptwriter for TikTok/Reels. Write a short video script for the following product in Vietnamese language (Tiếng Việt).
+                     Product Name: ${product.name}
+                     Tone: ${tone}
+                     Angle/Angle Hook: ${angle}
+                     Key Features: ${product.features}
+                     
+                     Requirements:
+                     - Language: Vietnamese (Tiếng Việt)
+                     - Format: Split into Scenes with Visuals and Audio/Dialogue.
+                     - Style: Viral, fast-paced, engaging.`;
+                     
                      if(imagePart) parts.push(imagePart);
                  } else if (action === 'detectOutfit') {
                      prompt = "Describe outfit in image.";
