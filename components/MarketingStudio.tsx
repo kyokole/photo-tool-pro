@@ -406,7 +406,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                     value={settings.customAngle} 
                                     onChange={e => handleSettingsChange('customAngle', e.target.value)} 
                                     rows={2} 
-                                    className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-transparent transition-all placeholder-gray-600" 
+                                    className="w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-transparent transition-all placeholder-gray-600" 
                                 />
                             </div>
                         </div>
