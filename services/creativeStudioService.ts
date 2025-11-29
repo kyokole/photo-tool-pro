@@ -16,13 +16,18 @@ export const generateImagesFromFeature = async (
         const serializedData: Record<string, any> = {};
         for (const key in data) {
             const value = data[key];
+            
+            // Direct File object (e.g. subject_image, person_left_image)
             if (value instanceof File) {
                 const { base64, mimeType } = await fileToBase64(value);
                 serializedData[key] = { base64, mimeType };
-            } else if (Array.isArray(value) && value.every(item => item instanceof File)) {
+            } 
+            // Array of Files
+            else if (Array.isArray(value) && value.every(item => item instanceof File)) {
                  serializedData[key] = await Promise.all(value.map(file => fileToBase64(file)));
-            } else if (typeof value === 'object' && value !== null && !(value instanceof File) && 'file' in value) {
-                // Handle nested objects like { file: File, description: '...' }
+            } 
+            // Wrapper object with file property (e.g. { file: File, description: '...' })
+            else if (typeof value === 'object' && value !== null && !(value instanceof File) && 'file' in value) {
                 if(value.file instanceof File) {
                     const { base64, mimeType } = await fileToBase64(value.file);
                     serializedData[key] = { ...value, file: { base64, mimeType } };
@@ -30,6 +35,7 @@ export const generateImagesFromFeature = async (
                     serializedData[key] = value;
                 }
             }
+            // Array of wrapper objects
              else if (Array.isArray(value) && value.some(item => typeof item === 'object' && item !== null && 'file' in item)) {
                  serializedData[key] = await Promise.all(value.map(async item => {
                     if (item.file instanceof File) {

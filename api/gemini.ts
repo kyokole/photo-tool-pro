@@ -329,7 +329,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     model: selectedModel,
                     contents: { parts: [imagePart, { text: prompt }] },
                     config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize) }
-                });
+                 });
                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                 return res.json({ imageData });
             }
@@ -386,7 +386,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize, settings.aspectRatio) }
                 });
                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
-                // **CHANGED:** Return both imageData and the prompt used
                 return res.json({ imageData, prompt });
             }
 
@@ -394,7 +393,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { modelFile, otherFiles, styles, quality, aspect, count, userPrompt } = payload;
                 const parts: Part[] = [];
                 
-                // Strict validation to avoid "Starting an object on a scalar field" error
                 if (!modelFile?.base64 || typeof modelFile.base64 !== 'string') {
                     return res.status(400).json({ error: "Dữ liệu ảnh Model không hợp lệ." });
                 }
@@ -452,50 +450,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const parts: Part[] = [];
 
                  if (action === 'generateMarketingAdCopy') {
-                     // Dynamic Language and Mandatory Data Injection
                      const isVietnamese = language && language.startsWith('vi');
                      const targetLang = isVietnamese ? 'Vietnamese (Tiếng Việt)' : 'English';
                      
-                     // Construct prompt with strong instructions
                      prompt = `Act as an expert Copywriter fluent in ${targetLang}. Write a high-converting Facebook Ad for the product.
-                     
-                     INPUT DATA:
-                     Product Name: ${product.name}
-                     Brand: ${product.brand}
-                     Category: ${product.category}
-                     Key Features: ${product.features}
-                     Pros: ${product.pros}
-                     Cons: ${product.cons}
-                     Price: ${product.price}
-                     Merchant/Store: ${product.merchant}
-                     
-                     MANDATORY REQUIREMENTS:
-                     1. Language: Output strictly in ${targetLang}.
-                     2. Data Usage: You MUST include the 'Price', 'Merchant', and 'Pros' in the content if they are provided above. Do not ignore them.
-                     3. Style: Engaging, professional, use emojis.
-                     4. Structure: Hook -> Problem -> Solution -> Benefits -> Call to Action (CTA).`;
+                     INPUT DATA: Name: ${product.name}, Brand: ${product.brand}, Category: ${product.category}, Features: ${product.features}, Pros: ${product.pros}, Cons: ${product.cons}, Price: ${product.price}, Merchant: ${product.merchant}.
+                     REQUIREMENTS: Output in ${targetLang}. Use 'Price', 'Merchant', and 'Pros'. Style: Engaging, professional, use emojis.`;
                      
                      if(imagePart) parts.push(imagePart);
                  } else if (action === 'generateMarketingVideoScript') {
-                     // Dynamic Language and Mandatory Data Injection
                      const isVietnamese = language && language.startsWith('vi');
                      const targetLang = isVietnamese ? 'Vietnamese (Tiếng Việt)' : 'English';
 
                      prompt = `Act as an expert Video Scriptwriter for TikTok/Reels fluent in ${targetLang}. Write a viral video script.
-                     
-                     INPUT DATA:
-                     Product Name: ${product.name}
-                     Tone: ${tone}
-                     Angle: ${angle}
-                     Key Features: ${product.features}
-                     Price: ${product.price}
-                     Merchant: ${product.merchant}
-                     
-                     MANDATORY REQUIREMENTS:
-                     1. Language: Output strictly in ${targetLang}.
-                     2. Data Usage: Incorporate 'Price' and 'Merchant' naturally into the dialogue or visual cues if provided.
-                     3. Format: Split into Scenes with Visuals and Audio/Dialogue.
-                     4. Style: Fast-paced, engaging hook.`;
+                     INPUT DATA: Name: ${product.name}, Tone: ${tone}, Angle: ${angle}, Features: ${product.features}, Price: ${product.price}, Merchant: ${product.merchant}.
+                     REQUIREMENTS: Output in ${targetLang}. Incorporate 'Price' and 'Merchant'. Format: Scenes with Visuals and Audio.`;
                      
                      if(imagePart) parts.push(imagePart);
                  } else if (action === 'detectOutfit') {
@@ -528,6 +497,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
              case 'generateImagesFromFeature': {
                  const { featureAction, formData } = payload;
+                 
+                 // --- SPECIAL HANDLING FOR COUPLE COMPOSE ---
+                 // This uses Gemini 3 Pro's specific ability to handle multiple image inputs
+                 // and bind them to specific subjects in the prompt.
+                 if (featureAction === 'couple_compose') {
+                     const parts: Part[] = [];
+                     
+                     // 1. Inject Person 1
+                     if (formData.person_left_image?.base64) {
+                         parts.push({ inlineData: { data: formData.person_left_image.base64, mimeType: formData.person_left_image.mimeType } });
+                         parts.push({ text: "This image above is REFERENCE PERSON A (Left subject). " });
+                     }
+                     
+                     // 2. Inject Person 2
+                     if (formData.person_right_image?.base64) {
+                         parts.push({ inlineData: { data: formData.person_right_image.base64, mimeType: formData.person_right_image.mimeType } });
+                         parts.push({ text: "This image above is REFERENCE PERSON B (Right subject). " });
+                     }
+                     
+                     // 3. Optional Custom Background
+                     if (formData.custom_background?.base64) {
+                         parts.push({ inlineData: { data: formData.custom_background.base64, mimeType: formData.custom_background.mimeType } });
+                         parts.push({ text: "Use this image above as the BACKGROUND scene. " });
+                     }
+
+                     // 4. Construct the sophisticated prompt
+                     const faceInstruction = formData.face_consistency 
+                        ? "**CRITICAL INSTRUCTION:** You MUST preserve the exact facial features, identity, and ethnicity of Reference Person A and Reference Person B. Do NOT generate generic faces. Map Person A's face to the person on the left, and Person B's face to the person on the right." 
+                        : "Create a couple inspired by the uploaded images.";
+
+                     const sceneDesc = formData.couple_background 
+                        ? `Background setting: ${formData.couple_background}. ` 
+                        : (formData.custom_background ? "Use the uploaded background." : "Romantic scenic background.");
+
+                     const actionDesc = formData.affection_action ? `Action: ${formData.affection_action}. ` : "Action: Hugging romantically. ";
+                     const styleDesc = formData.aesthetic_style ? `Style: ${formData.aesthetic_style}. ` : "";
+                     const frameDesc = formData.frame_style ? `Framing: ${formData.frame_style}. ` : "";
+
+                     const mainPrompt = `[TASK] Generate a photorealistic couple photo based on the provided reference images.
+                     ${faceInstruction}
+                     ${actionDesc}
+                     ${sceneDesc}
+                     ${styleDesc}
+                     ${frameDesc}
+                     Ensure natural lighting, high detail, 8K resolution.
+                     `;
+                     
+                     parts.push({ text: mainPrompt });
+
+                     // Use Gemini 3 Pro for this specific task
+                     const geminiRes = await ai.models.generateContent({
+                        model: MODEL_PRO,
+                        contents: { parts },
+                        config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(MODEL_PRO, '4K', formData.aspect_ratio) }
+                     });
+                     
+                     const processedData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                     return res.json({ images: [processedData.split(',')[1]], successCount: 1 });
+                 }
+
+                 // --- GENERIC HANDLER FOR OTHER FEATURES ---
                  const prompt = `Execute Feature: ${featureAction}. Data: ${JSON.stringify(formData)}`;
                  const geminiRes = await ai.models.generateContent({
                     model: selectedModel,

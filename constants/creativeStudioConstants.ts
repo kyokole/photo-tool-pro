@@ -339,6 +339,7 @@ export const FEATURES: Feature[] = [
       { type: 'select', label: 'aiStudio.inputs.couple_compose.aesthetic_style.label', name: 'aesthetic_style', options: [
           "aiStudio.inputs.couple_compose.aesthetic_style.options.warm", "aiStudio.inputs.couple_compose.aesthetic_style.options.clear", "aiStudio.inputs.couple_compose.aesthetic_style.options.minimalist", "aiStudio.inputs.couple_compose.aesthetic_style.options.film"
       ] },
+      { type: 'checkbox', label: 'aiStudio.inputs.korean_style_studio.face_consistency.label', name: 'face_consistency', default: true },
     ],
   },
   {
