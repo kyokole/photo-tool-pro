@@ -3,7 +3,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { MarketingProduct, MarketingSettings, MarketingResult, FashionAspectRatio } from '../types';
-import { MARKETING_TEMPLATES, MARKETING_TONES, FASHION_ASPECT_RATIOS } from '../constants';
+import { MARKETING_TEMPLATES, MARKETING_TONES, FASHION_ASPECT_RATIOS, CREDIT_COSTS } from '../constants';
 import { generateMarketingAdCopy, generateMarketingImage, generateMarketingVideoScript, generateMarketingVideo } from '../services/geminiService';
 import { fileToBase64, resizeBase64 } from '../utils/fileUtils';
 import { Spinner } from './creativestudio/Spinner';
@@ -236,6 +236,9 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
     const productImagePreview = useMemo(() => product.productImage ? URL.createObjectURL(product.productImage) : null, [product.productImage]);
     const refImagePreview = useMemo(() => product.referenceImage ? URL.createObjectURL(product.referenceImage) : null, [product.referenceImage]);
+
+    const imageCost = settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+    const videoCost = CREDIT_COSTS.VIDEO_GENERATION;
 
     return (
         <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 font-sans animate-fade-in h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
@@ -495,7 +498,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                         </div>
                                     )}
                                 </div>
-                                <button onClick={generateImage} disabled={isLoading.image || !product.productImage} className="w-full btn-gradient text-white font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"><i className="fas fa-magic"></i>{t('marketingStudio.actions.generateImage')}</button>
+                                <button onClick={generateImage} disabled={isLoading.image || !product.productImage} className="w-full btn-gradient text-white font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"><i className="fas fa-magic"></i>{t('marketingStudio.actions.generateImage')} {isVip ? '(Miễn phí)' : `(${imageCost} Credits)`}</button>
                             </div>
                         )}
 
@@ -561,7 +564,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                 </div>
                                 <div className="flex gap-3">
                                     <button onClick={generateVideoScript} disabled={isLoading.video} className="flex-1 btn-secondary text-white font-bold py-3 rounded-lg shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"><i className="fas fa-file-alt"></i>{t('marketingStudio.actions.generateVideoScript')}</button>
-                                    <button onClick={renderVideo} disabled={isLoading.videoRender || !result.videoScript} className="flex-1 btn-gradient text-white font-bold py-3 rounded-lg shadow-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"><i className="fas fa-video"></i>{t('marketingStudio.actions.renderVideo')}</button>
+                                    <button onClick={renderVideo} disabled={isLoading.videoRender || !result.videoScript} className="flex-1 btn-gradient text-white font-bold py-3 rounded-lg shadow-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"><i className="fas fa-video"></i>{t('marketingStudio.actions.renderVideo')} {isVip ? '(Miễn phí)' : `(${videoCost} Credits)`}</button>
                                 </div>
                             </div>
                         )}

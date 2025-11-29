@@ -6,6 +6,7 @@ import { generateArtStyleImages } from '../services/geminiService';
 import { fileToResizedDataURL } from '../utils/fileUtils';
 import { smartDownload } from '../utils/canvasUtils';
 import type { ArtStyleUploadedFile } from '../types';
+import { CREDIT_COSTS } from '../constants';
 
 interface ArtStyleStudioProps {
     theme: string;
@@ -213,6 +214,9 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
         previews.forEach((url, i) => smartDownload(url, `art-style-${i}.png`));
     };
 
+    const singleCost = quality === '1080p' ? CREDIT_COSTS.STANDARD_IMAGE : CREDIT_COSTS.HIGH_QUALITY_IMAGE;
+    const totalCost = singleCost * count;
+
     return (
         <div className="flex-1 flex flex-col font-sans animate-fade-in h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
             <header className="w-full max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 pt-6 pb-2">
@@ -315,7 +319,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
                                 {loading ? (
                                     <><i className="fas fa-circle-notch fa-spin"></i> {t('artStyleStudio.generating')}</>
                                 ) : (
-                                    <><i className="fas fa-magic"></i> {t('artStyleStudio.generate', { count })}</>
+                                    <><i className="fas fa-magic"></i> {t('artStyleStudio.generate', { count })} {isVip ? '(Miễn phí)' : `(${totalCost} Credits)`}</>
                                 )}
                             </button>
                         </div>

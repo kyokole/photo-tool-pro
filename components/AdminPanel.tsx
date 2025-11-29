@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { User } from '../types';
@@ -10,6 +11,7 @@ interface AdminPanelProps {
   currentUser: User;
   users: User[];
   onGrant: (uid: string, days: number) => void;
+  onAddCredits: (uid: string, amount: number) => void;
   onResetPassword: (email: string) => Promise<void>;
   onToggleAdmin: (uid: string) => void;
   theme: string;
@@ -28,15 +30,18 @@ const UserRow: React.FC<{
     user: User; 
     currentUser: User;
     onGrant: (uid: string, days: number) => void; 
+    onAddCredits: (uid: string, amount: number) => void;
     onRequestReset: (user: User) => void;
     onRequestToggleAdmin: (user: User) => void;
-}> = ({ user, currentUser, onGrant, onRequestReset, onRequestToggleAdmin }) => {
+}> = ({ user, currentUser, onGrant, onAddCredits, onRequestReset, onRequestToggleAdmin }) => {
     const { t } = useTranslation();
     const isEffectivelyAdmin = new Date(user.subscriptionEndDate).getFullYear() > 9000;
     const superAdminUsername = decodeCredentials('b2tveUs=');
 
     const handleGrant30 = () => onGrant(user.uid, 30);
     const handleGrant365 = () => onGrant(user.uid, 365);
+    const handleAdd100Credits = () => onAddCredits(user.uid, 100);
+    const handleAdd500Credits = () => onAddCredits(user.uid, 500);
     const handleReset = () => onRequestReset(user);
     const handleToggle = () => onRequestToggleAdmin(user);
     
@@ -49,7 +54,10 @@ const UserRow: React.FC<{
 
     return (
         <tr className={`border-b border-white/10 ${user.isAdmin ? 'bg-blue-900/20' : 'hover:bg-white/5'}`}>
-            <td className="p-3 font-medium">{user.username}</td>
+            <td className="p-3 font-medium">
+                {user.username}
+                <div className="text-xs text-yellow-400 mt-1"><i className="fas fa-coins"></i> {user.credits || 0} Credits</div>
+            </td>
             <td className="p-3">{new Date(user.subscriptionEndDate).toLocaleDateString(t('common.locale'))}</td>
             <td className="p-3 font-semibold">
                 {isEffectivelyAdmin ? (
@@ -74,14 +82,18 @@ const UserRow: React.FC<{
                 {user.isAdmin && user.username.toLowerCase().includes(superAdminUsername.toLowerCase()) ? (
                      <span className="text-sm text-gray-500">{t('admin.notApplicable')}</span>
                 ) : (
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex flex-col gap-2 items-end">
                         {!user.isAdmin && (
-                            <>
+                            <div className="flex gap-2">
                                 <button onClick={handleGrant30} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded transition-colors">{t('admin.add30days')}</button>
                                 <button onClick={handleGrant365} className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-1 px-2 rounded transition-colors">{t('admin.add365days')}</button>
-                            </>
+                            </div>
                         )}
-                        <button onClick={handleReset} className="btn-secondary text-xs font-bold py-1 px-2 rounded">{t('admin.resetPassword')}</button>
+                        <div className="flex gap-2">
+                             <button onClick={handleAdd100Credits} className="bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-bold py-1 px-2 rounded transition-colors">+100 Cr</button>
+                             <button onClick={handleAdd500Credits} className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-1 px-2 rounded transition-colors">+500 Cr</button>
+                             <button onClick={handleReset} className="btn-secondary text-xs font-bold py-1 px-2 rounded">{t('admin.resetPassword')}</button>
+                        </div>
                     </div>
                 )}
             </td>
@@ -90,7 +102,7 @@ const UserRow: React.FC<{
 };
 
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, onResetPassword, onToggleAdmin, theme, setTheme }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, onAddCredits, onResetPassword, onToggleAdmin, theme, setTheme }) => {
   const { t } = useTranslation();
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [userToToggleAdmin, setUserToToggleAdmin] = useState<User | null>(null);
@@ -137,7 +149,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, on
                         key={user.uid} 
                         user={user} 
                         currentUser={currentUser}
-                        onGrant={onGrant} 
+                        onGrant={onGrant}
+                        onAddCredits={onAddCredits}
                         onRequestReset={handleRequestReset}
                         onRequestToggleAdmin={handleRequestToggleAdmin}
                     />

@@ -10,6 +10,7 @@ import { Spinner } from './Spinner';
 import { getHotTrends } from '../../services/creativeStudioService';
 import { MALE_HAIRSTYLE_NAMES, FEMALE_HAIRSTYLE_NAMES, YOGA_POSES_BEGINNER, YOGA_POSES_INTERMEDIATE, YOGA_POSES_ADVANCED } from '../../constants/creativeStudioConstants';
 import { ConceptInserter } from '../ConceptInserter';
+import { CREDIT_COSTS } from '../../constants'; // Import CREDIT_COSTS
 
 interface InputSectionProps {
   feature: Feature;
@@ -23,10 +24,11 @@ interface InputSectionProps {
   concepts: Concept[];
   onInsertConcept: (fieldName: string, tag: string) => void;
   showCreativeTip?: boolean;
+  isVip: boolean; // Add isVip
 }
 
 export const InputSection: React.FC<InputSectionProps> = ({
-  feature, onGenerate, isLoading, formData, setFormData, numImages, setNumImages, usageCount, concepts, onInsertConcept, showCreativeTip
+  feature, onGenerate, isLoading, formData, setFormData, numImages, setNumImages, usageCount, concepts, onInsertConcept, showCreativeTip, isVip
 }) => {
   const { t } = useTranslation();
   const [trends, setTrends] = useState<string[]>([]);
@@ -493,12 +495,22 @@ export const InputSection: React.FC<InputSectionProps> = ({
     }
 
     const gridCols = [FeatureAction.FASHION_STUDIO, FeatureAction.CREATE_ALBUM, FeatureAction.BIRTHDAY_PHOTO, FeatureAction.CHANGE_HAIRSTYLE, FeatureAction.YOGA_STUDIO].includes(feature.action) ? 3 : 2;
+    
+    // Cost calculation
+    const imgCount = isSpecialFeature ? calculateImagesToGenerate() : numImages;
+    const singleCost = formData.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+    const totalCost = imgCount * singleCost;
+
     return (
       <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${gridCols} gap-4 items-start`}>
         {feature.inputs.map(renderInput)}
       </div>
     );
   };
+
+  const imgCount = isSpecialFeature ? calculateImagesToGenerate() : numImages;
+  const singleCost = formData.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+  const totalCost = imgCount * singleCost;
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onGenerate(); }} className="bg-[var(--bg-secondary)] rounded-2xl p-6 border border-[var(--border-color)] backdrop-blur-xl">
@@ -541,7 +553,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
         >
           {isLoading && <Spinner />}
           <span className={isLoading ? 'ml-2' : ''}>
-            {isLoading ? t('aiStudio.generating') : usageCount <= 0 ? t('aiStudio.noTurns') : t('aiStudio.generate')}
+            {isLoading ? t('aiStudio.generating') : usageCount <= 0 ? t('aiStudio.noTurns') : `${t('aiStudio.generate')} ${isVip ? '(Miễn phí)' : `(${totalCost} Credits)`}`}
           </span>
         </button>
       </div>

@@ -5,15 +5,17 @@ import { FootballStudioSettings, FootballStudioResult, FootballCategory } from '
 import { generateFootballPhoto } from '../services/footballService';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { FOOTBALL_ASPECT_RATIOS, FOOTBALL_TEAMS, FOOTBALL_PLAYERS, FOOTBALL_IDOL_SCENES, FOOTBALL_OUTFIT_SCENES, FOOTBALL_STYLES, DEFAULT_FOOTBALL_SETTINGS } from '../constants/footballConstants';
+import { CREDIT_COSTS } from '../constants';
 import { Spinner } from './creativestudio/Spinner';
 import { smartDownload } from '../utils/canvasUtils';
 
 interface FootballStudioProps {
     theme: string;
     setTheme: (theme: string) => void;
+    isVip: boolean;
 }
 
-const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
+const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme, isVip }) => {
     const { t, i18n } = useTranslation();
     const [settings, setSettings] = useState<FootballStudioSettings>(DEFAULT_FOOTBALL_SETTINGS);
     const [result, setResult] = useState<FootballStudioResult | null>(null);
@@ -130,6 +132,7 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
     
     const canGenerate = !isLoading && !!settings.sourceImage;
     const currentLang = i18n.language as 'vi' | 'en';
+    const cost = settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
 
     return (
         <div className="flex-1 flex flex-col animate-fade-in h-full">
@@ -280,7 +283,7 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme }) => {
                     </div>
                     <div className="mt-auto pt-4">
                          <button onClick={handleGenerate} disabled={!canGenerate} className={`w-full btn-gradient text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${canGenerate ? 'animate-pulse-glow' : ''}`}>
-                            {isLoading ? <><Spinner /> <span className="ml-2">{t('footballStudio.generating')}</span></> : <><i className="fas fa-futbol mr-2"></i> {t('footballStudio.generateButton')}</>}
+                            {isLoading ? <><Spinner /> <span className="ml-2">{t('footballStudio.generating')}</span></> : <><i className="fas fa-futbol mr-2"></i> {t('footballStudio.generateButton')} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}</>}
                         </button>
                     </div>
                 </aside>

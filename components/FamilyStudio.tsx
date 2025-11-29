@@ -9,6 +9,7 @@ import { generateFamilyPhoto_3_Pass } from '../services/geminiService';
 import { dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
 // REMOVED: import { applyWatermark } from '../utils/canvasUtils';
 import { ZoomModal } from './creativestudio/ZoomModal';
+import { CREDIT_COSTS } from '../constants';
 
 interface FamilyStudioProps {
     theme: string;
@@ -331,6 +332,8 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
         }
     }, [result]);
 
+    const cost = settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+
     return (
         <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 font-sans animate-fade-in">
             <header className="w-full max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4">
@@ -448,7 +451,7 @@ const FamilyStudio: React.FC<FamilyStudioProps> = ({ theme, setTheme, isVip }) =
                                     {progressMessage || t('familyStudio.generating')}
                                 </>
                             ) : (
-                                <><i className="fas fa-users mr-2"></i> {t('familyStudio.generateButton')}</>
+                                <><i className="fas fa-users mr-2"></i> {t('familyStudio.generateButton')} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}</>
                             )}
                         </button>
                     </div>

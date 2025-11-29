@@ -288,6 +288,7 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
                     concepts={concepts}
                     onInsertConcept={handleInsertConcept}
                     showCreativeTip={showCreativeTip}
+                    isVip={isVip} // Pass isVip
                 />
                 <div className="mt-8">
                     <ImageGallery 
@@ -342,6 +343,7 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
                 isOpen={isVideoCreatorOpen}
                 onClose={() => setIsVideoCreatorOpen(false)}
                 base64Image={videoSourceImage}
+                isVip={isVip}
             />
         </div>
     );

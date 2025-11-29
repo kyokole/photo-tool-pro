@@ -7,6 +7,7 @@ import { fileToGenerativePart } from '../utils/fileUtils';
 import { dataUrlToBlob, smartDownload } from '../utils/canvasUtils';
 // REMOVED: import { applyWatermark } from '../utils/canvasUtils';
 import type { Scene, FilePart } from '../types';
+import { CREDIT_COSTS } from '../constants';
 
 type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 type AspectRatio = '1:1' | '4:3' | '9:16' | '16:9' | '3:4';
@@ -223,6 +224,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
     }, [resultImage, activeSeason]);
     
     const currentSeasonTheme = seasonsConfig[activeSeason];
+    const cost = isHighQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
     
     return (
         <div className="flex-1 flex flex-col h-full font-sans transition-colors duration-500">
@@ -358,7 +360,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
                     </div>
 
                      <button onClick={handleGenerate} disabled={isLoading || !sourceFile || !selectedScene} className={`w-full text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all duration-300 disabled:bg-gray-400/50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${currentSeasonTheme.accentBg}`}>
-                        {isLoading ? <><Spinner size="h-5 w-5" /> <span>{t('fourSeasons.generating')}</span></> : <><i className="fas fa-magic"></i> {t(currentSeasonTheme.generateButtonKey)}</>}
+                        {isLoading ? <><Spinner size="h-5 w-5" /> <span>{t('fourSeasons.generating')}</span></> : <><i className="fas fa-magic"></i> {t(currentSeasonTheme.generateButtonKey)} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}</>}
                     </button>
                 </div>
                 {/* Right Panel */}

@@ -189,12 +189,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className={`flex-shrink-0 w-8 h-8 flex items-center justify-center ${statusColor} ${iconAnimation}`} title={statusTooltip}>
                     <i className={`${statusIcon} text-xl`}></i>
                 </div>
-                <div>
+                <div className="min-w-0">
                     <p className="text-xs text-[var(--text-secondary)]">{t('user.greeting')}</p>
                     <p className={`text-sm font-bold truncate ${nameColor}`} title={currentUser.username}>{getDisplayName(currentUser.username)}</p>
                 </div>
             </div>
-             <div className="text-sm font-medium pl-11">
+            
+            {/* New Credit Display */}
+            <div className="flex items-center justify-between bg-[var(--bg-deep-space)] p-2 rounded-md border border-white/5">
+                <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1">
+                    <i className="fas fa-coins text-yellow-400"></i> Credit:
+                </span>
+                <span className="text-sm font-bold text-white">{currentUser.credits || 0}</span>
+            </div>
+
+             <div className="text-sm font-medium pl-1">
                 <span className="text-[var(--text-secondary)] text-xs">{t('user.expiry')}: </span>
                 {currentUser.isAdmin ? (
                     <span className="text-[var(--accent-blue)]" title={t('user.permanent')}><i className="fas fa-infinity"></i></span>

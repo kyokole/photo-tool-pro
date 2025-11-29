@@ -1,3 +1,4 @@
+
 export default {
   "errors": {
     "uploadRequired": "Please upload an image before generating.",
@@ -46,6 +47,7 @@ export default {
     "quotaExceeded": "You have exceeded your free usage quota for today. Please try again in 24 hours or contact an administrator to upgrade.",
     "loginFailedServer": "Login failed due to a server-side error",
     "loginFailedHelp": "Please check your network connection or contact support. You will be logged out.",
-    "firestorePermissionDenied": "Database access permission error (Firestore). This is likely because the Firebase project's 'Security Rules' do not allow new users to create their own profile. Please contact the administrator to configure this."
+    "firestorePermissionDenied": "Database access permission error (Firestore). This is likely because the Firebase project's 'Security Rules' do not allow new users to create their own profile. Please contact the administrator to configure this.",
+    "insufficientCredits": "Insufficient Credits. This action costs {{cost}} credits but you only have {{current}}. Please contact Admin to top up."
   }
 }

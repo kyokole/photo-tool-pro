@@ -11,6 +11,7 @@ import { smartDownload } from '../utils/canvasUtils';
 import { ImageUploader } from './ImageUploader';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
+import { CREDIT_COSTS } from '../constants';
 
 interface RestorationToolProps {
     theme: string;
@@ -212,6 +213,9 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
             isActive ? 'bg-[var(--bg-component)] border-[var(--accent-cyan)] text-white' : 'bg-[var(--bg-interactive)] border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-component-light)] hover:text-white'
         }`;
 
+    const currentOptions = activeTool === 'photo' ? photoOptions : documentOptions;
+    const cost = currentOptions.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+
     return (
         <div className="flex-1 flex flex-col animate-fade-in h-full px-4 sm:px-6 lg:p-8">
             <header className="w-full max-w-6xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 pt-4 sm:pt-6 lg:pt-0 pb-2">
@@ -349,7 +353,7 @@ const RestorationTool: React.FC<RestorationToolProps> = ({ theme, setTheme, isVi
                         <div className="pt-6">
                             {(originalFile && !result) && (
                                 <button onClick={() => handleGenerate()} disabled={isLoading} className="w-full btn-gradient text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50">
-                                    {isLoading ? <>{t('common.processing')}</> : <><i className="fas fa-wand-magic-sparkles mr-2"></i> {t('restoration.restoreButton')}</>}
+                                    {isLoading ? <>{t('common.processing')}</> : <><i className="fas fa-wand-magic-sparkles mr-2"></i> {t('restoration.restoreButton')} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}</>}
                                 </button>
                             )}
                             {result && (

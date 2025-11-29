@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HeadshotStyle, HeadshotResult } from '../types';
-import { HEADSHOT_STYLES } from '../constants';
+import type { HeadshotStyle, HeadshotResult, User } from '../types';
+import { HEADSHOT_STYLES, CREDIT_COSTS } from '../constants';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { smartDownload } from '../utils/canvasUtils';
 
@@ -16,6 +16,8 @@ interface HeadshotGeneratorProps {
     onReset: () => void;
     theme: string;
     setTheme: (theme: string) => void;
+    isVip: boolean;
+    currentUser: User | null;
 }
 
 const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
@@ -27,7 +29,9 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
     onGenerate,
     onReset,
     theme,
-    setTheme
+    setTheme,
+    isVip,
+    currentUser
 }) => {
     const { t } = useTranslation();
     const [selectedStyle, setSelectedStyle] = useState<HeadshotStyle>(HEADSHOT_STYLES[0]);
@@ -51,24 +55,6 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
 
     const handleGenerateClick = () => {
         if (sourceFile && selectedStyle) {
-            // We need to pass isHighQuality, but existing interface might need adaptation
-            // For now, let's assume onGenerate can handle it or we attach it to the style object
-            // A cleaner way is to update the parent component to accept this, 
-            // but here we can attach it to the style object as a temporary property if needed
-            // or better, update the parent component logic.
-            // Since we are updating the code, let's just rely on the fact that the parent
-            // probably doesn't look at this state yet.
-            // Wait, App.tsx calls generateHeadshot service directly.
-            // We need to update how App.tsx handles this.
-            // But first, let's just put the UI here.
-            
-            // Hack: Mutate the style object temporarily to pass the quality flag
-            // This is not ideal but avoids changing App.tsx prop signature massively
-            // Better: The parent component doesn't know about this local state.
-            // We should probably lift this state up or just pass it.
-            // Let's assume we update App.tsx to handle an extra argument, 
-            // BUT since I cannot change App.tsx in this prompt without making it huge,
-            // I'll attach it to the style object which is passed through.
             const styleWithQuality = { ...selectedStyle, highQuality: isHighQuality };
             onGenerate(sourceFile, styleWithQuality);
         }
@@ -109,6 +95,10 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
 
     const hasResults = results.length > 0;
     const canGenerate = !isLoading && !!sourceFile;
+
+    // Calculate cost: 4 images * cost per image
+    const singleImageCost = isHighQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+    const totalCost = 4 * singleImageCost;
 
     return (
         <div className="flex-1 flex flex-col text-[var(--text-primary)] animate-fade-in">
@@ -244,7 +234,9 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
                         </>
                     ) : (
                         <>
-                            <i className="fas fa-magic mr-3"></i> {t('headshot.generateButton')}
+                            <i className="fas fa-magic mr-3"></i> 
+                            {t('headshot.generateButton')} 
+                            {isVip ? ' (Miễn phí)' : (currentUser ? ` (${totalCost} Credits)` : ' (Miễn phí - Watermark)')}
                         </>
                     )}
                 </button>

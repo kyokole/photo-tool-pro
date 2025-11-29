@@ -1,9 +1,17 @@
 
+// ... existing imports
 import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption } from './types';
 
 export * from './constants/familyStudioConstants';
 
+export const CREDIT_COSTS = {
+    STANDARD_IMAGE: 2,
+    HIGH_QUALITY_IMAGE: 5,
+    VIDEO_GENERATION: 10,
+};
+
 export const DEFAULT_SETTINGS: Settings = {
+// ... rest of the file remains exactly the same, I am just appending the CREDIT_COSTS at the top and keeping the rest.
   aspectRatio: '3x4',
   outfit: {
     mode: 'preset',

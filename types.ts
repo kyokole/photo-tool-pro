@@ -100,6 +100,7 @@ export interface User {
   uid: string;
   username: string;
   subscriptionEndDate: string; // ISO 8601 date string
+  credits: number; // New: Credit balance
   isAdmin?: boolean;
   deviceFingerprint?: string;
   providerId?: string;

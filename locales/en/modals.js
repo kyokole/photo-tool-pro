@@ -1,3 +1,4 @@
+
 export default {
   "guide": {
     "title": "User Guide",
@@ -279,14 +280,19 @@ export default {
   },
   "upgradeVipModal": {
     "title": "Upgrade to VIP Package",
-    "description": "Unlock the full power of the toolkit with exclusive benefits:",
-    "benefits": {
-      "unlimited": "Unlimited generation & no watermark",
-      "allTools": "Unlock all premium VIP tools",
-      "batch": "Batch image processing",
-      "priority": "Priority team support"
-    },
-    "contactButton": "Contact & Upgrade Now",
+    "creditTitle": "CREDIT TOP-UP",
+    "creditSubtitle": "Buy Credits & Upgrade VIP",
+    "creditDesc": "Choose the option that best suits your needs.",
+    "credit100": "100 Credits",
+    "credit500": "500 Credits",
+    "creditNote": "Credits are used for image generation and have no expiration date.",
+    "vipTitle": "VIP MEMBERSHIP",
+    "memberStandard": "Standard Member",
+    "memberVip": "VIP Member",
+    "vipBenefit1": "∞ Unlimited Credits",
+    "vipBenefit2": "No Watermark",
+    "vipBenefit3": "Unlock all features",
+    "contactButton": "Contact Admin to Top-up/Upgrade",
     "closeButton": "Later"
   },
   "verificationModal": {

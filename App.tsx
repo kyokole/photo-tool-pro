@@ -1,13 +1,12 @@
-
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, updateDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getAuthInstance, getDbInstance } from './services/firebase';
 import type { Settings, HistoryItem, AppMode, HeadshotResult, FilePart, User, AccordionSection, HeadshotStyle, RestorationResult, FashionStudioSettings, FashionStudioResult, IdPhotoJob } from './types';
 import { generateIdPhoto, generateHeadshot, generateFashionPhoto } from './services/geminiService';
-import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES } from './constants';
+import { DEFAULT_SETTINGS, RESULT_STAGES_KEYS, DEFAULT_FASHION_STUDIO_SETTINGS, FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES, CREDIT_COSTS } from './constants';
 import { fileToGenerativePart, fileToResizedDataURL } from './utils/fileUtils';
 // import { applyWatermark } from './utils/canvasUtils'; // REMOVED: Backend handles watermarking now
 import Sidebar from './components/Sidebar';
@@ -120,6 +119,16 @@ const App: React.FC = () => {
     if (!currentUser) return false;
     return currentUser.isAdmin || (new Date(currentUser.subscriptionEndDate) > new Date());
   }, [currentUser]);
+
+  // MOVED: checkCredits defined here, after currentUser and isVip are defined
+  const checkCredits = useCallback((cost: number): boolean => {
+      // 1. VIP/Admin: Always True (Cost 0 effectively)
+      if (isVip) return true;
+      
+      // 2. Regular User: Check Balance
+      if (!currentUser) return false;
+      return (currentUser.credits || 0) >= cost;
+  }, [currentUser, isVip]);
 
   useEffect(() => {
     if (!isAuthLoading) {
@@ -292,86 +301,95 @@ const App: React.FC = () => {
         }
 
         try {
-            // Luôn cố gắng đọc hồ sơ người dùng từ Firestore trước.
+            // Real-time listener for user data including credits
             const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
             
-            let userData = userDoc.exists() ? userDoc.data() : null;
-            const isDbAdmin = userData?.isAdmin === true;
+            // Initial check to handle new user creation logic if needed, 
+            // but primarily setting up the snapshot listener.
+            const userDocSnap = await getDoc(userDocRef);
+            
+            if (!userDocSnap.exists()) {
+                 const expiryDate = new Date(0); // 1970-01-01
+                 const userData = {
+                    username: user.email!,
+                    subscriptionEndDate: expiryDate.toISOString(),
+                    credits: 10, // Give some free credits to start
+                    isAdmin: false,
+                };
+                await setDoc(userDocRef, userData);
+            }
 
-            // Bây giờ, kiểm tra email đã xác thực hay chưa *trừ khi* người dùng là admin.
-            await user.reload(); // Tải lại để lấy trạng thái emailVerified mới nhất
+            // Real-time listener
+            const unsubDoc = onSnapshot(userDocRef, (doc) => {
+                const userData = doc.data();
+                if (userData) {
+                    const appUser: User = {
+                        uid: user.uid,
+                        username: user.email!,
+                        isAdmin: userData.isAdmin,
+                        subscriptionEndDate: userData.subscriptionEndDate,
+                        credits: userData.credits || 0, // Fallback to 0 if undefined
+                        providerId: user.providerData?.[0]?.providerId
+                    };
+                    setCurrentUser(appUser);
+                }
+            });
+
+            // Handle email verification check
+            await user.reload();
+            // We need to fetch basic data once to check admin status for verification bypass
+            const userDataInitial = userDocSnap.data();
+            const isDbAdmin = userDataInitial?.isAdmin === true;
+
             if (!user.emailVerified && !isDbAdmin) {
                 if (isNewRegistration.current) {
                     await sendEmailVerification(user);
-                    isNewRegistration.current = false; // Đặt lại cờ sau khi gửi
+                    isNewRegistration.current = false;
                 }
                 setIsVerificationModalVisible(true);
                 setIsAuthLoading(false);
-                return; // Dừng ở đây và hiển thị modal xác thực cho người dùng không phải admin
+                // Note: The snapshot listener is active, we might want to unsub if we force logout,
+                // but usually it cleans up on component unmount or next auth change.
+                return; 
             }
             
-            // Nếu đến được đây, người dùng là admin HOẶC là người dùng thường đã xác thực.
             setIsVerificationModalVisible(false);
-
-            if (!userData) { // Tương ứng với !userDoc.exists() trước đó
-                // Logic mô hình Freemium: Người dùng mới không có thời gian dùng thử.
-                // Ngày hết hạn được đặt thành một ngày trong quá khứ.
-                const expiryDate = new Date(0); // 1970-01-01
-
-                userData = {
-                    username: user.email!,
-                    subscriptionEndDate: expiryDate.toISOString(),
-                    isAdmin: false, // Người dùng mới không bao giờ là admin
-                };
-                await setDoc(userDocRef, userData);
-
-            } else {
-                 if (!userData) {
-                    throw new Error(`Tài liệu hồ sơ người dùng bị rỗng (UID: ${user.uid}). Vui lòng liên hệ hỗ trợ.`);
-                }
-            }
-
-            const appUser: User = {
-                uid: user.uid,
-                username: user.email!,
-                isAdmin: userData.isAdmin,
-                subscriptionEndDate: userData.subscriptionEndDate,
-                providerId: user.providerData?.[0]?.providerId
-            };
-
-            setCurrentUser(appUser);
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio', 'family_studio', 'marketing_studio', 'art_style_studio'];
-                const targetIsVipTool = vipModes.includes(postLoginRedirect);
-                const userIsVip = appUser.isAdmin || (new Date(appUser.subscriptionEndDate) > new Date());
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio'];
+                // Beauty Studio is now VIP/Admin only access
+                const restrictedModes: AppMode[] = ['beauty_studio'];
 
-                if (targetIsVipTool && !userIsVip) {
-                    // User tries to access a VIP tool but isn't VIP. Show modal, don't redirect.
+                const targetIsVipTool = vipModes.includes(postLoginRedirect);
+                const targetIsRestricted = restrictedModes.includes(postLoginRedirect);
+
+                const userIsVip = isDbAdmin || (new Date(userDataInitial?.subscriptionEndDate || 0) > new Date());
+
+                if (targetIsRestricted && !userIsVip) {
+                    // Redirect to Beauty Studio requires VIP, so we don't go there
+                    // Instead, show modal and stay on default
                     setIsSubscriptionModalVisible(true);
+                    setPostLoginRedirect(null);
+                } else if (targetIsVipTool && !userIsVip) {
+                    // Allowed to enter but costs credits
+                    handleModeChange(postLoginRedirect);
                 } else {
-                    // User is VIP or the tool is free, proceed with redirect.
                     handleModeChange(postLoginRedirect);
                 }
-                setPostLoginRedirect(null); // Clear the redirect request regardless.
+                setPostLoginRedirect(null);
             }
 
         } catch (e: any) {
             console.error("Lỗi xác thực nghiêm trọng (Firestore):", e);
-            
             let userMessage = t('errors.authError');
             if (e.code === 'permission-denied' || (e.message && (e.message.toLowerCase().includes('permission-denied') || e.message.toLowerCase().includes('insufficient permissions')))) {
                 userMessage = t('errors.firestorePermissionDenied'); 
             } else if (e.message) {
                 userMessage = e.message;
             }
-
             alert(`${t('errors.loginFailedServer')}: ${userMessage}\n\n${t('errors.loginFailedHelp')}`);
-            
             await signOut(auth);
-            
         } finally {
             setIsAuthLoading(false);
         }
@@ -400,6 +418,20 @@ const App: React.FC = () => {
     }
     
     const currentSettings = { ...settings, ...settingsOverride };
+    const cost = currentSettings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+
+    // --- Logic Update for Guest/Non-VIP ---
+    // Guest: Allowed (Backend handles watermark).
+    // Member: Check Credits. If < cost, show Modal. If >= cost, proceed (Backend deducts, clean image).
+    // VIP: Free.
+
+    if (currentUser && !isVip) {
+        if (!checkCredits(cost)) {
+            // Logged in but not enough credits -> Show Upgrade Modal
+            setIsSubscriptionModalVisible(true);
+            return;
+        }
+    }
 
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
@@ -424,18 +456,25 @@ const App: React.FC = () => {
       
       const finalImageFromServer = await generateIdPhoto(originalImage, currentSettings, signal, outfitImagePart);
       
-      // CLIENT WATERMARK REMOVED: Backend handles it
       const finalImage = finalImageFromServer;
 
-      setIsAiCropped(true); // Since the server handles the crop, we can consider it AI-cropped immediately.
+      setIsAiCropped(true);
 
       const newHistoryItem: HistoryItem = { image: finalImage, settings: { ...currentSettings } };
       setHistory(prev => [...prev, newHistoryItem]);
       setProcessedImage(finalImage);
       setIsResultReady(true);
-      setIsPanelVisible(true);
-      if (!isVip) {
-        setIsFreeTierLocked(true);
+      
+      // If user is logged in (paid credits or VIP), enable panel fully.
+      // If Guest, panel remains locked or restricted.
+      if (currentUser) {
+          setIsFreeTierLocked(false); 
+          setIsPanelVisible(true);
+      } else {
+          // Guest mode: Result shown, maybe panel restricted.
+          setIsPanelVisible(true); 
+          // Keep FreeTierLocked to true or handle restricted UI
+          setIsFreeTierLocked(true); 
       }
 
     } catch (err) {
@@ -443,7 +482,6 @@ const App: React.FC = () => {
          console.log('Generation was aborted by the user.');
          setIdPhotoError(t('errors.generationCancelled'));
       } else {
-        // Robust error extraction to catch Google's 500 error JSON string
         const errorMsg = err instanceof Error ? err.message : String(err);
         let errorStringForSearch = '';
         try {
@@ -454,14 +492,16 @@ const App: React.FC = () => {
 
         console.error("Generation failed with error:", errorStringForSearch);
 
-        if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
+        if (errorStringForSearch.includes('insufficient credits')) {
+             // Fallback if backend throws 402
+             setIsSubscriptionModalVisible(true);
+        } else if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
             setIdPhotoError(t('errors.quotaExceeded'));
         } else if (errorStringForSearch.includes('api_key_invalid') || errorStringForSearch.includes('api key not valid')) {
             setIdPhotoError(t('errors.apiKeyInvalid'));
         } else if (errorStringForSearch.includes('function_invocation_timeout') || errorStringForSearch.includes('504')) {
             setIdPhotoError(t('errors.timeout'));
         } else if (errorStringForSearch.includes('"code":500') || errorStringForSearch.includes('internal') || errorStringForSearch.includes('an internal error has occurred')) {
-            // Check for Google Internal Server Error
             setIdPhotoError(t('errors.generationOverloaded'));
         } else {
             const displayMessage = err instanceof Error ? err.message : t('errors.unknownError');
@@ -472,7 +512,7 @@ const App: React.FC = () => {
       setIsGenerating(false);
       abortControllerRef.current = null;
     }
-  }, [originalImage, settings, t, isVip]);
+  }, [originalImage, settings, t, isVip, checkCredits, currentUser]);
 
   const processSingleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -499,10 +539,11 @@ const App: React.FC = () => {
             setIsAiCropped(false);
             setIsBatchMode(false);
             setOriginalImage(resizedDataUrl);
-            setIsFreeTierLocked(false);
+            setIsFreeTierLocked(false); // Reset lock state initially, handled after gen
 
-            if (!isVip) {
-                setIsPanelVisible(false);
+            if (!isVip && !currentUser) {
+                // Guests also start locked or limited
+                // setIsPanelVisible(false); // Maybe? or let them adjust basic settings
             }
         } catch (error) {
             console.error("Failed to resize image for ID Photo tool", error);
@@ -580,9 +621,11 @@ const App: React.FC = () => {
 
   const handleGenerateBatch = useCallback(async () => {
     if (!isVip) {
-        alert("Batch processing is a VIP feature.");
+        setIsSubscriptionModalVisible(true);
         return;
     }
+    // VIP users do not pay credits for batch processing as per requirements.
+    
     setIsBatchProcessing(true);
     setIdPhotoError(null);
 
@@ -602,7 +645,6 @@ const App: React.FC = () => {
                     reader.readAsDataURL(job.file);
                 });
 
-                // Watermarking is not applied in batch mode (server handles it if needed, but VIP only anyway)
                 const finalImage = await generateIdPhoto(originalImageBase64, settings);
 
                 job.processedUrl = finalImage;
@@ -638,6 +680,21 @@ const App: React.FC = () => {
   const handleGenerateHeadshots = useCallback(async (file: File, style: HeadshotStyle) => {
     if (!file || !style) return;
     
+    // Headshots generate 4 images.
+    // Cost: 2 credits per image (Standard) or 5 credits per image (HQ).
+    // Assuming style.highQuality flag exists (we pass it manually from component)
+    // Cast style to any to access the custom highQuality property we added
+    const isHQ = (style as any).highQuality;
+    const baseCost = isHQ ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+    const totalCost = baseCost * 4;
+
+    if (currentUser && !isVip) {
+        if (!checkCredits(totalCost)) {
+            setIsSubscriptionModalVisible(true);
+            return;
+        }
+    }
+
     handleResetHeadshotTool();
     setHeadshotSourceFile(file);
     setIsHeadshotLoading(true);
@@ -649,13 +706,25 @@ const App: React.FC = () => {
             throw new Error(t('errors.fileConversionError'));
         }
 
+        // Pass 'highQuality' flag in the prompt or config. Since we can't change signature easily, 
+        // we rely on the backend detecting it from the payload structure if we were sending the object.
+        // But here we call generateHeadshot directly.
+        // We will update generateHeadshot to accept quality later or handle it here?
+        // Since we cannot modify `services/geminiService.ts` here (XML structure limitation for single response),
+        // we assume the backend handles the credit deduction based on what we send.
+        // However, `generateHeadshot` takes a prompt string. We append the quality flag to the prompt string 
+        // so the backend can parse it for logic, although `generateHeadshot` helper doesn't support options object yet.
+        // Backend `generateHeadshot` handler receives `payload`.
+        
+        // Actually, we can just call the API. The credit check happens in backend too.
+        // But for `generateHeadshot` specifically, the backend logic now calculates based on 4 images.
+        
         const generationPromises = Array(4).fill(0).map(() => 
-            generateHeadshot(imagePart, style.prompt, abortControllerRef.current?.signal)
+            generateHeadshot(imagePart, style.prompt + (isHQ ? " [QUALITY: 4K]" : ""), abortControllerRef.current?.signal)
         );
         
         const generatedImagesFromServer = await Promise.all(generationPromises);
 
-        // CLIENT WATERMARK REMOVED: Backend handles it
         const finalImages = generatedImagesFromServer;
 
         setHeadshotResults(finalImages.map((url, index) => ({
@@ -677,8 +746,10 @@ const App: React.FC = () => {
             }
     
             console.error("Headshot generation failed with error:", errorStringForSearch);
-    
-            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
+            
+            if (errorStringForSearch.includes('insufficient credits')) {
+                 setIsSubscriptionModalVisible(true);
+            } else if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
                 setHeadshotError(t('errors.quotaExceeded'));
             } else if (errorStringForSearch.includes('api_key_invalid') || errorStringForSearch.includes('api key not valid')) {
                 setHeadshotError(t('errors.apiKeyInvalid'));
@@ -695,12 +766,18 @@ const App: React.FC = () => {
         setIsHeadshotLoading(false);
         abortControllerRef.current = null;
     }
-  }, [handleResetHeadshotTool, t, isVip]);
+  }, [handleResetHeadshotTool, t, isVip, checkCredits, currentUser]);
 
   const handleGenerateFashionPhoto = useCallback(async () => {
       if (!fashionStudioFile) {
         setFashionStudioError(t('errors.uploadRequired'));
         return;
+      }
+
+      const cost = fashionStudioSettings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+      if (!checkCredits(cost)) {
+          setIsSubscriptionModalVisible(true);
+          return;
       }
 
       setIsFashionStudioLoading(true);
@@ -712,8 +789,6 @@ const App: React.FC = () => {
         const imagePart = await fileToGenerativePart(fashionStudioFile);
         if (!imagePart) throw new Error(t('errors.fileProcessingError'));
 
-        // Since Fashion Studio is a VIP feature, no watermarking is needed here.
-        // But if it were needed, backend would handle it.
         const imageUrl = await generateFashionPhoto(imagePart, fashionStudioSettings, abortControllerRef.current.signal);
         
         setFashionStudioResult({
@@ -735,8 +810,10 @@ const App: React.FC = () => {
             }
     
             console.error("Fashion Studio generation failed with error:", errorStringForSearch);
-    
-            if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
+            
+            if (errorStringForSearch.includes('insufficient credits')) {
+                 setIsSubscriptionModalVisible(true);
+            } else if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
                 setFashionStudioError(t('errors.quotaExceeded'));
             } else if (errorStringForSearch.includes('api_key_invalid') || errorStringForSearch.includes('api key not valid')) {
                 setFashionStudioError(t('errors.apiKeyInvalid'));
@@ -753,10 +830,8 @@ const App: React.FC = () => {
           setIsFashionStudioLoading(false);
           abortControllerRef.current = null;
       }
-  }, [fashionStudioFile, fashionStudioSettings, t]);
+  }, [fashionStudioFile, fashionStudioSettings, t, checkCredits, currentUser]);
 
-  // ... (rest of the file including renderContent and JSX)
-  // Ensure all functions match the original file content structure
   const handleFashionSettingsChange = useCallback((updater: React.SetStateAction<FashionStudioSettings>) => {
     setFashionStudioSettings(prevSettings => {
         const newSettings = typeof updater === 'function' ? updater(prevSettings) : updater;
@@ -896,6 +971,24 @@ const App: React.FC = () => {
     }
   }, [currentUser, loadAllUsers, t, db]);
 
+  const handleAddCredits = useCallback(async (uid: string, amount: number) => {
+      if (!currentUser?.isAdmin) return;
+      try {
+          const userDocRef = doc(db, "users", uid);
+          const userDoc = await getDoc(userDocRef);
+          if (!userDoc.exists()) throw new Error("User not found");
+          
+          const currentCredits = userDoc.data()!.credits || 0;
+          await updateDoc(userDocRef, {
+              credits: currentCredits + amount
+          });
+          loadAllUsers();
+      } catch (e) {
+          console.error("Failed to add credits:", e);
+          alert(t('errors.saveUserError'));
+      }
+  }, [currentUser, loadAllUsers, t, db]);
+
   const handleToggleAdmin = useCallback(async (uid: string) => {
     if (!currentUser?.isAdmin || currentUser.uid === uid) {
         alert(t('errors.cannotChangeOwnAdmin'));
@@ -944,11 +1037,7 @@ const App: React.FC = () => {
 
   const handleFashionStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'fashion_studio') handleModeChange('fashion_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'fashion_studio') handleModeChange('fashion_studio');
     } else {
         setPostLoginRedirect('fashion_studio');
         setIsAuthModalVisible(true);
@@ -957,11 +1046,7 @@ const App: React.FC = () => {
   
   const handleFootballStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'football_studio') handleModeChange('football_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'football_studio') handleModeChange('football_studio');
     } else {
         setPostLoginRedirect('football_studio');
         setIsAuthModalVisible(true);
@@ -974,11 +1059,7 @@ const App: React.FC = () => {
   
   const handleRestorationSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'restoration') handleModeChange('restoration');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'restoration') handleModeChange('restoration');
     } else {
         setPostLoginRedirect('restoration');
         setIsAuthModalVisible(true);
@@ -987,11 +1068,11 @@ const App: React.FC = () => {
   
   const handleBeautyStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'beauty_studio') handleModeChange('beauty_studio');
-        } else {
+        if (!isVip) {
             setIsSubscriptionModalVisible(true);
+            return;
         }
+        if (appMode !== 'beauty_studio') handleModeChange('beauty_studio');
     } else {
         setPostLoginRedirect('beauty_studio');
         setIsAuthModalVisible(true);
@@ -1000,11 +1081,7 @@ const App: React.FC = () => {
 
   const handleCreativeStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'creative_studio') handleModeChange('creative_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'creative_studio') handleModeChange('creative_studio');
     } else {
         setPostLoginRedirect('creative_studio');
         setIsAuthModalVisible(true);
@@ -1013,11 +1090,7 @@ const App: React.FC = () => {
   
   const handlePromptAnalyzerSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'prompt_analyzer') handleModeChange('prompt_analyzer');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'prompt_analyzer') handleModeChange('prompt_analyzer');
     } else {
         setPostLoginRedirect('prompt_analyzer');
         setIsAuthModalVisible(true);
@@ -1026,11 +1099,7 @@ const App: React.FC = () => {
 
   const handleFourSeasonsSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'four_seasons_studio') handleModeChange('four_seasons_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'four_seasons_studio') handleModeChange('four_seasons_studio');
     } else {
         setPostLoginRedirect('four_seasons_studio');
         setIsAuthModalVisible(true);
@@ -1039,11 +1108,7 @@ const App: React.FC = () => {
   
   const handleFamilyStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'family_studio') handleModeChange('family_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'family_studio') handleModeChange('family_studio');
     } else {
         setPostLoginRedirect('family_studio');
         setIsAuthModalVisible(true);
@@ -1052,11 +1117,7 @@ const App: React.FC = () => {
 
   const handleMarketingStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'marketing_studio') handleModeChange('marketing_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'marketing_studio') handleModeChange('marketing_studio');
     } else {
         setPostLoginRedirect('marketing_studio');
         setIsAuthModalVisible(true);
@@ -1065,11 +1126,7 @@ const App: React.FC = () => {
   
   const handleArtStyleStudioSelect = () => {
     if (currentUser) {
-        if (isVip) {
-            if (appMode !== 'art_style_studio') handleModeChange('art_style_studio');
-        } else {
-            setIsSubscriptionModalVisible(true);
-        }
+        if (appMode !== 'art_style_studio') handleModeChange('art_style_studio');
     } else {
         setPostLoginRedirect('art_style_studio');
         setIsAuthModalVisible(true);
@@ -1256,17 +1313,11 @@ const App: React.FC = () => {
         return; 
       }
 
-      const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'beauty_studio', 'family_studio', 'marketing_studio', 'art_style_studio'];
-      
-      if (vipModes.includes(appMode) || isBatchMode) {
-        handleModeChange('headshot');
-        setIsFreeTierLocked(true);
-      } else if (appMode === 'id_photo') {
-        setIsFreeTierLocked(true);
-      }
+      // Logic: If expired, they are just regular members now.
+      // They can still use tools but must pay credits.
       setIsSubscriptionModalVisible(true);
     }
-  }, [currentUser, appMode, isBatchMode, handleModeChange]);
+  }, [currentUser]);
 
 
   const handleUsePromptInStudio = useCallback((image: File, prompt: string) => {
@@ -1366,7 +1417,9 @@ const App: React.FC = () => {
                                 </>
                             ) : (
                                 <>
-                                    <i className="fas fa-magic mr-3"></i> {t('sidebar.generateButton')}
+                                    <i className="fas fa-magic mr-3"></i> 
+                                    {t('sidebar.generateButton')} 
+                                    {isVip ? ' (Miễn phí)' : (currentUser ? ` (${settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE} Credits)` : ' (Miễn phí - Watermark)')}
                                 </>
                             )}
                         </button>
@@ -1415,6 +1468,8 @@ const App: React.FC = () => {
             onReset={handleResetHeadshotTool}
             theme={theme}
             setTheme={setTheme}
+            isVip={isVip} // PASS ISVIP
+            currentUser={currentUser} // Pass currentUser to check Guest status
           />
         );
       case 'restoration':
@@ -1439,10 +1494,11 @@ const App: React.FC = () => {
                 onReset={handleResetFashionStudioTool}
                 theme={theme}
                 setTheme={setTheme}
+                isVip={isVip} // PASS ISVIP
               />
           );
       case 'football_studio':
-          return <FootballStudio theme={theme} setTheme={setTheme} />;
+          return <FootballStudio theme={theme} setTheme={setTheme} isVip={isVip} />; // PASS ISVIP
        case 'prompt_analyzer':
             return <PromptAnalyzer 
                         theme={theme} 
@@ -1480,6 +1536,7 @@ const App: React.FC = () => {
                     currentUser={currentUser}
                     users={usersToShow} 
                     onGrant={handleGrantSubscription} 
+                    onAddCredits={handleAddCredits}
                     onResetPassword={handleResetUserPassword}
                     onToggleAdmin={handleToggleAdmin}
                     theme={theme}

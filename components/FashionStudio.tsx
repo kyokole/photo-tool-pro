@@ -1,7 +1,8 @@
+
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FashionStudioSettings, FashionStudioResult, FashionCategory, FashionAspectRatio, FashionStyle } from '../types';
-import { FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES, FASHION_ASPECT_RATIOS } from '../constants';
+import { FASHION_FEMALE_STYLES, FASHION_MALE_STYLES, FASHION_GIRL_STYLES, FASHION_BOY_STYLES, FASHION_ASPECT_RATIOS, CREDIT_COSTS } from '../constants';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { smartDownload } from '../utils/canvasUtils';
 
@@ -17,6 +18,7 @@ interface FashionStudioProps {
     onReset: () => void;
     theme: string;
     setTheme: (theme: string) => void;
+    isVip: boolean;
 }
 
 const FashionStudio: React.FC<FashionStudioProps> = ({
@@ -31,6 +33,7 @@ const FashionStudio: React.FC<FashionStudioProps> = ({
     onReset,
     theme,
     setTheme,
+    isVip
 }) => {
     const { t } = useTranslation();
     const [isDragging, setIsDragging] = useState(false);
@@ -101,6 +104,7 @@ const FashionStudio: React.FC<FashionStudioProps> = ({
         { key: 'boy', label: t('fashionStudio.categories.boy') },
     ];
 
+    const cost = settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
 
     return (
         <div className="flex-1 flex flex-col animate-fade-in h-full">
@@ -269,7 +273,7 @@ const FashionStudio: React.FC<FashionStudioProps> = ({
                                 </>
                             ) : (
                                 <>
-                                    <i className="fas fa-magic mr-3"></i> {t('fashionStudio.generateButton')}
+                                    <i className="fas fa-magic mr-3"></i> {t('fashionStudio.generateButton')} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}
                                 </>
                             )}
                         </button>

@@ -1,3 +1,4 @@
+
 export default {
   "guide": {
     "title": "Hướng dẫn sử dụng",
@@ -279,15 +280,20 @@ export default {
   },
   "upgradeVipModal": {
     "title": "Nâng Cấp Lên Gói VIP",
-    "description": "Mở khóa toàn bộ sức mạnh của bộ công cụ với các quyền lợi độc quyền:",
-    "benefits": {
-      "unlimited": "Tạo ảnh không giới hạn & không watermark",
-      "allTools": "Mở khóa tất cả công cụ VIP cao cấp",
-      "batch": "Xử lý ảnh hàng loạt (batch processing)",
-      "priority": "Ưu tiên hỗ trợ từ đội ngũ"
-    },
-    "contactButton": "Liên Hệ & Nâng Cấp Ngay",
-    "closeButton": "Để Sau"
+    "creditTitle": "GÓI NẠP CREDIT",
+    "creditSubtitle": "Nạp Credit & Nâng Cấp VIP",
+    "creditDesc": "Lựa chọn phương án phù hợp nhất với nhu cầu của bạn.",
+    "credit100": "100 Credit",
+    "credit500": "500 Credit",
+    "creditNote": "Credit dùng để tạo ảnh, không giới hạn thời gian sử dụng.",
+    "vipTitle": "GÓI HỘI VIÊN VIP",
+    "memberStandard": "Thành viên Thường",
+    "memberVip": "Thành viên VIP",
+    "vipBenefit1": "∞ Không tốn Credit",
+    "vipBenefit2": "Không Watermark",
+    "vipBenefit3": "Mở khóa mọi tính năng",
+    "contactButton": "Liên hệ Admin để Nạp/Nâng cấp",
+    "closeButton": "Để sau"
   },
   "verificationModal": {
     "title": "Xác thực Email của bạn",

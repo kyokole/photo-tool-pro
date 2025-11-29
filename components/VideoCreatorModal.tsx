@@ -1,8 +1,10 @@
+
 // components/creativestudio/VideoCreatorModal.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { generateVideoFromImage, generateVideoPrompt } from '../services/creativeStudioService';
 import { Spinner } from './creativestudio/Spinner';
+import { CREDIT_COSTS } from '../constants';
 
 // FIX: Replaced inline type with a declared interface to resolve global type conflicts.
 // This allows for declaration merging if `AIStudio` or `window.aistudio` is defined elsewhere.
@@ -20,6 +22,7 @@ interface VideoCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
   base64Image: string | null;
+  isVip: boolean;
 }
 
 const FILTERS = [
@@ -30,7 +33,7 @@ const FILTERS = [
     { name: 'Cool', value: 'contrast(1.1) brightness(1.1) hue-rotate(-15deg)' },
 ];
 
-export const VideoCreatorModal: React.FC<VideoCreatorModalProps> = ({ isOpen, onClose, base64Image }) => {
+export const VideoCreatorModal: React.FC<VideoCreatorModalProps> = ({ isOpen, onClose, base64Image, isVip }) => {
   const { t, i18n } = useTranslation();
   const [userIdea, setUserIdea] = useState('');
   const [generatedPrompt, setGeneratedPrompt] = useState('');
@@ -284,7 +287,7 @@ export const VideoCreatorModal: React.FC<VideoCreatorModalProps> = ({ isOpen, on
             >
                 {isLoading && <Spinner />}
                 <span className={isLoading ? 'ml-2' : ''}>
-                    {isLoading ? t('videoCreator.creatingVideo') : t('videoCreator.step3')}
+                    {isLoading ? t('videoCreator.creatingVideo') : `${t('videoCreator.step3')} ${isVip ? '(Miễn phí)' : `(${CREDIT_COSTS.VIDEO_GENERATION} Credits)`}`}
                 </span>
             </button>
         </div>
