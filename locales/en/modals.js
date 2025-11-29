@@ -292,6 +292,12 @@ export default {
     "vipBenefit1": "∞ Unlimited Credits",
     "vipBenefit2": "No Watermark",
     "vipBenefit3": "Unlock all features",
+    "standardBenefit1": "Pay with Credits",
+    "standardBenefit2": "Watermark (If 0 Credits)",
+    "standardBenefit3": "No Batch Processing",
+    "bestValue": "Best Value",
+    "standardLabel": "Standard",
+    "recommended": "Recommended",
     "contactButton": "Contact Admin to Top-up/Upgrade",
     "closeButton": "Later"
   },

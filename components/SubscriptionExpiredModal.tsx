@@ -45,7 +45,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact })
                             <div className="bg-[#1a1d24] rounded-xl p-4 flex justify-between items-center border border-gray-700 hover:border-gray-500 transition-colors cursor-pointer group">
                                 <div>
                                     <div className="text-white font-bold text-lg group-hover:text-yellow-400 transition-colors">{t('upgradeVipModal.credit100')}</div>
-                                    <div className="text-gray-500 text-sm">Standard</div>
+                                    <div className="text-gray-500 text-sm">{t('upgradeVipModal.standardLabel')}</div>
                                 </div>
                                 <div className="text-yellow-400 font-bold text-xl">50.000 VNĐ</div>
                             </div>
@@ -57,7 +57,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact })
                                 </div>
                                 <div>
                                     <div className="text-white font-bold text-lg group-hover:text-yellow-400 transition-colors">{t('upgradeVipModal.credit500')}</div>
-                                    <div className="text-gray-500 text-sm">Best Value</div>
+                                    <div className="text-gray-500 text-sm">{t('upgradeVipModal.bestValue')}</div>
                                 </div>
                                 <div className="text-yellow-400 font-bold text-xl">200.000 VNĐ</div>
                             </div>
@@ -85,13 +85,13 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact })
                                 <h4 className="text-gray-400 font-bold mb-4">{t('upgradeVipModal.memberStandard')}</h4>
                                 <ul className="space-y-3 text-xs text-gray-500">
                                     <li className="flex items-center gap-2">
-                                        <i className="fas fa-coins text-yellow-600"></i> Thanh toán bằng Credit
+                                        <i className="fas fa-coins text-yellow-600"></i> {t('upgradeVipModal.standardBenefit1')}
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <i className="fas fa-ban text-red-800"></i> Có Watermark (Nếu hết Credit)
+                                        <i className="fas fa-ban text-red-800"></i> {t('upgradeVipModal.standardBenefit2')}
                                     </li>
                                     <li className="flex items-center gap-2">
-                                        <i className="fas fa-lock text-gray-600"></i> Không hỗ trợ hàng loạt
+                                        <i className="fas fa-lock text-gray-600"></i> {t('upgradeVipModal.standardBenefit3')}
                                     </li>
                                 </ul>
                             </div>
@@ -99,7 +99,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact })
                             {/* VIP Member Card */}
                             <div className="bg-[#1b1924] rounded-xl p-4 border-2 border-purple-500 relative shadow-[0_0_15px_rgba(168,85,247,0.15)]">
                                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white text-[10px] font-bold px-3 py-0.5 rounded-full shadow-sm">
-                                    Khuyên dùng
+                                    {t('upgradeVipModal.recommended')}
                                 </div>
                                 <div className="flex justify-between items-start mb-4">
                                     <h4 className="text-white font-bold">{t('upgradeVipModal.memberVip')}</h4>

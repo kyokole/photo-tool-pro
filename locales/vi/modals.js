@@ -292,6 +292,12 @@ export default {
     "vipBenefit1": "∞ Không tốn Credit",
     "vipBenefit2": "Không Watermark",
     "vipBenefit3": "Mở khóa mọi tính năng",
+    "standardBenefit1": "Thanh toán bằng Credit",
+    "standardBenefit2": "Có Watermark (Nếu hết Credit)",
+    "standardBenefit3": "Không hỗ trợ hàng loạt",
+    "bestValue": "Tiết kiệm nhất",
+    "standardLabel": "Tiêu chuẩn",
+    "recommended": "Khuyên dùng",
     "contactButton": "Liên hệ Admin để Nạp/Nâng cấp",
     "closeButton": "Để sau"
   },
