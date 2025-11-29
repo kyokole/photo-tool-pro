@@ -14,6 +14,7 @@ import { TrainerModal } from './TrainerModal';
 import { VideoCreatorModal } from './VideoCreatorModal';
 import { ThumbnailGenerator } from './creativestudio/ThumbnailGenerator';
 import { BatchProcessor } from './batch/BatchProcessor';
+import { resizeBase64 } from '../utils/fileUtils'; // Import resize utility
 
 const LIBRARY_KEY = 'ai_studio_library';
 const THEME_KEY = 'ai_studio_theme';
@@ -163,13 +164,21 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
         setIsVideoCreatorOpen(true);
     };
 
-    const addToLibrary = (newImages: string[]) => {
+    // UPDATED: Async function to handle compression before saving
+    const addToLibrary = async (newImages: string[]) => {
+        // Compress images to a smaller size (e.g., 400px width/height) for library storage
+        // This drastically reduces size from ~4MB to ~50KB to fit in LocalStorage
+        const compressedImages = await Promise.all(
+            newImages.map(img => resizeBase64(img, 400))
+        );
+
         setLibrary(prevLibrary => {
-            let updatedLibrary = [...newImages, ...prevLibrary];
+            let updatedLibrary = [...compressedImages, ...prevLibrary];
             if (updatedLibrary.length > MAX_LIBRARY_SIZE) {
                 updatedLibrary = updatedLibrary.slice(0, MAX_LIBRARY_SIZE);
             }
 
+            // Retry logic in case quota is still full
             while (updatedLibrary.length > 0) {
                 try {
                     localStorage.setItem(LIBRARY_KEY, JSON.stringify(updatedLibrary));
@@ -181,10 +190,10 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
 
                     if (isQuotaError) {
                         console.warn(`LocalStorage quota exceeded. Removing oldest image to make space.`);
-                        updatedLibrary.pop();
+                        updatedLibrary.pop(); // Remove the oldest image
                     } else {
                         console.error("Failed to save library to localStorage:", error);
-                        return prevLibrary;
+                        return prevLibrary; // Abort if unknown error
                     }
                 }
             }
@@ -237,8 +246,8 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
 
         try {
             const result = await generateImagesFromFeature(selectedFeature, formData, imagesToGenerate);
-            setImages(result.images);
-            addToLibrary(result.images);
+            setImages(result.images); // Display High-Res images immediately
+            await addToLibrary(result.images); // Compress and Save to History
 
             if (result.successCount < imagesToGenerate) {
                 setError(t('aiStudio.generationError', { successCount: result.successCount, total: imagesToGenerate }));

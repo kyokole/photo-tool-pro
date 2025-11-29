@@ -1,3 +1,4 @@
+
 // components/creativestudio/ZoomModal.tsx
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +15,8 @@ export const ZoomModal: React.FC<ZoomModalProps> = ({ isOpen, onClose, base64Ima
     return null;
   }
 
+  const mime = base64Image.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-80 z-[100] flex justify-center items-center p-4" onClick={onClose}>
         <button onClick={onClose} className="absolute top-4 right-4 text-white text-3xl font-bold z-50">
@@ -21,7 +24,7 @@ export const ZoomModal: React.FC<ZoomModalProps> = ({ isOpen, onClose, base64Ima
         </button>
         <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
              <img 
-                src={`data:image/png;base64,${base64Image}`} 
+                src={`data:${mime};base64,${base64Image}`} 
                 alt={t('aiStudio.gallery.zoomedAlt')} 
                 className="rounded-lg object-contain w-full h-full max-w-full max-h-full"
             />

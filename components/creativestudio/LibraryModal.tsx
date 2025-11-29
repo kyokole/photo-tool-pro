@@ -1,3 +1,4 @@
+
 // components/creativestudio/LibraryModal.tsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,9 +20,18 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ima
     return null;
   }
 
+  // Helper to safely render image source
+  const getSrc = (base64: string) => {
+      // Check for JPEG signature (starts with /9j/)
+      const mime = base64.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+      return `data:${mime};base64,${base64}`;
+  };
+
   const handleDownload = (base64Image: string, index: number) => {
-    const imageUrl = `data:image/png;base64,${base64Image}`;
-    const fileName = `ai_studio_library_${index}.png`;
+    const mime = base64Image.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+    const ext = mime === 'image/jpeg' ? 'jpg' : 'png';
+    const imageUrl = `data:${mime};base64,${base64Image}`;
+    const fileName = `ai_studio_library_${index}.${ext}`;
     smartDownload(imageUrl, fileName);
   };
 
@@ -56,7 +66,7 @@ export const LibraryModal: React.FC<LibraryModalProps> = ({ isOpen, onClose, ima
                   {images.map((base64Image, index) => (
                     <div key={index} className="relative group aspect-square">
                       <img
-                        src={`data:image/png;base64,${base64Image}`}
+                        src={getSrc(base64Image)}
                         alt={`Library image ${index + 1}`}
                         className="w-full h-full object-cover rounded-lg"
                         loading="lazy"

@@ -1,3 +1,4 @@
+
 // components/creativestudio/ImageGallery.tsx
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,14 +24,24 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ isLoading, images, n
   };
 
   const handleDownload = (base64Image: string, index: number) => {
-    const imageUrl = `data:image/png;base64,${base64Image}`;
-    const fileName = `ai_studio_image_${index + 1}.png`;
+    // Determine mime type if possible, or default to png
+    const mimeType = base64Image.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+    const imageUrl = `data:${mimeType};base64,${base64Image}`;
+    const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png';
+    const fileName = `ai_studio_image_${index + 1}.${ext}`;
     smartDownload(imageUrl, fileName);
   }
 
   const handleCloseModals = () => {
     setIsZoomModalOpen(false);
     setSelectedImage(null);
+  };
+
+  // Helper to safely render image source
+  const getSrc = (base64: string) => {
+      // Check for JPEG signature (starts with /9j/)
+      const mime = base64.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+      return `data:${mime};base64,${base64}`;
   };
 
   if (isLoading) {
@@ -68,7 +79,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ isLoading, images, n
           {images.map((base64Image, index) => (
             <div key={index} className="relative group aspect-square rounded-lg overflow-hidden">
               <img
-                src={`data:image/png;base64,${base64Image}`}
+                src={getSrc(base64Image)}
                 alt={`Generated image ${index + 1}`}
                 className="w-full h-full object-cover"
               />
