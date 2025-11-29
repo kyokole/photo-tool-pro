@@ -240,23 +240,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateIdPhoto': {
                  const { originalImage, settings } = payload;
                  const buildIdPhotoPrompt = (s: any) => {
-                     let p = `**Cắt ảnh chân dung:** Cắt lấy phần đầu và vai chuẩn thẻ. Loại bỏ nền tạp. Role: ID Photo Editor.`;
-                     if (s.background.mode === 'ai' && s.background.customPrompt) p += `**1. Nền AI:** "${s.background.customPrompt}". Bokeh background. `;
-                     else {
-                         const c = s.background.mode === 'custom' ? s.background.customColor : (s.background.mode === 'white' ? '#FFFFFF' : '#E0E8F0');
-                         p += `**1. Nền:** Màu ${c}. Masking tóc hoàn hảo. `;
-                     }
-                     if (s.outfit.mode === 'upload') p += `**2. Trang phục:** Thay bằng bộ đồ ở ảnh 2. `;
-                     else if (!s.outfit.keepOriginal) p += `**2. Trang phục:** Thay thành "${s.outfit.mode === 'preset' ? s.outfit.preset : s.outfit.customPrompt}". `;
+                     let p = `**NHIỆM VỤ:** Tạo ảnh thẻ chuyên nghiệp (ID Photo). Cắt lấy phần đầu và vai chuẩn thẻ. `;
                      
-                     if (s.face.hairStyle !== 'keep_original') p += `**3. Tóc:** Thay đổi thành "${s.face.hairStyle}". Giữ ngũ quan. `;
-                     else p += `**3. Tóc:** Giữ nguyên. `;
-                     if (s.face.smoothSkin) p += `Làm mịn da. `;
+                     // 1. NỀN
+                     if (s.background.mode === 'ai' && s.background.customPrompt) {
+                         p += `**1. NỀN:** AI Background: "${s.background.customPrompt}". Bokeh nhẹ. `;
+                     } else {
+                         const c = s.background.mode === 'custom' ? s.background.customColor : (s.background.mode === 'white' ? '#FFFFFF' : '#E0E8F0');
+                         p += `**1. NỀN:** Màu đơn sắc ${c}. Tách nền sạch sẽ, không lem tóc. `;
+                     }
+
+                     // 2. TRANG PHỤC
+                     if (s.outfit.mode === 'upload') {
+                         p += `**2. TRANG PHỤC:** Thay bằng bộ đồ ở ảnh tham chiếu thứ 2. Giữ cấu trúc cơ thể tự nhiên. `;
+                     } else if (!s.outfit.keepOriginal) {
+                         const outfitName = s.outfit.mode === 'preset' ? s.outfit.preset : s.outfit.customPrompt;
+                         p += `**2. TRANG PHỤC:** Thay thế toàn bộ trang phục gốc thành "${outfitName}". Đảm bảo cổ áo và vai cân đối, chuyên nghiệp. `;
+                     }
+                     
+                     // 3. TÓC & GƯƠNG MẶT (Phần quan trọng nhất)
+                     p += `**3. GƯƠNG MẶT & TÓC:** `;
+                     p += `Giữ nguyên 100% đặc điểm nhận dạng khuôn mặt (mắt, mũi, miệng, dáng mặt). `;
+                     
+                     if (s.face.hairStyle !== 'keep_original') {
+                         let hairDesc = "";
+                         let action = "Thay đổi hoàn toàn kiểu tóc gốc.";
+                         
+                         if (s.face.hairStyle === 'auto') {
+                             hairDesc = "Tóc buộc gọn gàng ra sau, lộ rõ hai tai và trán, không để tóc che mặt, không để tóc xõa xuống vai.";
+                             action = "Xóa bỏ tóc cũ đang phủ trên vai. Vẽ lại phần cổ và vai bị tóc che. Tạo kiểu tóc mới:";
+                         } else if (s.face.hairStyle === 'slicked_back') {
+                             hairDesc = "Vuốt ngược gọn gàng (slicked back), lộ trán và tai.";
+                             action = "Xóa bỏ tóc cũ. Tạo kiểu tóc mới:";
+                         } else if (s.face.hairStyle === 'down') {
+                             hairDesc = "Tóc thả tự nhiên, suôn mượt, vén gọn sau tai.";
+                         } else {
+                             hairDesc = s.face.hairStyle;
+                         }
+                         
+                         p += `${action} "${hairDesc}". `;
+                     } else {
+                         p += `Giữ nguyên kiểu tóc gốc. `;
+                     }
+
+                     if (s.face.smoothSkin) p += `Làm mịn da nhẹ nhàng (giữ kết cấu da). `;
+                     if (s.face.slightSmile) p += `Điều chỉnh miệng cười mỉm nhẹ thân thiện. `;
+                     
                      return p;
                  };
 
                  const prompt = buildIdPhotoPrompt(settings);
                  const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
+                 
+                 // Nếu có upload trang phục, thêm vào parts
+                 if (payload.outfitImagePart) {
+                     parts.splice(1, 0, payload.outfitImagePart);
+                 }
+
                  let modelRatio = settings.aspectRatio === '5x5' ? '1:1' : '3:4';
 
                  const geminiRes = await ai.models.generateContent({
