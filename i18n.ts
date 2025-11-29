@@ -1,6 +1,7 @@
 
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
 
 // Vietnamese imports
 import viActionBar from './locales/vi/actionBar.js';
@@ -111,11 +112,19 @@ const resources = {
 };
 
 i18n
+  .use(LanguageDetector) // Detect user language
   .use(initReactI18next)
   .init({
     resources,
-    lng: 'vi', // default language
+    // lng: 'vi', // Removed to allow auto-detection.
     fallbackLng: 'vi',
+    detection: {
+      order: ['querystring', 'cookie', 'localStorage', 'navigator', 'htmlTag'],
+      lookupQuerystring: 'lang',
+      lookupCookie: 'i18next',
+      lookupLocalStorage: 'i18nextLng',
+      caches: ['localStorage', 'cookie'],
+    },
     interpolation: {
       escapeValue: false // react already safes from xss
     }
