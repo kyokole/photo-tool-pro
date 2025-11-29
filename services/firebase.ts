@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, doc, runTransaction } from "firebase/firestore";
 import type { FirebaseApp } from "firebase/app";
 import type { Auth } from "firebase/auth";
 import type { Firestore } from "firebase/firestore";
@@ -69,4 +69,74 @@ export const getAuthInstance = (): Auth => {
 export const getDbInstance = (): Firestore => {
     if (!db) throw new Error("Firestore is not initialized. Call initializeFirebase() first.");
     return db;
+};
+
+/**
+ * Trừ credit của người dùng hiện tại (Client-side Transaction)
+ * Đảm bảo tính nhất quán và cập nhật UI ngay lập tức.
+ */
+export const deductUserCredits = async (cost: number): Promise<void> => {
+    if (!auth?.currentUser || !db) return; 
+    const userRef = doc(db, "users", auth.currentUser.uid);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) {
+                throw new Error("User document does not exist!");
+            }
+
+            const userData = userDoc.data();
+            const currentCredits = userData.credits || 0;
+            
+            // Kiểm tra VIP/Admin
+            const isAdmin = userData.isAdmin === true;
+            const expiryDate = new Date(userData.subscriptionEndDate || 0);
+            const isVip = isAdmin || (expiryDate > new Date());
+
+            if (isVip) {
+                return; // VIP không bị trừ
+            }
+
+            if (currentCredits < cost) {
+                throw new Error("INSUFFICIENT_CREDITS");
+            }
+
+            transaction.update(userRef, { credits: currentCredits - cost });
+        });
+    } catch (e: any) {
+        console.error("Credit deduction failed:", e);
+        throw e;
+    }
+};
+
+/**
+ * Hoàn tiền credit cho người dùng (Sử dụng khi API lỗi)
+ * Đây là logic "Optimistic UI Rollback" quan trọng.
+ */
+export const refundUserCredits = async (amount: number): Promise<void> => {
+    if (!auth?.currentUser || !db) return;
+    const userRef = doc(db, "users", auth.currentUser.uid);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists()) return;
+
+            const userData = userDoc.data();
+            // Chỉ hoàn tiền nếu không phải VIP (vì VIP không bị trừ lúc đầu)
+            const isAdmin = userData.isAdmin === true;
+            const expiryDate = new Date(userData.subscriptionEndDate || 0);
+            const isVip = isAdmin || (expiryDate > new Date());
+
+            if (!isVip) {
+                const currentCredits = userData.credits || 0;
+                transaction.update(userRef, { credits: currentCredits + amount });
+                console.log(`[Billing System] Refunded ${amount} credits due to generation failure.`);
+            }
+        });
+    } catch (e) {
+        console.error("FATAL: Failed to refund credits:", e);
+        // Lỗi hoàn tiền là lỗi nghiêm trọng, nên log lại để xử lý thủ công nếu cần
+    }
 };
