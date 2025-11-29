@@ -1,3 +1,4 @@
+
 export default {
   "sidebar": {
     "mainTitle": "AI PHOTO SUITE",
@@ -43,7 +44,7 @@ export default {
     "status": {
       "admin": "Administrator",
       "vip": "VIP Member",
-      "member": "Member"
+      "member": "Standard Plan"
     }
   }
 }
