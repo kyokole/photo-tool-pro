@@ -44,7 +44,7 @@ export default {
     "status": {
       "admin": "Quản trị viên",
       "vip": "Thành viên VIP",
-      "member": "Thành viên"
+      "member": "Gói Tiêu Chuẩn"
     }
   }
 }

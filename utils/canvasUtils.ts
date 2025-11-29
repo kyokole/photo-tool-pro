@@ -209,8 +209,9 @@ const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, wi
 };
 
 /**
- * Draws image with crop fit (cover) inside the destination rect.
- * This ensures the photo fills the ID card slot completely, cropping excess edges.
+ * Draws image with "Smart Cover" crop logic inside the destination rect.
+ * FIX: Adjusted vertical alignment to prioritize the top part of the image (faces)
+ * when cropping portrait images into square or shorter aspect ratios.
  */
 const drawImageWithCrop = (
     ctx: CanvasRenderingContext2D,
@@ -225,17 +226,23 @@ const drawImageWithCrop = (
     let sx, sy, sWidth, sHeight;
 
     if (sourceRatio > destRatio) {
-        // Source is wider than destination -> Crop width (left/right)
+        // Source is wider than destination -> Crop width (left/right) - Keep centered
         sHeight = img.height;
         sWidth = sHeight * destRatio;
         sx = (img.width - sWidth) / 2;
         sy = 0;
     } else {
         // Source is taller than destination -> Crop height (top/bottom)
+        // OLD LOGIC (Center Crop): sy = (img.height - sHeight) / 2;
+        // NEW LOGIC (Top-Bias Crop): Prioritize the top 20% to keep hair/forehead visible
         sWidth = img.width;
         sHeight = sWidth / destRatio;
         sx = 0;
-        sy = (img.height - sHeight) / 2;
+        
+        // Offset Y by 15-20% from the top instead of 50% (center)
+        // This effectively "pushes" the crop window up.
+        const topBias = 0.15; // 15% from top
+        sy = (img.height - sHeight) * topBias;
     }
 
     ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
