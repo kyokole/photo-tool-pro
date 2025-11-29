@@ -238,7 +238,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
     const refImagePreview = useMemo(() => product.referenceImage ? URL.createObjectURL(product.referenceImage) : null, [product.referenceImage]);
 
     return (
-        <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 font-sans animate-fade-in h-full overflow-hidden">
+        <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 font-sans animate-fade-in h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
             <header className="w-full max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-6 flex-shrink-0">
                 <div />
                 <div className="text-center">
@@ -250,9 +250,9 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                 <div className="flex justify-end"><ThemeSelector currentTheme={theme} onChangeTheme={setTheme} /></div>
             </header>
 
-            <main className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-6 min-h-0 flex-1 overflow-hidden">
+            <main className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-6 min-h-0 flex-1 lg:overflow-hidden">
                 {/* Left Column: Inputs */}
-                <div className="flex flex-col gap-4 overflow-y-auto scrollbar-thin pr-2 pb-10">
+                <div className="flex flex-col gap-4 overflow-visible lg:overflow-y-auto scrollbar-thin pr-2 pb-10">
                     
                     {/* Section 1: Product Info */}
                     <div className="bg-[var(--bg-component)] p-5 rounded-xl border border-[var(--border-color)] shadow-lg">
@@ -438,7 +438,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                 </div>
 
                 {/* Right Column: Results */}
-                <div className="flex flex-col bg-[var(--bg-component)] rounded-xl border border-[var(--border-color)] overflow-hidden shadow-2xl">
+                <div className="flex flex-col bg-[var(--bg-component)] rounded-xl border border-[var(--border-color)] overflow-hidden shadow-2xl h-auto lg:h-full">
                      {/* Prompt Preview */}
                     <div className="p-4 bg-[var(--bg-interactive)] border-b border-[var(--border-color)]">
                         <div className="flex justify-between items-center mb-2">
@@ -468,7 +468,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                     </div>
 
                     {/* Content Area */}
-                    <div className="flex-1 p-6 relative flex flex-col">
+                    <div className="flex-1 p-6 relative flex flex-col min-h-[500px] lg:min-h-0">
                         {error && (
                             <div className="mb-4 bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm" role="alert">
                                 <strong className="font-bold">{t('common.error')}: </strong>
@@ -478,7 +478,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
                         {activeTab === 'image' && (
                             <div className="h-full flex flex-col items-center justify-center gap-6">
-                                <div className="flex-1 w-full flex items-center justify-center bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] overflow-hidden relative group shadow-inner">
+                                <div className="flex-1 w-full flex items-center justify-center bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] overflow-hidden relative group shadow-inner min-h-[300px]">
                                     {isLoading.image ? (
                                         <div className="text-center"><Spinner /><p className="mt-4 text-sm font-semibold animate-pulse text-[var(--accent-cyan)]">{t('marketingStudio.actions.generating')}</p></div>
                                     ) : result.generatedImageUrl ? (
@@ -501,7 +501,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
 
                         {activeTab === 'ad' && (
                             <div className="h-full flex flex-col gap-4">
-                                <div className="flex-1 bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] p-6 overflow-y-auto whitespace-pre-wrap relative shadow-inner text-[var(--text-primary)] leading-relaxed">
+                                <div className="flex-1 bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] p-6 overflow-y-auto whitespace-pre-wrap relative shadow-inner text-[var(--text-primary)] leading-relaxed min-h-[300px]">
                                     {isLoading.ad ? <div className="absolute inset-0 flex items-center justify-center"><Spinner /></div> : (result.adCopy || <span className="text-[var(--text-muted)] italic">{t('marketingStudio.results.adCopyPlaceholder')}</span>)}
                                 </div>
                                 <div className="flex gap-3">
@@ -528,19 +528,19 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                     </div>
                                 )}
 
-                                <div className="flex-1 bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] p-4 overflow-y-auto whitespace-pre-wrap relative flex flex-col shadow-inner">
+                                <div className="flex-1 bg-[var(--bg-deep-space)] rounded-xl border border-[var(--border-color)] p-4 overflow-y-auto whitespace-pre-wrap relative flex flex-col shadow-inner min-h-[400px]">
                                     {isLoading.video ? (
                                         <div className="absolute inset-0 flex items-center justify-center"><Spinner /></div>
                                     ) : (
                                         <>
-                                            <div className="flex-1 mb-4 overflow-y-auto max-h-[40%] border-b border-white/10 pb-4">
+                                            <div className="flex-1 mb-4 overflow-y-auto max-h-[40%] border-b border-white/10 pb-4 min-h-[150px]">
                                                 <h4 className="text-xs font-bold text-[var(--accent-cyan)] mb-2 uppercase tracking-wide">AI Script Idea:</h4>
                                                 <div className="text-sm text-[var(--text-primary)] leading-relaxed">
                                                     {result.videoScript || <span className="text-[var(--text-muted)] italic">{t('marketingStudio.results.videoScriptPlaceholder')}</span>}
                                                 </div>
                                             </div>
                                             
-                                            <div className="flex-1 flex flex-col items-center justify-center bg-black/40 rounded-lg relative overflow-hidden border border-white/5">
+                                            <div className="flex-1 flex flex-col items-center justify-center bg-black/40 rounded-lg relative overflow-hidden border border-white/5 min-h-[200px]">
                                                 {isLoading.videoRender ? (
                                                     <div className="text-center">
                                                         <Spinner />

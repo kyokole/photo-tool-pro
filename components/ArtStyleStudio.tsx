@@ -214,7 +214,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
     };
 
     return (
-        <div className="flex-1 flex flex-col font-sans animate-fade-in h-full">
+        <div className="flex-1 flex flex-col font-sans animate-fade-in h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
             <header className="w-full max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 pt-6 pb-2">
                 <div />
                 <div className="text-center">
@@ -226,10 +226,10 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
                 <div className="flex justify-end"><ThemeSelector currentTheme={theme} onChangeTheme={setTheme} /></div>
             </header>
 
-            <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-6 min-h-0">
+            <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-6 min-h-0 lg:overflow-hidden">
                 
                 {/* Left Panel: Inputs */}
-                <div className="flex flex-col gap-6 overflow-y-auto scrollbar-thin pr-2 pb-10">
+                <div className="flex flex-col gap-6 overflow-visible lg:overflow-y-auto scrollbar-thin pr-2 pb-10">
                     
                     {/* Upload Section */}
                     <div className="bg-[var(--bg-component)] p-5 rounded-2xl border border-[var(--border-color)] shadow-lg">
@@ -328,7 +328,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
                 </div>
 
                 {/* Right Panel: Preview */}
-                <div className="flex flex-col gap-4 h-full min-h-0">
+                <div className="flex flex-col gap-4 h-full min-h-[500px] lg:min-h-0">
                     <div className="flex-1 bg-[var(--bg-component)] rounded-2xl border border-[var(--border-color)] shadow-lg p-4 overflow-y-auto scrollbar-thin">
                         <div className="flex justify-between items-center mb-4 border-b border-[var(--border-color)] pb-2">
                             <h3 className="text-base font-bold text-[var(--text-primary)] uppercase tracking-wide">{t('artStyleStudio.previewSection')}</h3>
