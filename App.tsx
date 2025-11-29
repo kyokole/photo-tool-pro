@@ -186,15 +186,14 @@ const App: React.FC = () => {
     setEnabledWizardSections(['layout']);
     setIsAiCropped(false);
 
-    if (!isVip) {
-      setIsFreeTierLocked(true);
-    }
+    // Reset lock state. We will re-evaluate what to lock based on user status when file is loaded.
+    setIsFreeTierLocked(false);
 
     setIsPanelVisible(true);
     setIsBatchMode(false);
     setIdPhotoJobs([]);
     setIsBatchProcessing(false);
-  }, [isVip]);
+  }, []);
   
   const handleResetHeadshotTool = useCallback(() => {
     console.log("Resetting Headshot Generator tool state.");
@@ -465,15 +464,15 @@ const App: React.FC = () => {
       setProcessedImage(finalImage);
       setIsResultReady(true);
       
-      // If user is logged in (paid credits or VIP), enable panel fully.
-      // If Guest, panel remains locked or restricted.
+      // LOGIC LOCKING (Quan trọng):
+      // Nếu là GUEST (Chưa đăng nhập): Khóa Panel lại sau khi tạo để ngăn chỉnh sửa "chùa".
+      // Nếu là MEMBER (có login, dù là credit hay VIP): GIỮ Panel mở để họ chỉnh sửa tiếp (tạo lại sẽ tốn thêm credit nếu thay đổi settings).
       if (currentUser) {
           setIsFreeTierLocked(false); 
           setIsPanelVisible(true);
       } else {
-          // Guest mode: Result shown, maybe panel restricted.
+          // Guest mode: Result shown, lock inputs to force reload or login
           setIsPanelVisible(true); 
-          // Keep FreeTierLocked to true or handle restricted UI
           setIsFreeTierLocked(true); 
       }
 
@@ -539,12 +538,12 @@ const App: React.FC = () => {
             setIsAiCropped(false);
             setIsBatchMode(false);
             setOriginalImage(resizedDataUrl);
-            setIsFreeTierLocked(false); // Reset lock state initially, handled after gen
+            
+            // LOGIC FIX: Always unlock initially to allow setup.
+            // Restriction happens visually in ControlPanel for premium features (Guest)
+            // or at the Generate button (Credits).
+            setIsFreeTierLocked(false);
 
-            if (!isVip && !currentUser) {
-                // Guests also start locked or limited
-                // setIsPanelVisible(false); // Maybe? or let them adjust basic settings
-            }
         } catch (error) {
             console.error("Failed to resize image for ID Photo tool", error);
             setIdPhotoError(t('errors.fileProcessingError'));
@@ -706,19 +705,6 @@ const App: React.FC = () => {
             throw new Error(t('errors.fileConversionError'));
         }
 
-        // Pass 'highQuality' flag in the prompt or config. Since we can't change signature easily, 
-        // we rely on the backend detecting it from the payload structure if we were sending the object.
-        // But here we call generateHeadshot directly.
-        // We will update generateHeadshot to accept quality later or handle it here?
-        // Since we cannot modify `services/geminiService.ts` here (XML structure limitation for single response),
-        // we assume the backend handles the credit deduction based on what we send.
-        // However, `generateHeadshot` takes a prompt string. We append the quality flag to the prompt string 
-        // so the backend can parse it for logic, although `generateHeadshot` helper doesn't support options object yet.
-        // Backend `generateHeadshot` handler receives `payload`.
-        
-        // Actually, we can just call the API. The credit check happens in backend too.
-        // But for `generateHeadshot` specifically, the backend logic now calculates based on 4 images.
-        
         const generationPromises = Array(4).fill(0).map(() => 
             generateHeadshot(imagePart, style.prompt + (isHQ ? " [QUALITY: 4K]" : ""), abortControllerRef.current?.signal)
         );
@@ -1280,21 +1266,19 @@ const App: React.FC = () => {
     setActiveWizardSection('layout');
     setEnabledWizardSections(['layout']);
     setIsAiCropped(false);
-    if (!isVip) {
-      setIsFreeTierLocked(false);
-    }
-  }, [isVip]);
+    // Re-enable free tier unlock for setup
+    setIsFreeTierLocked(false);
+  }, []);
 
   const handleClearHistory = useCallback(() => {
     if (window.confirm(t('history.clearConfirmation'))) {
         setHistory([]);
         setProcessedImage(null);
         setIsResultReady(false);
-        if (!isVip) {
-          setIsFreeTierLocked(false);
-        }
+        // Re-enable free tier unlock for setup
+        setIsFreeTierLocked(false);
     }
-  }, [t, isVip]);
+  }, [t]);
 
   const handleOpenDonateModal = () => {
     setIsAboutModalVisible(false);
@@ -1400,6 +1384,7 @@ const App: React.FC = () => {
                       isVip={isVip}
                       isFreeTierLocked={isFreeTierLocked}
                       onContactClick={() => setIsAboutModalVisible(true)}
+                      currentUser={currentUser} // Pass currentUser here
                     />
                     <div className="mt-auto pt-4">
                         <button 

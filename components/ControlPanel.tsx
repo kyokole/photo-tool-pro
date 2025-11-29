@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Settings, AspectRatio, BackgroundMode, OutfitMode, HairStyle, PrintLayout, PaperBackground, AccordionSection } from '../types';
+import type { Settings, AspectRatio, BackgroundMode, OutfitMode, HairStyle, PrintLayout, PaperBackground, AccordionSection, User } from '../types';
 import { OUTFIT_PRESETS } from '../constants';
 import { getFixedCount } from '../utils/canvasUtils';
 
@@ -21,6 +21,7 @@ interface ControlPanelProps {
   isFreeTierLocked: boolean;
   onContactClick: () => void;
   title?: string;
+  currentUser?: User | null; // Added currentUser to determine lock state more granularly
 }
 
 const VipLockOverlay: React.FC<{ onContactClick: () => void }> = ({ onContactClick }) => {
@@ -31,6 +32,18 @@ const VipLockOverlay: React.FC<{ onContactClick: () => void }> = ({ onContactCli
             <p className="font-semibold text-yellow-300">{t('controlPanel.vipLock.title')}</p>
             <p className="text-xs text-gray-300 mb-4">{t('controlPanel.vipLock.description')}</p>
             <button onClick={onContactClick} className="btn-secondary text-sm py-1 px-3">{t('controlPanel.vipLock.button')}</button>
+        </div>
+    );
+};
+
+// Component for locking specific sub-features for guests
+const GuestLockOverlay: React.FC<{ title: string }> = ({ title }) => {
+    return (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-lg">
+            <div className="bg-black/80 px-3 py-1.5 rounded-full flex items-center gap-2 border border-yellow-500/30">
+                <i className="fas fa-crown text-yellow-400 text-xs"></i>
+                <span className="text-xs font-bold text-white uppercase tracking-wider">{title}</span>
+            </div>
         </div>
     );
 };
@@ -51,11 +64,19 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   isVip,
   isFreeTierLocked,
   onContactClick,
-  title
+  title,
+  currentUser
 }) => {
   const { t } = useTranslation();
   
-  const isLocked = !isVip && isFreeTierLocked;
+  // Logic Update:
+  // 1. isFreeTierLocked: Only true for GUESTS after generation to force reload/login.
+  // 2. isGuest: Checks if user is logged in.
+  const isGuest = !currentUser;
+  
+  // If isFreeTierLocked is true (post-generation guest), lock whole panel.
+  // If not locked, but is guest, lock specific premium features.
+  const isGlobalLocked = isFreeTierLocked; 
 
   if (!isVisible) {
     return null;
@@ -63,10 +84,10 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   
   const handleAspectRatioSelect = (ratio: AspectRatio) => {
       // After first generation, changing aspect ratio should not reset the image for non-vips
-      const changeHandler = (isLocked || hasProcessedImage) ? onPrintSettingChange : onDestructiveSettingChange;
+      const changeHandler = (isGlobalLocked || hasProcessedImage) ? onPrintSettingChange : onDestructiveSettingChange;
       changeHandler(prev => ({ ...prev, aspectRatio: ratio }));
       // Restore auto-advancing wizard for new images
-      if (!isLocked && !hasProcessedImage) {
+      if (!isGlobalLocked && !hasProcessedImage) {
         setActiveSection('background');
       }
   };
@@ -151,7 +172,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                             </button>
                         ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                    <div className="mt-4 pt-4 border-t border-[var(--border-color)] relative">
+                        {isGuest && <GuestLockOverlay title="VIP" />}
                         <div className="flex items-center space-x-2">
                             <input
                                 id="high_quality_id"
@@ -159,6 +181,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                                 checked={settings.highQuality || false}
                                 onChange={e => onDestructiveSettingChange(prev => ({...prev, highQuality: e.target.checked}))}
                                 className="form-checkbox"
+                                disabled={isGuest}
                             />
                             <label htmlFor="high_quality_id" className="text-sm font-semibold text-[var(--text-primary)]">
                                 {t('common.highQualityLabel')}
@@ -171,19 +194,24 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
             );
         case 'background':
-             const handleBgChange = isLocked ? onPrintSettingChange : onDestructiveSettingChange;
+             const handleBgChange = isGlobalLocked ? onPrintSettingChange : onDestructiveSettingChange;
             return (
                 <div className="relative">
-                    {isLocked && <VipLockOverlay onContactClick={onContactClick} />}
-                    <div className={`space-y-4 animate-fade-in ${isLocked ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
+                    {isGlobalLocked && <VipLockOverlay onContactClick={onContactClick} />}
+                    <div className={`space-y-4 animate-fade-in ${isGlobalLocked ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
                         <div className="grid grid-cols-2 gap-2">
                             {(['light_blue', 'white', 'custom', 'ai'] as BackgroundMode[]).map(mode => (
-                                <button key={mode} onClick={() => {
-                                    handleBgChange(prev => ({...prev, background: { ...prev.background, mode: mode }}));
-                                    if (!isLocked) setActiveSection('outfit');
-                                }} className={getOptionButtonClass(settings.background.mode === mode)}>
-                                    {t(`controlPanel.background.buttons.${mode}`)}
-                                </button>
+                                <div key={mode} className="relative">
+                                    {/* Lock AI Background for Guests */}
+                                    {isGuest && mode === 'ai' && <GuestLockOverlay title="VIP" />}
+                                    <button onClick={() => {
+                                        if (isGuest && mode === 'ai') return;
+                                        handleBgChange(prev => ({...prev, background: { ...prev.background, mode: mode }}));
+                                        if (!isGlobalLocked) setActiveSection('outfit');
+                                    }} className={getOptionButtonClass(settings.background.mode === mode)}>
+                                        {t(`controlPanel.background.buttons.${mode}`)}
+                                    </button>
+                                </div>
                             ))}
                         </div>
                         {settings.background.mode === 'custom' && (
@@ -211,8 +239,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
             return (
                  <div className="relative">
-                    {isLocked && <VipLockOverlay onContactClick={onContactClick} />}
-                    <div className={`space-y-4 animate-fade-in ${isLocked ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
+                    {isGlobalLocked && <VipLockOverlay onContactClick={onContactClick} />}
+                    <div className={`space-y-4 animate-fade-in ${isGlobalLocked ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
                         <div className="flex items-center space-x-2">
                             <input id="keep_outfit" type="checkbox" checked={settings.outfit.keepOriginal} onChange={e => handleKeepOutfitToggle(e.target.checked)} className="form-checkbox" />
                             <label htmlFor="keep_outfit" className="text-sm">{t('controlPanel.outfit.keepOriginal')}</label>
@@ -221,9 +249,17 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                             <div className="animate-fade-in">
                                 <div className="flex border-b border-[var(--border-color)] mb-4">
                                     {(['preset', 'custom', 'upload'] as OutfitMode[]).map(mode => (
-                                        <button key={mode} onClick={() => handleOutfitModeChange(mode)} className={getOutfitTabClass(settings.outfit.mode === mode)}>
-                                            {t(`controlPanel.outfit.buttons.${mode}`)}
-                                        </button>
+                                        <div key={mode} className="flex-1 relative">
+                                            {/* Lock Custom and Upload for Guests */}
+                                            {isGuest && (mode === 'custom' || mode === 'upload') && (
+                                                <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center cursor-not-allowed">
+                                                    <i className="fas fa-lock text-xs text-white/70"></i>
+                                                </div>
+                                            )}
+                                            <button onClick={() => handleOutfitModeChange(mode)} className={`w-full ${getOutfitTabClass(settings.outfit.mode === mode)}`} disabled={isGuest && (mode === 'custom' || mode === 'upload')}>
+                                                {t(`controlPanel.outfit.buttons.${mode}`)}
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
 
@@ -291,11 +327,13 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         case 'face':
             return (
                   <div className="relative">
-                      {isLocked && <VipLockOverlay onContactClick={onContactClick} />}
-                      <div className={`space-y-4 animate-fade-in ${isLocked ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
-                        <div className="p-2 rounded-md bg-blue-900/30 border border-blue-500/50">
+                      {isGlobalLocked && <VipLockOverlay onContactClick={onContactClick} />}
+                      <div className={`space-y-4 animate-fade-in ${isGlobalLocked ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
+                        <div className="p-2 rounded-md bg-blue-900/30 border border-blue-500/50 relative">
+                            {/* Lock Face Lock for Guests */}
+                            {isGuest && <GuestLockOverlay title="VIP" />}
                             <div className="flex items-center space-x-2">
-                                <input id="keep_features" type="checkbox" checked={settings.face.keepOriginalFeatures} onChange={e => handleNestedDestructiveChange('face', 'keepOriginalFeatures', e.target.checked)} className="form-checkbox" />
+                                <input id="keep_features" type="checkbox" checked={settings.face.keepOriginalFeatures} onChange={e => handleNestedDestructiveChange('face', 'keepOriginalFeatures', e.target.checked)} className="form-checkbox" disabled={isGuest} />
                                 <label htmlFor="keep_features" className="text-sm font-bold text-blue-300">{t('controlPanel.face.keepFeatures.label')}</label>
                             </div>
                             <p className="text-xs text-blue-400 mt-1 pl-6">{t('controlPanel.face.keepFeatures.description')}</p>
@@ -311,17 +349,21 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                         </div>
                         
                         <h4 className="text-sm font-semibold">{t('controlPanel.face.adjustments.title')}</h4>
-                        <div className="space-y-2">
+                        <div className="space-y-2 relative">
+                            {isGuest && <GuestLockOverlay title="VIP" />}
                             <div className="flex items-center space-x-2">
-                                <input id="smooth_skin" type="checkbox" checked={settings.face.smoothSkin} onChange={e => handleNestedDestructiveChange('face', 'smoothSkin', e.target.checked)} className="form-checkbox" />
+                                <input id="smooth_skin" type="checkbox" checked={settings.face.smoothSkin} onChange={e => handleNestedDestructiveChange('face', 'smoothSkin', e.target.checked)} className="form-checkbox" disabled={isGuest} />
                                 <label htmlFor="smooth_skin" className="text-sm">{t('controlPanel.face.adjustments.smoothSkin')}</label>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <input id="slight_smile" type="checkbox" checked={settings.face.slightSmile} onChange={e => handleNestedDestructiveChange('face', 'slightSmile', e.target.checked)} className="form-checkbox" disabled={settings.face.keepOriginalFeatures} />
+                                <input id="slight_smile" type="checkbox" checked={settings.face.slightSmile} onChange={e => handleNestedDestructiveChange('face', 'slightSmile', e.target.checked)} className="form-checkbox" disabled={settings.face.keepOriginalFeatures || isGuest} />
                                 <label htmlFor="slight_smile" className={`text-sm ${settings.face.keepOriginalFeatures ? 'text-[var(--text-secondary)]' : ''}`}>{t('controlPanel.face.adjustments.slightSmile')}</label>
                             </div>
                         </div>
-                        <textarea value={settings.face.otherCustom} onChange={e => handleNestedDestructiveChange('face', 'otherCustom', e.target.value)} placeholder={t('controlPanel.face.otherPlaceholder')} className="w-full bg-black/20 text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={2}></textarea>
+                        <div className="relative">
+                             {isGuest && <GuestLockOverlay title="VIP" />}
+                             <textarea value={settings.face.otherCustom} onChange={e => handleNestedDestructiveChange('face', 'otherCustom', e.target.value)} placeholder={t('controlPanel.face.otherPlaceholder')} className="w-full bg-black/20 text-sm border border-white/20 rounded p-2 focus:ring-1 focus:ring-[var(--accent-blue)]" rows={2} disabled={isGuest}></textarea>
+                        </div>
                     </div>
                   </div>
             );
@@ -376,7 +418,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
 
         {/* Print Settings */}
-        <div className="p-4 border-t border-[var(--border-color)]">
+        <div className="p-4 border-t border-[var(--border-color)] relative">
+             {isGuest && hasProcessedImage && <GuestLockOverlay title="VIP" />}
              <h2 className="text-base font-semibold uppercase tracking-wider text-center mb-4 animated-gradient-text">{t('controlPanel.print.title')}</h2>
              <div className="space-y-3">
                  <div>
