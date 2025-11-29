@@ -285,6 +285,7 @@ const BeautyStudio: React.FC<BeautyStudioProps> = ({ theme, setTheme, isVip }) =
                         error={error}
                         onSave={handleSave}
                         canSave={!!currentBaseImage}
+                        onCameraCapture={handleImageUpload}
                     />
                 </div>
 

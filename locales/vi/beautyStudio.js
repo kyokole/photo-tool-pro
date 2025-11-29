@@ -1,11 +1,19 @@
-
 export default {
     "beautyStudio": {
         "title": "Studio Làm Đẹp",
         "subtitle": "Nâng tầm vẻ đẹp của bạn với Gương thần AI",
         "uploadPlaceholder": {
-            "title": "Tải ảnh của bạn lên",
-            "description": "Chọn một bức ảnh chân dung rõ nét"
+            "title": "Bắt đầu sáng tạo",
+            "description": "Tải ảnh lên hoặc chụp ảnh selfie",
+            "uploadBtn": "Tải ảnh lên",
+            "cameraBtn": "Chụp ảnh ngay"
+        },
+        "camera": {
+            "title": "Chụp ảnh",
+            "switch": "Đổi Camera",
+            "capture": "Chụp",
+            "cancel": "Hủy",
+            "error": "Không thể truy cập camera. Vui lòng kiểm tra quyền."
         },
         "history": {
             "title": "Lịch sử tạo ảnh",

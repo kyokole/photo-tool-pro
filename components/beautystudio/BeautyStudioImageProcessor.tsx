@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BeforeAfterSlider } from '../BeforeAfterSlider';
+import { CameraModal } from './CameraModal';
 
 interface ImageProcessorProps {
   originalUpload: string | null;
@@ -11,12 +12,20 @@ interface ImageProcessorProps {
   error: string | null;
   onSave: () => void;
   canSave: boolean;
+  onCameraCapture: (imageData: string) => void;
 }
 
 // --- Icons ---
 const UploadIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-[var(--text-muted)] mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+    </svg>
+);
+
+const CameraIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
 
@@ -85,7 +94,7 @@ const ActionControls: React.FC<{
     );
 };
 
-export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ originalUpload, currentImage, previewImage, onUploadClick, isLoading, error, onSave, canSave }) => {
+export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ originalUpload, currentImage, previewImage, onUploadClick, isLoading, error, onSave, canSave, onCameraCapture }) => {
   const { t } = useTranslation();
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState<number>(3/4);
@@ -94,6 +103,7 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const isPanning = useRef(false);
   const lastPanPoint = useRef({ x: 0, y: 0 });
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   useEffect(() => {
     const imageToMeasure = previewImage || currentImage || originalUpload;
@@ -152,13 +162,31 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
       {isLoading && <Loader />}
 
       {!originalUpload && (
-        <div
-            onClick={onUploadClick}
-            className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-[var(--border-color)] rounded-lg h-full w-full cursor-pointer hover:border-[var(--accent-cyan)] hover:bg-[var(--bg-hover)] transition-colors"
-        >
-          <UploadIcon />
-          <h3 className="font-bold text-[var(--text-primary)]">{t('beautyStudio.uploadPlaceholder.title')}</h3>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">{t('beautyStudio.uploadPlaceholder.description')}</p>
+        <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-[var(--border-color)] rounded-lg h-full w-full bg-[var(--bg-interactive)]">
+            <h3 className="font-bold text-[var(--text-primary)] text-xl mb-1">{t('beautyStudio.uploadPlaceholder.title')}</h3>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{t('beautyStudio.uploadPlaceholder.description')}</p>
+            
+            <div className="flex gap-4">
+                <button
+                    onClick={onUploadClick}
+                    className="flex flex-col items-center justify-center w-32 h-32 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] rounded-xl transition-all duration-200 group border border-[var(--border-color)] hover:border-[var(--accent-cyan)]"
+                >
+                    <div className="mb-2 text-[var(--accent-cyan)] group-hover:scale-110 transition-transform">
+                        <UploadIcon />
+                    </div>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">{t('beautyStudio.uploadPlaceholder.uploadBtn')}</span>
+                </button>
+
+                <button
+                    onClick={() => setIsCameraOpen(true)}
+                    className="flex flex-col items-center justify-center w-32 h-32 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] rounded-xl transition-all duration-200 group border border-[var(--border-color)] hover:border-[var(--accent-cyan)]"
+                >
+                    <div className="mb-2 text-[var(--accent-cyan)] group-hover:scale-110 transition-transform">
+                        <CameraIcon />
+                    </div>
+                    <span className="text-xs font-semibold text-[var(--text-primary)]">{t('beautyStudio.uploadPlaceholder.cameraBtn')}</span>
+                </button>
+            </div>
         </div>
       )}
      
@@ -196,6 +224,12 @@ export const BeautyStudioImageProcessor: React.FC<ImageProcessorProps> = ({ orig
             />
          </div>
       )}
+      
+      <CameraModal 
+        isOpen={isCameraOpen} 
+        onClose={() => setIsCameraOpen(false)} 
+        onCapture={onCameraCapture}
+      />
     </div>
   );
 };

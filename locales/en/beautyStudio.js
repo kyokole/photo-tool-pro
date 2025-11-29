@@ -3,8 +3,17 @@ export default {
         "title": "Beauty Studio",
         "subtitle": "See your face change in 30 seconds with the AI magic mirror.",
         "uploadPlaceholder": {
-            "title": "Upload Your Photo",
-            "description": "Choose a clear portrait photo"
+            "title": "Start Creating",
+            "description": "Upload a photo or take a selfie",
+            "uploadBtn": "Upload Photo",
+            "cameraBtn": "Take Photo"
+        },
+        "camera": {
+            "title": "Take Photo",
+            "switch": "Switch Camera",
+            "capture": "Capture",
+            "cancel": "Cancel",
+            "error": "Cannot access camera. Please check permissions."
         },
         "history": {
             "title": "Creation History",
