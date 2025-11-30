@@ -54,9 +54,24 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
     const [error, setError] = useState<string | null>(null);
     
     // Audio Player State
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    
+    // Refs for Audio Control
+    const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+
+    // Cleanup audio on unmount
+    useEffect(() => {
+        return () => {
+            if (activeSourceRef.current) {
+                try { activeSourceRef.current.stop(); } catch(e) {}
+            }
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+            }
+        };
+    }, []);
 
     const handleSettingsChange = (key: keyof MusicSettings, value: any) => {
         setSettings(prev => ({ ...prev, [key]: value }));
@@ -68,8 +83,12 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
         setError(null);
         setSong(null);
         setAlbumArt(null);
-        setAudioUrl(null);
+        setAudioBuffer(null); // Reset audio buffer for new song
         setIsPlaying(false);
+        if (activeSourceRef.current) {
+            try { activeSourceRef.current.stop(); } catch(e) {}
+            activeSourceRef.current = null;
+        }
 
         try {
             // 1. Generate Lyrics & Structure
@@ -80,11 +99,9 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
             setIsArtLoading(true);
             try {
                 const artUrl = await generateAlbumArt(generatedSong.description);
-                // Fix: generateAlbumArt returns the string directly, no need to access .imageData
                 setAlbumArt(artUrl);
             } catch (artError) {
                 console.error("Failed to generate album art:", artError);
-                // Non-blocking error for art
             }
             setIsArtLoading(false);
 
@@ -97,51 +114,80 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
         }
     };
 
+    const playBuffer = (buffer: AudioBuffer) => {
+        // Initialize context if needed
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const ctx = audioContextRef.current;
+
+        // Stop previous source if any
+        if (activeSourceRef.current) {
+            try { activeSourceRef.current.stop(); } catch(e) {}
+        }
+
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        
+        activeSourceRef.current = source;
+        setIsPlaying(true);
+
+        source.onended = () => {
+            setIsPlaying(false);
+            activeSourceRef.current = null;
+        };
+    };
+
     const handlePlayDemo = async () => {
         if (!song) return;
-        if (audioUrl) {
-            // Toggle existing audio
-            if (audioRef.current) {
-                // Not implemented: simple toggle logic for HTML5 Audio if we had a URL
-                // Since we use AudioContext below, we just replay for now as simple demo
+
+        // CASE 1: Playing -> STOP
+        if (isPlaying) {
+            if (activeSourceRef.current) {
+                try { activeSourceRef.current.stop(); } catch(e) {}
+                activeSourceRef.current = null;
             }
+            setIsPlaying(false);
             return;
         }
 
-        // Generate Audio if not exists
+        // CASE 2: Not Playing + Has Buffer -> REPLAY (FREE)
+        if (audioBuffer) {
+            playBuffer(audioBuffer);
+            return;
+        }
+
+        // CASE 3: Not Playing + No Buffer -> GENERATE (COSTS CREDITS)
         setIsLoading(true);
         try {
-            // Use Gemini TTS to read the lyrics rhythmically
             const prompt = `[Style: ${song.stylePrompt}] \n\n ${song.lyrics}`;
+            // Use standard speed 1.0 for demo
             const base64Audio = await generateSpeech(prompt, 'hanoi_female_26', settings.language, undefined, 1.0); 
             
-            // Decode Base64 to ArrayBuffer
+            // Decode Base64
             const binaryString = atob(base64Audio);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
             for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
             
-            // Decode Audio Data
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            
-            // Convert Raw PCM (int16) to AudioBuffer if necessary, or decode if standard format
-            // Assuming generateSpeech returns Raw PCM (from previous context), we need manual decoding
-            // Reuse logic from VoiceStudio:
+            // Decode PCM to AudioBuffer
             const int16Data = new Int16Array(bytes.buffer);
             const float32Data = new Float32Array(int16Data.length);
             for (let i = 0; i < int16Data.length; i++) {
                 float32Data[i] = int16Data[i] / 32768.0;
             }
-            const audioBuffer = ctx.createBuffer(1, float32Data.length, 24000); // 24kHz standard
-            audioBuffer.copyToChannel(float32Data, 0);
 
-            // Play
-            const source = ctx.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(ctx.destination);
-            source.start(0);
-            setIsPlaying(true);
-            source.onended = () => setIsPlaying(false);
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            const ctx = audioContextRef.current;
+            const newBuffer = ctx.createBuffer(1, float32Data.length, 24000); // 24kHz standard
+            newBuffer.copyToChannel(float32Data, 0);
+
+            setAudioBuffer(newBuffer); // CACHE IT!
+            playBuffer(newBuffer);
             
         } catch (e: any) {
             console.error(e);
@@ -250,15 +296,26 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
                                     <div className="flex gap-3 justify-center md:justify-start mt-4">
                                         <button 
                                             onClick={handlePlayDemo}
-                                            className="px-6 py-2 rounded-full btn-gradient text-white font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                                            disabled={isLoading}
+                                            className={`px-6 py-2 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform ${isPlaying ? 'bg-red-600 hover:bg-red-700 text-white' : 'btn-gradient text-white'}`}
                                         >
-                                            {isPlaying ? <i className="fas fa-stop"></i> : <i className="fas fa-play"></i>}
-                                            {t('musicStudio.actions.playDemo')}
+                                            {isLoading ? (
+                                                <><i className="fas fa-circle-notch fa-spin"></i> {t('common.processing')}</>
+                                            ) : isPlaying ? (
+                                                <><i className="fas fa-stop"></i> Dừng</>
+                                            ) : (
+                                                <><i className="fas fa-play"></i> {audioBuffer ? "Phát lại" : t('musicStudio.actions.playDemo')}</>
+                                            )}
                                         </button>
                                         <button onClick={downloadAssets} className="px-4 py-2 rounded-full bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-white transition-colors">
                                             <i className="fas fa-download"></i>
                                         </button>
                                     </div>
+                                    {!audioBuffer && !isLoading && !isPlaying && (
+                                        <p className="text-xs text-[var(--text-secondary)] mt-1">
+                                            *Nhấn lần đầu sẽ tốn Credit để tạo giọng đọc. Các lần nghe sau miễn phí.
+                                        </p>
+                                    )}
                                     {isArtLoading && <p className="text-xs text-[var(--accent-cyan)] animate-pulse mt-2">{t('musicStudio.status.generatingArt')}</p>}
                                 </div>
                             </div>
