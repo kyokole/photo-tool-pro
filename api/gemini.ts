@@ -221,54 +221,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { text, voiceId, language } = payload;
             
             // Map our internal voiceId to Gemini's prebuilt voices
-            // Gemini currently supports: Puck, Charon, Kore, Fenrir, Zephyr
-            // MAPPING STRATEGY: 
-            // - Male News/Formal -> Zephyr
+            // Gemini currently supports: Puck (Male), Charon (Male), Kore (Female), Fenrir (Male), Zephyr (Male), Aoede (Female)
+            // CORRECT MAPPING STRATEGY TO FIX GENDER ISSUES:
+            // - Male News/Energetic -> Zephyr
             // - Male Deep/Story -> Fenrir or Charon
-            // - Female Soft -> Puck (Sometimes Puck sounds neutral/soft) or Kore (Female)
+            // - Female Soft/Story -> Aoede (Priority) or Kore
             // - Female Energetic -> Kore
+            // - Kids -> Puck (Male child), Aoede (Female child)
             
             const voiceMap: Record<string, string> = {
                 // North
                 'north_male_hanoi_news': 'Zephyr',
-                'north_female_hanoi_soft': 'Puck',
+                'north_female_hanoi_soft': 'Aoede', // Changed from Puck to Aoede for female
                 'north_male_haiphong': 'Fenrir',
-                'north_female_bacninh': 'Kore',
-                'north_female_thaibinh_story': 'Kore', // Soft
-                'north_male_namdinh_pod': 'Charon',    // Deep
+                'north_female_bacninh': 'Aoede', // Changed from Kore/Puck
+                'north_female_thaibinh_story': 'Kore',
+                'north_male_namdinh_pod': 'Charon',
                 'north_male_quangninh': 'Fenrir',
-                'north_female_haiduong': 'Kore',
+                'north_female_haiduong': 'Aoede',
                 
                 // Central
                 'central_male_nghean_story': 'Charon', 
-                'central_female_hue': 'Kore',
+                'central_female_hue': 'Aoede', // Changed from Kore for softer tone
                 'central_male_danang': 'Zephyr',
-                'central_female_hatinh': 'Puck',
+                'central_female_hatinh': 'Aoede',
                 'central_male_quangbinh': 'Fenrir',
-                'central_female_binhdinh': 'Puck',
+                'central_female_binhdinh': 'Kore',
                 'central_male_quangtri': 'Fenrir',
 
                 // South
                 'south_male_saigon_vlog': 'Fenrir',
-                'south_female_saigon_chic': 'Puck',
+                'south_female_saigon_chic': 'Aoede', // Changed from Puck
                 'south_female_mekong': 'Kore', 
-                'south_female_vinhlong_story': 'Kore', 
+                'south_female_vinhlong_story': 'Aoede', 
                 'south_male_camau': 'Charon',
                 'south_male_bentre': 'Zephyr',
                 'south_female_dongthap': 'Kore',
                 'south_male_vungtau': 'Zephyr',
 
                 // Special (Ads/Kids)
-                'special_ad_male_promo': 'Zephyr', // Energetic
-                'special_ad_female_sales': 'Kore', // Energetic/Friendly
-                'special_kid_boy': 'Puck', // Higher pitch, softer
-                'special_kid_girl': 'Kore', // Soft female
+                'special_ad_male_promo': 'Zephyr', // High energy
+                'special_ad_female_sales': 'Kore', // High energy
+                'special_kid_boy': 'Puck', // Higher pitch male -> kid boy
+                'special_kid_girl': 'Aoede', // Soft female -> kid girl
 
                 // International
                 'us_male': 'Fenrir',
                 'us_female': 'Kore',
                 'uk_male': 'Charon',
-                'uk_female': 'Puck'
+                'uk_female': 'Puck' // Fallback or Aoede
             };
             
             const geminiVoiceName = voiceMap[voiceId] || 'Puck'; // Default fallback
