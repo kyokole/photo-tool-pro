@@ -573,6 +573,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                  return res.json({ imageData, similarityScores: [], debug: null });
              }
+             
+             // --- MUSIC STUDIO GENERATION ---
+             case 'generateSongContent': {
+                 const { topic, genre, mood, language } = payload;
+                 const prompt = `
+                 ACT AS A PROFESSIONAL SONGWRITER.
+                 Task: Write lyrics and metadata for a new song.
+                 Topic: ${topic}
+                 Genre: ${genre}
+                 Mood: ${mood}
+                 Language: ${language}
+                 
+                 OUTPUT FORMAT: JSON with keys: title, lyrics, chords, description, stylePrompt.
+                 - 'lyrics': Full lyrics with Verse/Chorus structure.
+                 - 'chords': Simple guitar chord progression (e.g. C - G - Am - F).
+                 - 'description': A detailed visual description for the Album Cover Art (e.g., "A neon-lit cyberpunk street with rain").
+                 - 'stylePrompt': A short description of the music style and rhythm for vocal synthesis (e.g., "Slow, emotional ballad, soft voice").
+                 `;
+                 
+                 const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts: [{ text: prompt }] },
+                    config: { responseMimeType: "application/json" }
+                 });
+                 
+                 return res.json(JSON.parse(geminiRes.text || '{}'));
+             }
+             
+             case 'generateAlbumArt': {
+                 const { description } = payload;
+                 const prompt = `[TASK] Album Cover Art. ${description}. [QUALITY] High resolution, artistic, vinyl style.`;
+                 
+                 const geminiRes = await ai.models.generateContent({
+                    model: selectedModel,
+                    contents: { parts: [{ text: prompt }] },
+                    config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, '2K', '1:1') }
+                 });
+                 const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                 return res.json({ imageData });
+             }
 
             // Text Actions
             case 'generateMarketingAdCopy': 

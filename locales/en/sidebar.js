@@ -28,7 +28,8 @@ export default {
     "fourSeasons": "Four Seasons Photo",
     "beautyStudio": "Beauty Studio",
     "familyStudio": "Family Photo Composite",
-    "voiceStudio": "AI Voice Studio"
+    "voiceStudio": "AI Voice Studio",
+    "musicStudio": "AI Music Studio"
   },
   "utilities": {
     "guide": "User Guide",

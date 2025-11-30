@@ -56,7 +56,8 @@ interface SidebarProps {
   onFamilyStudioClick: () => void;
   onMarketingStudioClick: () => void; 
   onArtStyleStudioClick: () => void;
-  onVoiceStudioClick: () => void; // New prop
+  onVoiceStudioClick: () => void;
+  onMusicStudioClick: () => void; // New prop
   onAdminPanelClick: () => void;
   onPresetSelect: (settings: Partial<Settings>) => void;
   onUndo: () => void;
@@ -86,6 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onMarketingStudioClick,
     onArtStyleStudioClick,
     onVoiceStudioClick,
+    onMusicStudioClick,
     onAdminPanelClick,
     onPresetSelect, 
     onUndo, 
@@ -291,6 +293,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
               <nav className="space-y-1 pb-2">
+                <button onClick={onMusicStudioClick} className={getToolButtonClasses('music_studio')}>
+                    <div className="w-5 h-5"><i className="fas fa-music"></i></div>
+                    <span>{t('tools.musicStudio')}</span>
+                </button>
                 <button onClick={onVoiceStudioClick} className={getToolButtonClasses('voice_studio')}>
                     <div className="w-5 h-5"><i className="fas fa-microphone-alt"></i></div>
                     <span>{t('tools.voiceStudio')}</span>

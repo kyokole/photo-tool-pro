@@ -1,3 +1,4 @@
+
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +38,8 @@ import HistoryPanel from './components/HistoryPanel';
 import FamilyStudio from './components/FamilyStudio';
 import MarketingStudio from './components/MarketingStudio';
 import ArtStyleStudio from './components/ArtStyleStudio'; 
-import VoiceStudio from './components/VoiceStudio'; // New import
+import VoiceStudio from './components/VoiceStudio'; 
+import MusicStudio from './components/MusicStudio'; // New import
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -270,6 +272,11 @@ const App: React.FC = () => {
     console.log("Resetting Voice Studio tool state.");
     handleAbort();
   }, []);
+  
+  const handleResetMusicStudioTool = useCallback(() => {
+    console.log("Resetting Music Studio tool state.");
+    handleAbort();
+  }, []);
 
 
   const resetAllTools = useCallback(() => {
@@ -286,8 +293,9 @@ const App: React.FC = () => {
     handleResetMarketingStudioTool();
     handleResetArtStyleStudioTool();
     handleResetVoiceStudioTool();
+    handleResetMusicStudioTool();
     setIsFreeTierLocked(false);
-  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool, handleResetVoiceStudioTool]);
+  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool, handleResetVoiceStudioTool, handleResetMusicStudioTool]);
 
   const handleModeChange = useCallback((newMode: AppMode) => {
     handleAbort();
@@ -363,7 +371,7 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio', 'voice_studio'];
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio', 'voice_studio', 'music_studio'];
                 // Beauty Studio is now VIP/Admin only access
                 const restrictedModes: AppMode[] = ['beauty_studio'];
 
@@ -1134,6 +1142,15 @@ const App: React.FC = () => {
         setIsAuthModalVisible(true);
     }
   };
+  
+  const handleMusicStudioSelect = () => {
+    if (currentUser) {
+        if (appMode !== 'music_studio') handleModeChange('music_studio');
+    } else {
+        setPostLoginRedirect('music_studio');
+        setIsAuthModalVisible(true);
+    }
+  };
 
   const handleAdminPanelSelect = () => {
     if (currentUser?.isAdmin) {
@@ -1527,6 +1544,8 @@ const App: React.FC = () => {
           return <ArtStyleStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'voice_studio':
           return <VoiceStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+      case 'music_studio':
+          return <MusicStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1612,6 +1631,7 @@ const App: React.FC = () => {
         onMarketingStudioClick={handleMarketingStudioSelect}
         onArtStyleStudioClick={handleArtStyleStudioSelect}
         onVoiceStudioClick={handleVoiceStudioSelect}
+        onMusicStudioClick={handleMusicStudioSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
         onUndo={handleUndo}

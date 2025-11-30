@@ -2,7 +2,7 @@
 // FIX: Import React to provide the 'React' namespace for React.ReactNode.
 import React from 'react';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio' | 'music_studio';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';
@@ -503,6 +503,28 @@ export interface VoiceStudioSettings {
     voiceId: string;
     language: 'vi' | 'en';
     speed: number; // Added speed property
+}
+
+// --- MUSIC STUDIO TYPES (NEW) ---
+export interface MusicSettings {
+    topic: string;
+    genre: string;
+    mood: string;
+    language: 'vi' | 'en';
+}
+
+export interface SongStructure {
+    title: string;
+    lyrics: string;
+    chords: string; // Text representation of chords
+    description: string; // Visual description for cover art
+    stylePrompt: string; // Musical style description
+}
+
+export interface MusicResult {
+    song: SongStructure;
+    coverArtUrl: string | null;
+    demoAudioUrl: string | null; // Base64 audio from TTS reading lyrics
 }
 
 // LayoutResult moved here to prevent circular dependency

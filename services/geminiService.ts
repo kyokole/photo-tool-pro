@@ -2,7 +2,7 @@
 // services/geminiService.ts
 import { getAuthInstance, getDbInstance, deductUserCredits, refundUserCredits } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings, FamilyStudioResult, MarketingProduct, MarketingSettings, MarketingResult, ArtStylePayload } from '../types';
+import type { Settings, FilePart, FashionStudioSettings, ThumbnailInputs, ThumbnailRatio, BatchAspectRatio, Scene, RestorationOptions, DocumentRestorationOptions, BeautyFeature, BeautySubFeature, BeautyStyle, SerializedFamilyStudioSettings, FamilyStudioResult, MarketingProduct, MarketingSettings, MarketingResult, ArtStylePayload, MusicSettings, SongStructure } from '../types';
 import { fileToBase64 } from '../utils/fileUtils';
 import { CREDIT_COSTS } from '../constants';
 
@@ -94,6 +94,8 @@ export const callGeminiApi = async (action: string, payload: any, creditCost: nu
         throw error;
     }
 };
+
+// ... (Existing exports for ID Photo, Headshot, etc.)
 
 // --- ID Photo Tool ---
 export const generateIdPhoto = async (originalImage: string, settings: Settings, signal?: AbortSignal, outfitImagePart?: FilePart): Promise<string> => {
@@ -380,8 +382,20 @@ export const generateVideoPrompt = async (userIdea: string, base64Image: string)
     return prompts;
 };
 
-// --- VOICE STUDIO (NEW) ---
+// --- VOICE STUDIO ---
 export const generateSpeech = async (text: string, voiceId: string, language: string, baseVoice?: string, speed?: number): Promise<string> => {
     const { audioData } = await callGeminiApi('generateSpeech', { text, voiceId, language, baseVoice, speed }, CREDIT_COSTS.AUDIO_GENERATION);
     return audioData;
+};
+
+// --- MUSIC STUDIO (NEW) ---
+export const generateSongContent = async (settings: MusicSettings): Promise<SongStructure> => {
+    // Generate Lyrics, Chords, Description
+    return await callGeminiApi('generateSongContent', settings, 0); // Free for text
+};
+
+export const generateAlbumArt = async (description: string): Promise<string> => {
+    // Generate Image
+    const { imageData } = await callGeminiApi('generateAlbumArt', { description }, CREDIT_COSTS.MUSIC_GENERATION);
+    return imageData;
 };

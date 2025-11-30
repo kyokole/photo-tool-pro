@@ -10,9 +10,32 @@ export const CREDIT_COSTS = {
     STANDARD_IMAGE: 2,
     HIGH_QUALITY_IMAGE: 5,
     VIDEO_GENERATION: 10,
-    AUDIO_GENERATION: 2, // New cost for audio
+    AUDIO_GENERATION: 2, 
+    MUSIC_GENERATION: 5, // Includes Lyrics + Cover Art + Demo
 };
 
+// --- MUSIC STUDIO CONSTANTS ---
+export const MUSIC_GENRES = [
+    { id: 'pop_ballad', labelKey: 'musicStudio.genres.pop_ballad' },
+    { id: 'rnb_lofi', labelKey: 'musicStudio.genres.rnb_lofi' },
+    { id: 'rap_hiphop', labelKey: 'musicStudio.genres.rap_hiphop' },
+    { id: 'indie_chill', labelKey: 'musicStudio.genres.indie_chill' },
+    { id: 'edm_remix', labelKey: 'musicStudio.genres.edm_remix' },
+    { id: 'bolero', labelKey: 'musicStudio.genres.bolero' },
+    { id: 'rock', labelKey: 'musicStudio.genres.rock' },
+    { id: 'acoustic', labelKey: 'musicStudio.genres.acoustic' }
+];
+
+export const MUSIC_MOODS = [
+    { id: 'happy', labelKey: 'musicStudio.moods.happy', icon: '😊' },
+    { id: 'sad', labelKey: 'musicStudio.moods.sad', icon: '😢' },
+    { id: 'romantic', labelKey: 'musicStudio.moods.romantic', icon: '❤️' },
+    { id: 'energetic', labelKey: 'musicStudio.moods.energetic', icon: '🔥' },
+    { id: 'chill', labelKey: 'musicStudio.moods.chill', icon: '🍃' },
+    { id: 'epic', labelKey: 'musicStudio.moods.epic', icon: '⚔️' }
+];
+
+// ... (Rest of existing contents of constants.ts below this line) ...
 // --- VOICE STUDIO CONSTANTS ---
 
 export const VOICE_REGIONS = [

@@ -28,7 +28,8 @@ export default {
     "fourSeasons": "Ảnh 4 Mùa",
     "beautyStudio": "Studio Làm Đẹp",
     "familyStudio": "Ghép Ảnh Gia Đình",
-    "voiceStudio": "Studio Giọng Nói AI"
+    "voiceStudio": "Studio Giọng Nói AI",
+    "musicStudio": "Studio Âm Nhạc AI"
   },
   "utilities": {
     "guide": "Hướng dẫn sử dụng",
