@@ -27,6 +27,7 @@ import viHistory from './locales/vi/history.js';
 import viFamilyStudio from './locales/vi/familyStudio.js';
 import viMarketingStudio from './locales/vi/marketingStudio.js';
 import viArtStyleStudio from './locales/vi/artStyleStudio.js';
+import viVoiceStudio from './locales/vi/voiceStudio.js'; // Added
 
 // English imports
 import enActionBar from './locales/en/actionBar.js';
@@ -52,6 +53,7 @@ import enHistory from './locales/en/history.js';
 import enFamilyStudio from './locales/en/familyStudio.js';
 import enMarketingStudio from './locales/en/marketingStudio.js';
 import enArtStyleStudio from './locales/en/artStyleStudio.js';
+import enVoiceStudio from './locales/en/voiceStudio.js'; // Added
 
 
 const resources = {
@@ -79,7 +81,8 @@ const resources = {
       ...enHistory,
       ...enFamilyStudio,
       ...enMarketingStudio,
-      ...enArtStyleStudio
+      ...enArtStyleStudio,
+      ...enVoiceStudio // Added
     }
   },
   vi: {
@@ -106,7 +109,8 @@ const resources = {
       ...viHistory,
       ...viFamilyStudio,
       ...viMarketingStudio,
-      ...viArtStyleStudio
+      ...viArtStyleStudio,
+      ...viVoiceStudio // Added
     }
   }
 };

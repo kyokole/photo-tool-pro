@@ -27,7 +27,8 @@ export default {
     "promptAnalyzer": "Phân Tích Ảnh",
     "fourSeasons": "Ảnh 4 Mùa",
     "beautyStudio": "Studio Làm Đẹp",
-    "familyStudio": "Ghép Ảnh Gia Đình"
+    "familyStudio": "Ghép Ảnh Gia Đình",
+    "voiceStudio": "Studio Giọng Nói AI"
   },
   "utilities": {
     "guide": "Hướng dẫn sử dụng",

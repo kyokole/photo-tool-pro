@@ -1,3 +1,4 @@
+
 // services/geminiService.ts
 import { getAuthInstance, getDbInstance, deductUserCredits, refundUserCredits } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -73,7 +74,7 @@ export const callGeminiApi = async (action: string, payload: any, creditCost: nu
             try {
                 const errorData = JSON.parse(errorText);
                 errorMessage = errorData.error || JSON.stringify(errorData);
-            } catch (e) {}
+            } catch (e) { }
             throw new Error(errorMessage);
         }
 
@@ -377,4 +378,10 @@ export const getHotTrends = async (): Promise<string[]> => {
 export const generateVideoPrompt = async (userIdea: string, base64Image: string): Promise<{ englishPrompt: string, vietnamesePrompt: string }> => {
     const { prompts } = await callGeminiApi('generateVideoPrompt', { userIdea, base64Image }, 0);
     return prompts;
+};
+
+// --- VOICE STUDIO (NEW) ---
+export const generateSpeech = async (text: string, voiceId: string, language: string): Promise<string> => {
+    const { audioData } = await callGeminiApi('generateSpeech', { text, voiceId, language }, CREDIT_COSTS.AUDIO_GENERATION);
+    return audioData;
 };

@@ -27,7 +27,8 @@ export default {
     "promptAnalyzer": "Image Analyzer",
     "fourSeasons": "Four Seasons Photo",
     "beautyStudio": "Beauty Studio",
-    "familyStudio": "Family Photo Composite"
+    "familyStudio": "Family Photo Composite",
+    "voiceStudio": "AI Voice Studio"
   },
   "utilities": {
     "guide": "User Guide",

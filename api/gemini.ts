@@ -1,3 +1,4 @@
+
 // /api/gemini.ts
 import { GoogleGenAI, Modality, Part } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -10,6 +11,7 @@ const MODEL_PRO = 'gemini-3-pro-image-preview';
 const MODEL_FLASH = 'gemini-2.5-flash-image';
 const TEXT_MODEL = 'gemini-2.5-flash';
 const VEO_MODEL = 'veo-3.1-fast-generate-preview';
+const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 // --- INIT FIREBASE ADMIN ---
 let isFirebaseInitialized = false;
@@ -152,9 +154,19 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, 
     return config;
 };
 
-const getAi = (forVideo: boolean = false) => {
-    let apiKey = forVideo ? (process.env.VEO_API_KEY || process.env.GEMINI_API_KEY) : process.env.GEMINI_API_KEY;
-    if (!apiKey) apiKey = process.env.API_KEY;
+// HELPER: Get AI Client with Key Fallback
+const getAi = (forVideo: boolean = false, forAudio: boolean = false) => {
+    let apiKey;
+    if (forVideo) {
+        apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY;
+    } else if (forAudio) {
+        // Fallback logic for Audio: Try Video key first, then General key
+        apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY;
+    } else {
+        apiKey = process.env.GEMINI_API_KEY;
+    }
+    
+    if (!apiKey) apiKey = process.env.API_KEY; // Final fallback
     if (!apiKey) throw new Error("Server API Key missing.");
     return new GoogleGenAI({ apiKey });
 };
@@ -202,6 +214,72 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         // --- GỌI AI API ---
+        
+        // Voice Studio Handler
+        if (action === 'generateSpeech') {
+            const ai = getAi(false, true); // Use logic for audio key fallback
+            const { text, voiceId, language } = payload;
+            
+            // Map our internal voiceId to Gemini's prebuilt voices
+            // Gemini currently supports: Puck, Charon, Kore, Fenrir, Zephyr
+            // MAPPING STRATEGY: 
+            // - Male News/Formal -> Zephyr
+            // - Male Deep/Story -> Fenrir or Charon
+            // - Female Soft -> Puck (Sometimes Puck sounds neutral/soft) or Kore (Female)
+            // - Female Energetic -> Kore
+            
+            const voiceMap: Record<string, string> = {
+                // North
+                'north_male_hanoi_news': 'Zephyr',
+                'north_female_hanoi_soft': 'Puck',
+                'north_male_haiphong': 'Fenrir',
+                'north_female_bacninh': 'Kore',
+                'north_female_thaibinh_story': 'Kore', // New: Story reading (Soft/Expressive)
+                'north_male_namdinh_pod': 'Charon',    // New: Podcast (Deep)
+                
+                // Central
+                'central_male_nghean_story': 'Charon', // Deepest male voice for stories
+                'central_female_hue': 'Kore',
+                'central_male_danang': 'Zephyr',
+                'central_female_hatinh': 'Puck',
+                'central_male_quangbinh': 'Fenrir',
+
+                // South
+                'south_male_saigon_vlog': 'Fenrir',
+                'south_female_saigon_chic': 'Puck',
+                'south_female_mekong': 'Kore', // Can Tho
+                'south_female_vinhlong_story': 'Kore', // New: Story reading
+                'south_male_camau': 'Charon',
+                'south_male_bentre': 'Zephyr', // New
+
+                // International
+                'us_male': 'Fenrir',
+                'us_female': 'Kore',
+                'uk_male': 'Charon', // Sound bit more formal
+                'uk_female': 'Puck'
+            };
+            
+            const geminiVoiceName = voiceMap[voiceId] || 'Puck'; // Default fallback
+
+            const response = await ai.models.generateContent({
+                model: TTS_MODEL,
+                contents: { parts: [{ text: text }] },
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: geminiVoiceName },
+                        },
+                    },
+                },
+            });
+
+            const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            if (!audioData) throw new Error("Không tạo được âm thanh.");
+            
+            return res.json({ audioData });
+        }
+
         if (action === 'generateVeoVideo') {
             const ai = getAi(true);
             const { base64Image, prompt } = payload;

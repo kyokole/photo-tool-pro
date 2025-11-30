@@ -1,17 +1,230 @@
 
 // ... existing imports
-import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption } from './types';
+import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption, VoiceOption } from './types';
 
 export * from './constants/familyStudioConstants';
+export * from './constants/footballConstants';
+export * from './constants/beautyStudioConstants';
+export * from './constants/creativeStudioConstants';
 
 export const CREDIT_COSTS = {
     STANDARD_IMAGE: 2,
     HIGH_QUALITY_IMAGE: 5,
     VIDEO_GENERATION: 10,
+    AUDIO_GENERATION: 2, // New cost for audio
 };
 
+// --- VOICE STUDIO CONSTANTS (Moved up to prevent circular reference issues with defaults) ---
+
+export const VOICE_REGIONS = [
+    { id: 'north', labelKey: 'voiceStudio.regions.north', icon: 'fas fa-landmark' },
+    { id: 'central', labelKey: 'voiceStudio.regions.central', icon: 'fas fa-umbrella-beach' },
+    { id: 'south', labelKey: 'voiceStudio.regions.south', icon: 'fas fa-water' },
+    { id: 'intl', labelKey: 'voiceStudio.regions.intl', icon: 'fas fa-globe' },
+];
+
+export const VOICE_OPTIONS: VoiceOption[] = [
+    // --- MIỀN BẮC (NORTH) ---
+    { 
+        id: 'north_male_hanoi_news', 
+        nameKey: 'voiceStudio.voices.north.hanoi_male_news', 
+        geminiVoice: 'Zephyr', 
+        gender: 'male', 
+        regionKey: 'north', 
+        icon: 'fas fa-newspaper',
+        provinceKey: 'hanoi'
+    },
+    { 
+        id: 'north_female_hanoi_soft', 
+        nameKey: 'voiceStudio.voices.north.hanoi_female_soft', 
+        geminiVoice: 'Puck', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-book-open',
+        provinceKey: 'hanoi'
+    },
+    { 
+        id: 'north_female_thaibinh_story', 
+        nameKey: 'voiceStudio.voices.north.thaibinh_female_story', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-book-reader',
+        provinceKey: 'thaibinh'
+    },
+    { 
+        id: 'north_male_haiphong', 
+        nameKey: 'voiceStudio.voices.north.haiphong_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'north', 
+        icon: 'fas fa-anchor',
+        provinceKey: 'haiphong'
+    },
+    { 
+        id: 'north_female_bacninh', 
+        nameKey: 'voiceStudio.voices.north.bacninh_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-music',
+        provinceKey: 'bacninh'
+    },
+    { 
+        id: 'north_male_namdinh_pod', 
+        nameKey: 'voiceStudio.voices.north.namdinh_male_pod', 
+        geminiVoice: 'Charon', 
+        gender: 'male', 
+        regionKey: 'north', 
+        icon: 'fas fa-microphone',
+        provinceKey: 'namdinh'
+    },
+
+    // --- MIỀN TRUNG (CENTRAL) ---
+    { 
+        id: 'central_male_nghean_story', 
+        nameKey: 'voiceStudio.voices.central.nghean_male_story', 
+        geminiVoice: 'Charon', 
+        gender: 'male', 
+        regionKey: 'central', 
+        icon: 'fas fa-book',
+        provinceKey: 'nghean'
+    },
+    { 
+        id: 'central_female_hue', 
+        nameKey: 'voiceStudio.voices.central.hue_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'central', 
+        icon: 'fas fa-leaf',
+        provinceKey: 'hue'
+    },
+    { 
+        id: 'central_male_danang', 
+        nameKey: 'voiceStudio.voices.central.danang_male', 
+        geminiVoice: 'Zephyr', 
+        gender: 'male', 
+        regionKey: 'central', 
+        icon: 'fas fa-building',
+        provinceKey: 'danang'
+    },
+    { 
+        id: 'central_female_hatinh', 
+        nameKey: 'voiceStudio.voices.central.hatinh_female', 
+        geminiVoice: 'Puck', 
+        gender: 'female', 
+        regionKey: 'central', 
+        icon: 'fas fa-seedling',
+        provinceKey: 'hatinh'
+    },
+    { 
+        id: 'central_male_quangbinh', 
+        nameKey: 'voiceStudio.voices.central.quangbinh_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'central', 
+        icon: 'fas fa-wind',
+        provinceKey: 'quangbinh'
+    },
+
+    // --- MIỀN NAM (SOUTH) ---
+    { 
+        id: 'south_male_saigon_vlog', 
+        nameKey: 'voiceStudio.voices.south.saigon_male_vlog', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'south', 
+        icon: 'fas fa-video',
+        provinceKey: 'saigon'
+    },
+    { 
+        id: 'south_female_saigon_chic', 
+        nameKey: 'voiceStudio.voices.south.saigon_female_chic', 
+        geminiVoice: 'Puck', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-cocktail',
+        provinceKey: 'saigon'
+    },
+    { 
+        id: 'south_female_vinhlong_story', 
+        nameKey: 'voiceStudio.voices.south.vinhlong_female_story', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-book-open',
+        provinceKey: 'vinhlong'
+    },
+    { 
+        id: 'south_female_mekong', 
+        nameKey: 'voiceStudio.voices.south.cantho_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-water',
+        provinceKey: 'cantho'
+    },
+    { 
+        id: 'south_male_camau', 
+        nameKey: 'voiceStudio.voices.south.camau_male', 
+        geminiVoice: 'Charon', 
+        gender: 'male', 
+        regionKey: 'south', 
+        icon: 'fas fa-tree',
+        provinceKey: 'camau'
+    },
+    { 
+        id: 'south_male_bentre', 
+        nameKey: 'voiceStudio.voices.south.bentre_male', 
+        geminiVoice: 'Zephyr', 
+        gender: 'male', 
+        regionKey: 'south', 
+        icon: 'fas fa-seedling',
+        provinceKey: 'bentre'
+    },
+
+    // --- QUỐC TẾ (INTERNATIONAL) ---
+    { 
+        id: 'us_male', 
+        nameKey: 'voiceStudio.voices.intl.us_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'intl', 
+        icon: 'fas fa-flag-usa',
+        provinceKey: 'us'
+    },
+    { 
+        id: 'us_female', 
+        nameKey: 'voiceStudio.voices.intl.us_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'intl', 
+        icon: 'fas fa-star',
+        provinceKey: 'us'
+    },
+    { 
+        id: 'uk_male', 
+        nameKey: 'voiceStudio.voices.intl.uk_male', 
+        geminiVoice: 'Charon', 
+        gender: 'male', 
+        regionKey: 'intl', 
+        icon: 'fas fa-crown',
+        provinceKey: 'uk'
+    },
+    { 
+        id: 'uk_female', 
+        nameKey: 'voiceStudio.voices.intl.uk_female', 
+        geminiVoice: 'Puck', 
+        gender: 'female', 
+        regionKey: 'intl', 
+        icon: 'fas fa-tea',
+        provinceKey: 'uk'
+    }
+];
+
+// --- OTHER CONSTANTS ---
+
 export const DEFAULT_SETTINGS: Settings = {
-// ... rest of the file remains exactly the same, I am just appending the CREDIT_COSTS at the top and keeping the rest.
   aspectRatio: '3x4',
   outfit: {
     mode: 'preset',

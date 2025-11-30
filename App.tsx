@@ -1,3 +1,4 @@
+
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +37,8 @@ import BeautyStudio from './components/BeautyStudio';
 import HistoryPanel from './components/HistoryPanel';
 import FamilyStudio from './components/FamilyStudio';
 import MarketingStudio from './components/MarketingStudio';
-import ArtStyleStudio from './components/ArtStyleStudio'; // New import
+import ArtStyleStudio from './components/ArtStyleStudio'; 
+import VoiceStudio from './components/VoiceStudio'; // New import
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -264,6 +266,11 @@ const App: React.FC = () => {
     console.log("Resetting Art Style Studio tool state.");
     handleAbort();
   }, []);
+  
+  const handleResetVoiceStudioTool = useCallback(() => {
+    console.log("Resetting Voice Studio tool state.");
+    handleAbort();
+  }, []);
 
 
   const resetAllTools = useCallback(() => {
@@ -279,8 +286,9 @@ const App: React.FC = () => {
     handleResetFamilyStudioTool();
     handleResetMarketingStudioTool();
     handleResetArtStyleStudioTool();
+    handleResetVoiceStudioTool();
     setIsFreeTierLocked(false);
-  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool]);
+  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool, handleResetVoiceStudioTool]);
 
   const handleModeChange = useCallback((newMode: AppMode) => {
     handleAbort();
@@ -356,7 +364,7 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio'];
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio', 'voice_studio'];
                 // Beauty Studio is now VIP/Admin only access
                 const restrictedModes: AppMode[] = ['beauty_studio'];
 
@@ -1118,6 +1126,15 @@ const App: React.FC = () => {
         setIsAuthModalVisible(true);
     }
   };
+  
+  const handleVoiceStudioSelect = () => {
+    if (currentUser) {
+        if (appMode !== 'voice_studio') handleModeChange('voice_studio');
+    } else {
+        setPostLoginRedirect('voice_studio');
+        setIsAuthModalVisible(true);
+    }
+  };
 
   const handleAdminPanelSelect = () => {
     if (currentUser?.isAdmin) {
@@ -1509,6 +1526,8 @@ const App: React.FC = () => {
           return <MarketingStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'art_style_studio':
           return <ArtStyleStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+      case 'voice_studio':
+          return <VoiceStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1593,6 +1612,7 @@ const App: React.FC = () => {
         onFamilyStudioClick={handleFamilyStudioSelect}
         onMarketingStudioClick={handleMarketingStudioSelect}
         onArtStyleStudioClick={handleArtStyleStudioSelect}
+        onVoiceStudioClick={handleVoiceStudioSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
         onUndo={handleUndo}

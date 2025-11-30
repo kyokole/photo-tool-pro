@@ -2,7 +2,7 @@
 // FIX: Import React to provide the 'React' namespace for React.ReactNode.
 import React from 'react';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';
@@ -485,6 +485,23 @@ export interface ArtStylePayload {
     aspect: string;
     count: number;
     userPrompt: string;
+}
+
+// --- VOICE STUDIO TYPES ---
+export interface VoiceOption {
+    id: string;
+    nameKey: string;
+    geminiVoice: string;
+    gender: 'male' | 'female';
+    regionKey: string; // north, central, south, intl
+    provinceKey?: string; // Optional: To distinguish provinces in UI
+    icon: string;
+}
+
+export interface VoiceStudioSettings {
+    text: string;
+    voiceId: string;
+    language: 'vi' | 'en';
 }
 
 // LayoutResult moved here to prevent circular dependency
