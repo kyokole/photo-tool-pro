@@ -1,5 +1,4 @@
 
-// ... existing imports
 import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption, VoiceOption } from './types';
 
 export * from './constants/familyStudioConstants';
@@ -20,305 +19,345 @@ export const VOICE_REGIONS = [
     { id: 'north', labelKey: 'voiceStudio.regions.north', icon: 'fas fa-landmark' },
     { id: 'central', labelKey: 'voiceStudio.regions.central', icon: 'fas fa-umbrella-beach' },
     { id: 'south', labelKey: 'voiceStudio.regions.south', icon: 'fas fa-water' },
-    { id: 'special', labelKey: 'voiceStudio.regions.special', icon: 'fas fa-star' }, // NEW REGION
+    { id: 'special', labelKey: 'voiceStudio.regions.special', icon: 'fas fa-star' }, 
     { id: 'intl', labelKey: 'voiceStudio.regions.intl', icon: 'fas fa-globe' },
 ];
 
-export const VOICE_OPTIONS: VoiceOption[] = [
+export const VOICE_OPTIONS: (VoiceOption & { stylePrompt: string })[] = [
     // --- MIỀN BẮC (NORTH) ---
     { 
-        id: 'north_male_hanoi_news', 
+        id: 'hanoi_female_26', 
+        nameKey: 'voiceStudio.voices.north.hanoi_female_26', 
+        geminiVoice: 'Aoede', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-book-open',
+        provinceKey: 'hanoi',
+        stylePrompt: "Đọc bằng giọng nữ Hà Nội chuẩn, rõ ràng, nhẹ nhàng, thanh lịch, giống một cô gái 26 tuổi có học thức, lịch sự và tự tin. Ngữ điệu mềm mại."
+    },
+    { 
+        id: 'hanoi_male_news', 
         nameKey: 'voiceStudio.voices.north.hanoi_male_news', 
         geminiVoice: 'Zephyr', 
         gender: 'male', 
         regionKey: 'north', 
         icon: 'fas fa-newspaper',
-        provinceKey: 'hanoi'
+        provinceKey: 'hanoi',
+        stylePrompt: "Đọc bằng giọng nam Hà Nội chuẩn, trầm ấm, đĩnh đạc, tròn vành rõ chữ, giống một phát thanh viên tin tức thời sự VTV, nghiêm túc và tin cậy."
     },
     { 
-        id: 'north_female_hanoi_soft', 
-        nameKey: 'voiceStudio.voices.north.hanoi_female_soft', 
-        geminiVoice: 'Aoede', 
-        gender: 'female', 
-        regionKey: 'north', 
-        icon: 'fas fa-book-open',
-        provinceKey: 'hanoi'
-    },
-    { 
-        id: 'north_male_quangninh', 
-        nameKey: 'voiceStudio.voices.north.quangninh_male', 
-        geminiVoice: 'Fenrir', 
-        gender: 'male', 
-        regionKey: 'north', 
-        icon: 'fas fa-mountain',
-        provinceKey: 'quangninh'
-    },
-    { 
-        id: 'north_female_haiduong', 
-        nameKey: 'voiceStudio.voices.north.haiduong_female', 
-        geminiVoice: 'Aoede', 
-        gender: 'female', 
-        regionKey: 'north', 
-        icon: 'fas fa-cookie-bite',
-        provinceKey: 'haiduong'
-    },
-    { 
-        id: 'north_female_thaibinh_story', 
-        nameKey: 'voiceStudio.voices.north.thaibinh_female_story', 
-        geminiVoice: 'Kore', 
-        gender: 'female', 
-        regionKey: 'north', 
-        icon: 'fas fa-book-reader',
-        provinceKey: 'thaibinh'
-    },
-    { 
-        id: 'north_male_haiphong', 
+        id: 'haiphong_male', 
         nameKey: 'voiceStudio.voices.north.haiphong_male', 
         geminiVoice: 'Fenrir', 
         gender: 'male', 
         regionKey: 'north', 
         icon: 'fas fa-anchor',
-        provinceKey: 'haiphong'
+        provinceKey: 'haiphong',
+        stylePrompt: "Đọc bằng giọng nam Hải Phòng, mạnh mẽ, phóng khoáng, hơi thô nhưng chân thật, ngữ điệu dứt khoát, to và rõ, đậm chất người vùng biển."
     },
     { 
-        id: 'north_female_bacninh', 
+        id: 'bacninh_female', 
         nameKey: 'voiceStudio.voices.north.bacninh_female', 
         geminiVoice: 'Aoede', 
         gender: 'female', 
         regionKey: 'north', 
         icon: 'fas fa-music',
-        provinceKey: 'bacninh'
+        provinceKey: 'bacninh',
+        stylePrompt: "Đọc bằng giọng nữ Bắc Ninh, ngọt ngào như hát quan họ, lúng liếng, duyên dáng, âm sắc mềm mại và có độ nảy hạt."
     },
     { 
-        id: 'north_male_namdinh_pod', 
+        id: 'thaibinh_female_story', 
+        nameKey: 'voiceStudio.voices.north.thaibinh_female_story', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-seedling',
+        provinceKey: 'thaibinh',
+        stylePrompt: "Đọc bằng giọng nữ Thái Bình, mộc mạc, chân chất, hơi trầm, nhịp độ chậm rãi, giống như đang kể chuyện tâm tình ở làng quê."
+    },
+    { 
+        id: 'namdinh_male', 
         nameKey: 'voiceStudio.voices.north.namdinh_male_pod', 
         geminiVoice: 'Charon', 
         gender: 'male', 
         regionKey: 'north', 
-        icon: 'fas fa-microphone',
-        provinceKey: 'namdinh'
+        icon: 'fas fa-church',
+        provinceKey: 'namdinh',
+        stylePrompt: "Đọc bằng giọng nam Nam Định, giọng hơi đanh, rõ ràng, thực tế, giống như một người dẫn chương trình Podcast đời sống."
+    },
+    { 
+        id: 'quangninh_male', 
+        nameKey: 'voiceStudio.voices.north.quangninh_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'north', 
+        icon: 'fas fa-mountain',
+        provinceKey: 'quangninh',
+        stylePrompt: "Đọc bằng giọng nam Quảng Ninh, khỏe khoắn, vui tươi, hào sảng, mang hơi thở của vùng mỏ và biển cả."
+    },
+    { 
+        id: 'haiduong_female', 
+        nameKey: 'voiceStudio.voices.north.haiduong_female', 
+        geminiVoice: 'Aoede', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-cookie',
+        provinceKey: 'haiduong',
+        stylePrompt: "Đọc bằng giọng nữ Hải Dương, nhẹ nhàng, bình dị, không quá điệu đà nhưng rất dễ nghe và thiện cảm."
     },
 
     // --- MIỀN TRUNG (CENTRAL) ---
     { 
-        id: 'central_male_nghean_story', 
-        nameKey: 'voiceStudio.voices.central.nghean_male_story', 
-        geminiVoice: 'Charon', 
-        gender: 'male', 
-        regionKey: 'central', 
-        icon: 'fas fa-book',
-        provinceKey: 'nghean'
-    },
-    { 
-        id: 'central_female_hue', 
+        id: 'hue_female', 
         nameKey: 'voiceStudio.voices.central.hue_female', 
         geminiVoice: 'Aoede', 
         gender: 'female', 
         regionKey: 'central', 
         icon: 'fas fa-leaf',
-        provinceKey: 'hue'
+        provinceKey: 'hue',
+        stylePrompt: "Đọc bằng giọng nữ Huế, rất nhẹ nhàng, ngọt ngào, sâu lắng, mang đậm chất Cố đô, âm sắc kéo dài dịu dàng (dạ, thưa)."
     },
     { 
-        id: 'central_male_danang', 
-        nameKey: 'voiceStudio.voices.central.danang_male', 
-        geminiVoice: 'Zephyr', 
+        id: 'nghean_male_story', 
+        nameKey: 'voiceStudio.voices.central.nghean_male_story', 
+        geminiVoice: 'Charon', 
         gender: 'male', 
         regionKey: 'central', 
-        icon: 'fas fa-building',
-        provinceKey: 'danang'
+        icon: 'fas fa-microphone',
+        provinceKey: 'nghean',
+        stylePrompt: "Đọc bằng giọng nam Nghệ An đặc trưng, trầm và nặng, chất phác, mộc mạc, phù hợp để đọc truyện đêm khuya hoặc tâm sự."
     },
     { 
-        id: 'central_female_binhdinh', 
-        nameKey: 'voiceStudio.voices.central.binhdinh_female', 
+        id: 'hatinh_female', 
+        nameKey: 'voiceStudio.voices.central.hatinh_female', 
         geminiVoice: 'Kore', 
         gender: 'female', 
         regionKey: 'central', 
-        icon: 'fas fa-swords', 
-        provinceKey: 'binhdinh'
+        icon: 'fas fa-sun',
+        provinceKey: 'hatinh',
+        stylePrompt: "Đọc bằng giọng nữ Hà Tĩnh, mộc mạc, chân thành, có chút nặng tình, ngữ điệu lên xuống đặc trưng của vùng 'chảo lửa túi mưa'."
     },
     { 
-        id: 'central_male_quangtri', 
-        nameKey: 'voiceStudio.voices.central.quangtri_male', 
-        geminiVoice: 'Fenrir', 
-        gender: 'male', 
-        regionKey: 'central', 
-        icon: 'fas fa-monument',
-        provinceKey: 'quangtri'
-    },
-    { 
-        id: 'central_female_hatinh', 
-        nameKey: 'voiceStudio.voices.central.hatinh_female', 
-        geminiVoice: 'Aoede', 
-        gender: 'female', 
-        regionKey: 'central', 
-        icon: 'fas fa-seedling',
-        provinceKey: 'hatinh'
-    },
-    { 
-        id: 'central_male_quangbinh', 
+        id: 'quangbinh_male', 
         nameKey: 'voiceStudio.voices.central.quangbinh_male', 
         geminiVoice: 'Fenrir', 
         gender: 'male', 
         regionKey: 'central', 
         icon: 'fas fa-wind',
-        provinceKey: 'quangbinh'
+        provinceKey: 'quangbinh',
+        stylePrompt: "Đọc bằng giọng nam Quảng Bình, rắn rỏi, mạnh mẽ như gió lào cát trắng, âm vực rộng và vang."
+    },
+    { 
+        id: 'danang_male', 
+        nameKey: 'voiceStudio.voices.central.danang_male', 
+        geminiVoice: 'Zephyr', 
+        gender: 'male', 
+        regionKey: 'central', 
+        icon: 'fas fa-building',
+        provinceKey: 'danang',
+        stylePrompt: "Đọc bằng giọng nam Đà Nẵng, sôi nổi, thân thiện, tốc độ vừa phải, ngữ điệu vui vẻ, cởi mở và hiện đại."
+    },
+    { 
+        id: 'quangtri_male', 
+        nameKey: 'voiceStudio.voices.central.quangtri_male', 
+        geminiVoice: 'Charon', 
+        gender: 'male', 
+        regionKey: 'central', 
+        icon: 'fas fa-history',
+        provinceKey: 'quangtri',
+        stylePrompt: "Đọc bằng giọng nam Quảng Trị, chân chất, thật thà, giọng nói đậm đà, mang nét khắc khổ nhưng kiên cường."
+    },
+    { 
+        id: 'binhdinh_female', 
+        nameKey: 'voiceStudio.voices.central.binhdinh_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'central', 
+        icon: 'fas fa-fist-raised',
+        provinceKey: 'binhdinh',
+        stylePrompt: "Đọc bằng giọng nữ Bình Định (xứ Nẫu), mạnh mẽ, nhanh nhẹn, dứt khoát như con nhà võ, nhưng vẫn có nét duyên dáng."
     },
 
     // --- MIỀN NAM (SOUTH) ---
     { 
-        id: 'south_male_saigon_vlog', 
+        id: 'saigon_female_20', 
+        nameKey: 'voiceStudio.voices.south.saigon_female_chic', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-cocktail',
+        provinceKey: 'saigon',
+        stylePrompt: "Đọc bằng giọng nữ Sài Gòn, ngọt ngào, dễ thương, hơi nũng nịu, sang chảnh, giống một cô gái 20 tuổi năng động và thời thượng."
+    },
+    { 
+        id: 'saigon_male_vlog', 
         nameKey: 'voiceStudio.voices.south.saigon_male_vlog', 
         geminiVoice: 'Fenrir', 
         gender: 'male', 
         regionKey: 'south', 
-        icon: 'fas fa-video',
-        provinceKey: 'saigon'
+        icon: 'fas fa-camera',
+        provinceKey: 'saigon',
+        stylePrompt: "Đọc bằng giọng nam Sài Gòn làm Vlog, phóng khoáng, tự tin, sảng khoái, tốc độ nhanh, hào hứng, lôi cuốn người nghe."
     },
     { 
-        id: 'south_female_saigon_chic', 
-        nameKey: 'voiceStudio.voices.south.saigon_female_chic', 
-        geminiVoice: 'Aoede', 
-        gender: 'female', 
-        regionKey: 'south', 
-        icon: 'fas fa-cocktail',
-        provinceKey: 'saigon'
-    },
-    { 
-        id: 'south_female_dongthap', 
-        nameKey: 'voiceStudio.voices.south.dongthap_female', 
-        geminiVoice: 'Kore', 
-        gender: 'female', 
-        regionKey: 'south', 
-        icon: 'fas fa-water', // Lotus/Water
-        provinceKey: 'dongthap'
-    },
-    { 
-        id: 'south_male_vungtau', 
-        nameKey: 'voiceStudio.voices.south.vungtau_male', 
-        geminiVoice: 'Zephyr', 
-        gender: 'male', 
-        regionKey: 'south', 
-        icon: 'fas fa-umbrella-beach',
-        provinceKey: 'vungtau'
-    },
-    { 
-        id: 'south_female_vinhlong_story', 
-        nameKey: 'voiceStudio.voices.south.vinhlong_female_story', 
-        geminiVoice: 'Aoede', 
-        gender: 'female', 
-        regionKey: 'south', 
-        icon: 'fas fa-book-open',
-        provinceKey: 'vinhlong'
-    },
-    { 
-        id: 'south_female_mekong', 
+        id: 'cantho_female', 
         nameKey: 'voiceStudio.voices.south.cantho_female', 
-        geminiVoice: 'Kore', 
+        geminiVoice: 'Aoede', 
         gender: 'female', 
         regionKey: 'south', 
         icon: 'fas fa-water',
-        provinceKey: 'cantho'
+        provinceKey: 'cantho',
+        stylePrompt: "Đọc bằng giọng con gái miền Tây (Cần Thơ), ngọt như mía lùi, êm ái, kéo dài âm cuối, nghe rất lọt tai và dịu dàng."
     },
     { 
-        id: 'south_male_camau', 
+        id: 'camau_male', 
         nameKey: 'voiceStudio.voices.south.camau_male', 
         geminiVoice: 'Charon', 
         gender: 'male', 
         regionKey: 'south', 
-        icon: 'fas fa-tree',
-        provinceKey: 'camau'
+        icon: 'fas fa-ship',
+        provinceKey: 'camau',
+        stylePrompt: "Đọc bằng giọng nam Cà Mau (đất mũi), hào sảng, chân chất, âm vực rộng, đậm chất sông nước miền Tây Nam Bộ."
     },
     { 
-        id: 'south_male_bentre', 
+        id: 'vinhlong_female_story', 
+        nameKey: 'voiceStudio.voices.south.vinhlong_female_story', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-book-reader',
+        provinceKey: 'vinhlong',
+        stylePrompt: "Đọc bằng giọng nữ Vĩnh Long kể chuyện đời xưa, chậm rãi, trầm ấm, có độ ngân nga, gợi cảm giác hoài cổ."
+    },
+    { 
+        id: 'bentre_male', 
         nameKey: 'voiceStudio.voices.south.bentre_male', 
         geminiVoice: 'Zephyr', 
         gender: 'male', 
         regionKey: 'south', 
-        icon: 'fas fa-seedling',
-        provinceKey: 'bentre'
+        icon: 'fas fa-tree',
+        provinceKey: 'bentre',
+        stylePrompt: "Đọc bằng giọng nam Bến Tre, hiền lành, thật thà, giọng nói đều đều, tạo cảm giác tin cậy và gần gũi."
+    },
+    { 
+        id: 'dongthap_female', 
+        nameKey: 'voiceStudio.voices.south.dongthap_female', 
+        geminiVoice: 'Aoede', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-spa',
+        provinceKey: 'dongthap',
+        stylePrompt: "Đọc bằng giọng nữ Đồng Tháp, nhẹ nhàng như hương sen, thanh thoát, mộc mạc nhưng tinh tế."
+    },
+    { 
+        id: 'vungtau_male', 
+        nameKey: 'voiceStudio.voices.south.vungtau_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'south', 
+        icon: 'fas fa-umbrella-beach',
+        provinceKey: 'vungtau',
+        stylePrompt: "Đọc bằng giọng nam Vũng Tàu, hiện đại, lai giữa giọng Sài Gòn và giọng biển, thoải mái và tự nhiên."
     },
 
-    // --- CHUYÊN BIỆT (SPECIAL: ADS, KIDS) ---
+    // --- CHUYÊN BIỆT (SPECIAL) ---
     { 
-        id: 'special_ad_male_promo', 
+        id: 'ad_male_promo', 
         nameKey: 'voiceStudio.voices.special.ad_male_promo', 
-        geminiVoice: 'Zephyr', 
+        geminiVoice: 'Fenrir', 
         gender: 'male', 
         regionKey: 'special', 
         icon: 'fas fa-bullhorn',
-        provinceKey: 'promo'
+        provinceKey: 'promo',
+        stylePrompt: "Đọc bằng giọng nam MC quảng cáo (TVC), năng lượng bùng nổ, dứt khoát, hào hứng, nhấn mạnh vào các từ khóa, thúc đẩy hành động."
     },
     { 
-        id: 'special_ad_female_sales', 
+        id: 'ad_female_sales', 
         nameKey: 'voiceStudio.voices.special.ad_female_sales', 
         geminiVoice: 'Kore', 
         gender: 'female', 
         regionKey: 'special', 
         icon: 'fas fa-shopping-bag',
-        provinceKey: 'promo'
+        provinceKey: 'promo',
+        stylePrompt: "Đọc bằng giọng nữ Livestream bán hàng, nhanh, liến thoắng, vui vẻ, thân thiện, kêu gọi chốt đơn liên tục."
     },
     { 
-        id: 'special_kid_boy', 
+        id: 'story_male_old', 
+        nameKey: 'voiceStudio.voices.special.story_male_old', 
+        geminiVoice: 'Charon', 
+        gender: 'male', 
+        regionKey: 'special', 
+        icon: 'fas fa-book',
+        provinceKey: 'promo',
+        stylePrompt: "Đọc bằng giọng nam già, trầm, khàn, chậm rãi, giống như một người ông đang kể chuyện cổ tích cho cháu nghe, đầy trải nghiệm."
+    },
+    { 
+        id: 'kid_boy_cute', 
         nameKey: 'voiceStudio.voices.special.kid_boy', 
-        geminiVoice: 'Puck', // Puck can sound younger
+        geminiVoice: 'Puck', 
         gender: 'male', 
         regionKey: 'special', 
         icon: 'fas fa-child',
-        provinceKey: 'kid'
+        provinceKey: 'kid',
+        stylePrompt: "Đọc bằng giọng bé trai 6 tuổi, ngây thơ, trong sáng, hơi ngọng nghịu một chút cho dễ thương, giọng cao."
     },
     { 
-        id: 'special_kid_girl', 
+        id: 'kid_girl_cute', 
         nameKey: 'voiceStudio.voices.special.kid_girl', 
-        geminiVoice: 'Aoede', // Soft female voice
+        geminiVoice: 'Puck', 
         gender: 'female', 
         regionKey: 'special', 
-        icon: 'fas fa-child-dress',
-        provinceKey: 'kid'
+        icon: 'fas fa-female',
+        provinceKey: 'kid',
+        stylePrompt: "Đọc bằng giọng bé gái 5 tuổi, điệu đà, nũng nịu, giọng cao vút và rất dễ thương."
     },
 
     // --- QUỐC TẾ (INTERNATIONAL) ---
     { 
-        id: 'us_male', 
+        id: 'us_male_news', 
         nameKey: 'voiceStudio.voices.intl.us_male', 
         geminiVoice: 'Fenrir', 
         gender: 'male', 
         regionKey: 'intl', 
         icon: 'fas fa-flag-usa',
-        provinceKey: 'us'
+        provinceKey: 'us',
+        stylePrompt: "Speak in a standard American male news anchor voice, professional, deep, authoritative, and clear."
     },
     { 
-        id: 'us_female', 
+        id: 'us_female_soft', 
         nameKey: 'voiceStudio.voices.intl.us_female', 
-        geminiVoice: 'Kore', 
+        geminiVoice: 'Aoede', 
         gender: 'female', 
         regionKey: 'intl', 
-        icon: 'fas fa-star',
-        provinceKey: 'us'
+        icon: 'fas fa-flag-usa',
+        provinceKey: 'us',
+        stylePrompt: "Speak in a soft, friendly American female voice, conversational and approachable."
     },
     { 
-        id: 'uk_male', 
+        id: 'uk_male_posh', 
         nameKey: 'voiceStudio.voices.intl.uk_male', 
-        geminiVoice: 'Charon', 
+        geminiVoice: 'Zephyr', 
         gender: 'male', 
         regionKey: 'intl', 
         icon: 'fas fa-crown',
-        provinceKey: 'uk'
+        provinceKey: 'uk',
+        stylePrompt: "Speak in a Posh British male voice (Received Pronunciation), elegant, sophisticated, and articulate."
     },
     { 
-        id: 'uk_female', 
+        id: 'uk_female_posh', 
         nameKey: 'voiceStudio.voices.intl.uk_female', 
-        geminiVoice: 'Puck', // Fallback for variety
+        geminiVoice: 'Aoede', 
         gender: 'female', 
         regionKey: 'intl', 
-        icon: 'fas fa-tea',
-        provinceKey: 'uk'
+        icon: 'fas fa-crown',
+        provinceKey: 'uk',
+        stylePrompt: "Speak in a Posh British female voice (Received Pronunciation), elegant, sophisticated, polite, and articulate."
     }
 ];
 
 // --- OTHER CONSTANTS ---
 
 export const DEFAULT_SETTINGS: Settings = {
-// ... existing constants
   aspectRatio: '3x4',
   outfit: {
     mode: 'preset',
@@ -345,7 +384,6 @@ export const DEFAULT_SETTINGS: Settings = {
   highQuality: false, // Default to standard/fast quality
 };
 
-// ... keep existing OUTFIT_PRESETS, ASPECT_RATIO_MAP etc ...
 export const OUTFIT_PRESETS = [
     { nameKey: 'outfits.white_shirt', value: 'Sơ mi trắng', icon: 'fas fa-shirt', category: 'somi', previewUrl: 'https://lh3.googleusercontent.com/d/12V-djiwtgB6uk1aIj06exKzeQrkedaW_' },
     { nameKey: 'outfits.blue_shirt', value: 'Sơ mi xanh', icon: 'fas fa-shirt', category: 'somi', previewUrl: 'https://lh3.googleusercontent.com/d/157-yjF1xs64mUVhGAqnJ2oBSX_ASSoTy' },

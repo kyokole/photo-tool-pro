@@ -381,7 +381,7 @@ export const generateVideoPrompt = async (userIdea: string, base64Image: string)
 };
 
 // --- VOICE STUDIO (NEW) ---
-export const generateSpeech = async (text: string, voiceId: string, language: string): Promise<string> => {
-    const { audioData } = await callGeminiApi('generateSpeech', { text, voiceId, language }, CREDIT_COSTS.AUDIO_GENERATION);
+export const generateSpeech = async (text: string, voiceId: string, language: string, baseVoice?: string): Promise<string> => {
+    const { audioData } = await callGeminiApi('generateSpeech', { text, voiceId, language, baseVoice }, CREDIT_COSTS.AUDIO_GENERATION);
     return audioData;
 };

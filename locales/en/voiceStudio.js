@@ -10,42 +10,43 @@ export default {
         "voices": {
             // NORTH
             "north": {
-                "hanoi_male_news": "Hanoi Male - News",
-                "hanoi_female_soft": "Hanoi Female - Soft",
-                "haiphong_male": "Haiphong Male - Strong",
-                "bacninh_female": "Bac Ninh Female - Folk",
-                "thaibinh_female_story": "Thai Binh Female - Story Reading",
-                "namdinh_male_pod": "Nam Dinh Male - Podcast",
-                "quangninh_male": "Quang Ninh Male - Robust",
-                "haiduong_female": "Hai Duong Female - Gentle"
+                "hanoi_female_26": "Hanoi Female - Gentle, Educated (26yo)",
+                "hanoi_male_news": "Hanoi Male - News Anchor, Professional",
+                "haiphong_male": "Haiphong Male - Strong, Bold",
+                "bacninh_female": "Bac Ninh Female - Folk, Sweet",
+                "thaibinh_female_story": "Thai Binh Female - Storytelling, Rustic",
+                "namdinh_male_pod": "Nam Dinh Male - Podcast, Clear",
+                "quangninh_male": "Quang Ninh Male - Robust, Cheerful",
+                "haiduong_female": "Hai Duong Female - Gentle, Easy-listening"
             },
             // CENTRAL
             "central": {
-                "hue_female": "Hue Female - Sweet",
-                "danang_male": "Da Nang Male - Energetic",
-                "nghean_male_story": "Nghe An Male - Night Story",
-                "hatinh_female": "Ha Tinh Female - Rustic",
-                "quangbinh_male": "Quang Binh Male - Deep",
-                "binhdinh_female": "Binh Dinh Female - Martial",
-                "quangtri_male": "Quang Tri Male - Authentic"
+                "hue_female": "Hue Female - Sweet, Soft",
+                "nghean_male_story": "Nghe An Male - Night Storytelling",
+                "danang_male": "Da Nang Male - Energetic, Friendly",
+                "hatinh_female": "Ha Tinh Female - Sincere, Emotional",
+                "quangbinh_male": "Quang Binh Male - Resonant, Strong",
+                "binhdinh_female": "Binh Dinh Female - Decisive, Quick",
+                "quangtri_male": "Quang Tri Male - Authentic, Deep"
             },
             // SOUTH
             "south": {
-                "saigon_male_vlog": "Saigon Male - Review/Vlog",
-                "saigon_female_chic": "Saigon Female - Chic",
-                "cantho_female": "Can Tho Female - Sweet",
-                "camau_male": "Ca Mau Male - Authentic",
-                "vinhlong_female_story": "Vinh Long Female - Story Reading",
-                "bentre_male": "Ben Tre Male - Narrative",
-                "dongthap_female": "Dong Thap Female - Lotus",
-                "vungtau_male": "Vung Tau Male - Coastal"
+                "saigon_female_chic": "Saigon Female - Chic, Cute (20yo)",
+                "saigon_male_vlog": "Saigon Male - Vlog, Energetic",
+                "cantho_female": "Can Tho Female - Sweet, Soft (Mekong)",
+                "camau_male": "Ca Mau Male - Authentic Mekong",
+                "vinhlong_female_story": "Vinh Long Female - Old Storytelling",
+                "bentre_male": "Ben Tre Male - Gentle, Narrative",
+                "dongthap_female": "Dong Thap Female - Soft, Elegant",
+                "vungtau_male": "Vung Tau Male - Modern Coastal"
             },
             // SPECIAL
             "special": {
                 "ad_male_promo": "Male Promo - High Energy",
                 "ad_female_sales": "Female Sales - Livestream",
-                "kid_boy": "Kid Boy - Innocent",
-                "kid_girl": "Kid Girl - Cute"
+                "story_male_old": "Old Storyteller - Deep, Raspy",
+                "kid_boy": "Kid Boy (6yo) - Innocent",
+                "kid_girl": "Kid Girl (5yo) - Cute"
             },
             // INTL
             "intl": {

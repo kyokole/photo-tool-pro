@@ -132,7 +132,7 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
 
     // State for tabs and selection
     const [activeRegion, setActiveRegion] = useState<string>('north');
-    const [selectedVoice, setSelectedVoice] = useState<VoiceOption | null>(null);
+    const [selectedVoice, setSelectedVoice] = useState<any | null>(null); // Use any to access stylePrompt
 
     // Initialize Audio Context on user interaction (or component mount if allowed)
     const getAudioContext = () => {
@@ -188,8 +188,12 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
         setError(null);
         
         try {
-            // Get base64 string (Raw PCM)
-            const base64Audio = await generateSpeech(text, selectedVoice.id, i18n.language);
+            // PROMPT ENGINEERING MAGIC:
+            // Combine the style prompt from constants with the user's text.
+            const fullPrompt = `${selectedVoice.stylePrompt}\n\nNội dung cần đọc:\n${text}`;
+
+            // Pass the base geminiVoice to the service
+            const base64Audio = await generateSpeech(fullPrompt, selectedVoice.id, i18n.language, selectedVoice.geminiVoice);
             
             const ctx = getAudioContext();
             const decodedBuffer = decodePCM(base64Audio, ctx);
@@ -243,11 +247,7 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
         source.connect(ctx.destination);
         
         source.onended = () => {
-            // Only reset if we reached the end naturally, not if we manually stopped/paused
-            // Checking time is a bit fuzzy, so we rely on state management usually.
-            // For simplicity, we just set playing to false.
-            // Note: onended fires even on .stop(), so we need to be careful.
-            // The updateLoop handles the UI time.
+            // Only reset if we reached the end naturally
         };
 
         startTimeRef.current = ctx.currentTime;
@@ -292,7 +292,7 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
         if (audioBuffer) {
             const wavBlob = bufferToWav(audioBuffer);
             const url = URL.createObjectURL(wavBlob);
-            smartDownload(url, `voice_studio_${Date.now()}.wav`);
+            smartDownload(url, `voice_studio_${selectedVoice?.provinceKey || 'audio'}_${Date.now()}.wav`);
             setTimeout(() => URL.revokeObjectURL(url), 100);
         }
     };
@@ -357,7 +357,7 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
                             ))}
                         </div>
 
-                        {/* Voice Grid - Mobile Responsive */}
+                        {/* Voice Grid */}
                         <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto scrollbar-thin bg-[var(--bg-interactive)]">
                             {filteredVoices.map((voice) => (
                                 <button
@@ -376,9 +376,6 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className={`text-sm font-bold truncate ${selectedVoice?.id === voice.id ? 'text-[var(--accent-cyan)]' : 'text-[var(--text-primary)]'}`}>
-                                            {voice.provinceKey ? t(`voiceStudio.provinces.${voice.provinceKey}`) : t(voice.nameKey)}
-                                        </div>
-                                        <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 truncate leading-tight">
                                             {t(voice.nameKey)}
                                         </div>
                                     </div>

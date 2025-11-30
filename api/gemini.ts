@@ -215,73 +215,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         // --- GỌI AI API ---
         
-        // Voice Studio Handler
+        // Voice Studio Handler (NEW PROMPT ENGINEERING METHOD)
         if (action === 'generateSpeech') {
-            const ai = getAi(false, true); // Use logic for audio key fallback
-            const { text, voiceId, language } = payload;
+            const ai = getAi(false, true); 
+            const { text, voiceId, language, baseVoice } = payload;
             
-            // Map our internal voiceId to Gemini's prebuilt voices
-            // Gemini currently supports: Puck (Male), Charon (Male), Kore (Female), Fenrir (Male), Zephyr (Male), Aoede (Female)
-            // CORRECT MAPPING STRATEGY TO FIX GENDER ISSUES:
-            // - Male News/Energetic -> Zephyr
-            // - Male Deep/Story -> Fenrir or Charon
-            // - Female Soft/Story -> Aoede (Priority) or Kore
-            // - Female Energetic -> Kore
-            // - Kids -> Puck (Male child), Aoede (Female child)
-            
-            const voiceMap: Record<string, string> = {
-                // North
-                'north_male_hanoi_news': 'Zephyr',
-                'north_female_hanoi_soft': 'Aoede', // Changed from Puck to Aoede for female
-                'north_male_haiphong': 'Fenrir',
-                'north_female_bacninh': 'Aoede', // Changed from Kore/Puck
-                'north_female_thaibinh_story': 'Kore',
-                'north_male_namdinh_pod': 'Charon',
-                'north_male_quangninh': 'Fenrir',
-                'north_female_haiduong': 'Aoede',
-                
-                // Central
-                'central_male_nghean_story': 'Charon', 
-                'central_female_hue': 'Aoede', // Changed from Kore for softer tone
-                'central_male_danang': 'Zephyr',
-                'central_female_hatinh': 'Aoede',
-                'central_male_quangbinh': 'Fenrir',
-                'central_female_binhdinh': 'Kore',
-                'central_male_quangtri': 'Fenrir',
-
-                // South
-                'south_male_saigon_vlog': 'Fenrir',
-                'south_female_saigon_chic': 'Aoede', // Changed from Puck
-                'south_female_mekong': 'Kore', 
-                'south_female_vinhlong_story': 'Aoede', 
-                'south_male_camau': 'Charon',
-                'south_male_bentre': 'Zephyr',
-                'south_female_dongthap': 'Kore',
-                'south_male_vungtau': 'Zephyr',
-
-                // Special (Ads/Kids)
-                'special_ad_male_promo': 'Zephyr', // High energy
-                'special_ad_female_sales': 'Kore', // High energy
-                'special_kid_boy': 'Puck', // Higher pitch male -> kid boy
-                'special_kid_girl': 'Aoede', // Soft female -> kid girl
-
-                // International
-                'us_male': 'Fenrir',
-                'us_female': 'Kore',
-                'uk_male': 'Charon',
-                'uk_female': 'Puck' // Fallback or Aoede
-            };
-            
-            const geminiVoiceName = voiceMap[voiceId] || 'Puck'; // Default fallback
+            // USE PROVIDED BASE VOICE OR FALLBACK
+            // Base voices: 'Fenrir' (Male), 'Aoede' (Female) - these tend to be stable.
+            const geminiBaseVoice = baseVoice || (voiceId.includes('male') && !voiceId.includes('female') ? 'Fenrir' : 'Aoede');
 
             const response = await ai.models.generateContent({
                 model: TTS_MODEL,
-                contents: { parts: [{ text: text }] },
+                contents: { parts: [{ text: text }] }, // 'text' here includes the full prompt description
                 config: {
                     responseModalities: [Modality.AUDIO],
                     speechConfig: {
                         voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: geminiVoiceName },
+                            prebuiltVoiceConfig: { voiceName: geminiBaseVoice },
                         },
                     },
                 },
