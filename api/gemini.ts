@@ -234,28 +234,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 'north_female_hanoi_soft': 'Puck',
                 'north_male_haiphong': 'Fenrir',
                 'north_female_bacninh': 'Kore',
-                'north_female_thaibinh_story': 'Kore', // New: Story reading (Soft/Expressive)
-                'north_male_namdinh_pod': 'Charon',    // New: Podcast (Deep)
+                'north_female_thaibinh_story': 'Kore', // Soft
+                'north_male_namdinh_pod': 'Charon',    // Deep
+                'north_male_quangninh': 'Fenrir',
+                'north_female_haiduong': 'Kore',
                 
                 // Central
-                'central_male_nghean_story': 'Charon', // Deepest male voice for stories
+                'central_male_nghean_story': 'Charon', 
                 'central_female_hue': 'Kore',
                 'central_male_danang': 'Zephyr',
                 'central_female_hatinh': 'Puck',
                 'central_male_quangbinh': 'Fenrir',
+                'central_female_binhdinh': 'Puck',
+                'central_male_quangtri': 'Fenrir',
 
                 // South
                 'south_male_saigon_vlog': 'Fenrir',
                 'south_female_saigon_chic': 'Puck',
-                'south_female_mekong': 'Kore', // Can Tho
-                'south_female_vinhlong_story': 'Kore', // New: Story reading
+                'south_female_mekong': 'Kore', 
+                'south_female_vinhlong_story': 'Kore', 
                 'south_male_camau': 'Charon',
-                'south_male_bentre': 'Zephyr', // New
+                'south_male_bentre': 'Zephyr',
+                'south_female_dongthap': 'Kore',
+                'south_male_vungtau': 'Zephyr',
+
+                // Special (Ads/Kids)
+                'special_ad_male_promo': 'Zephyr', // Energetic
+                'special_ad_female_sales': 'Kore', // Energetic/Friendly
+                'special_kid_boy': 'Puck', // Higher pitch, softer
+                'special_kid_girl': 'Kore', // Soft female
 
                 // International
                 'us_male': 'Fenrir',
                 'us_female': 'Kore',
-                'uk_male': 'Charon', // Sound bit more formal
+                'uk_male': 'Charon',
                 'uk_female': 'Puck'
             };
             

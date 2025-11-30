@@ -14,6 +14,86 @@ interface VoiceStudioProps {
     isVip: boolean;
 }
 
+// --- Audio Utilities ---
+
+const SAMPLE_RATE = 24000; // Gemini TTS standard sample rate
+
+// Decodes Base64 Raw PCM (Int16) into an AudioBuffer
+const decodePCM = (base64Data: string, ctx: AudioContext): AudioBuffer => {
+    const binaryString = atob(base64Data);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Convert Uint8Array bytes to Int16Array
+    const int16Data = new Int16Array(bytes.buffer);
+    const float32Data = new Float32Array(int16Data.length);
+    
+    // Normalize Int16 (-32768 to 32767) to Float32 (-1.0 to 1.0) for Web Audio API
+    for (let i = 0; i < int16Data.length; i++) {
+        float32Data[i] = int16Data[i] / 32768.0;
+    }
+
+    const buffer = ctx.createBuffer(1, float32Data.length, SAMPLE_RATE);
+    buffer.copyToChannel(float32Data, 0);
+    return buffer;
+};
+
+// Encodes AudioBuffer back to WAV Blob for downloading
+const bufferToWav = (buffer: AudioBuffer): Blob => {
+    const numOfChan = buffer.numberOfChannels;
+    const length = buffer.length * numOfChan * 2 + 44;
+    const bufferArray = new ArrayBuffer(length);
+    const view = new DataView(bufferArray);
+    const channels = [];
+    let i;
+    let sample;
+    let offset = 0;
+    let pos = 0;
+
+    // write RIFF chunk
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + buffer.length * 2, true);
+    writeString(view, 8, 'WAVE');
+    // write fmt chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numOfChan, true);
+    view.setUint32(24, buffer.sampleRate, true);
+    view.setUint32(28, buffer.sampleRate * 2 * numOfChan, true);
+    view.setUint16(32, numOfChan * 2, true);
+    view.setUint16(34, 16, true);
+    // write data chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, buffer.length * 2, true);
+
+    // write the PCM samples
+    for (i = 0; i < buffer.numberOfChannels; i++)
+        channels.push(buffer.getChannelData(i));
+
+    while (pos < buffer.length) {
+        for (i = 0; i < numOfChan; i++) {
+            // interleave channels
+            sample = Math.max(-1, Math.min(1, channels[i][pos])); // clamp
+            sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0; // scale to 16-bit signed int
+            view.setInt16(44 + offset, sample, true);
+            offset += 2;
+        }
+        pos++;
+    }
+
+    return new Blob([view], { type: 'audio/wav' });
+};
+
+function writeString(view: DataView, offset: number, string: string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
 const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     return (
         <div className="flex items-center justify-center gap-1 h-12 w-full max-w-xs mx-auto">
@@ -34,48 +114,89 @@ const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
 const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => {
     const { t, i18n } = useTranslation();
     const [text, setText] = useState('');
-    const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    
+    // Audio Context State
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
+    const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+    
+    // Playback Timing State
+    const startTimeRef = useRef<number>(0);
+    const pausedAtRef = useRef<number>(0);
+    const [duration, setDuration] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const animationFrameRef = useRef<number>(0);
 
     // State for tabs and selection
     const [activeRegion, setActiveRegion] = useState<string>('north');
     const [selectedVoice, setSelectedVoice] = useState<VoiceOption | null>(null);
 
-    // Filter voices based on active region
+    // Initialize Audio Context on user interaction (or component mount if allowed)
+    const getAudioContext = () => {
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+        }
+        if (audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume();
+        }
+        return audioContextRef.current;
+    };
+
+    // Clean up
+    useEffect(() => {
+        return () => {
+            if (sourceNodeRef.current) {
+                try { sourceNodeRef.current.stop(); } catch(e) {}
+            }
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+            }
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, []);
+
     const filteredVoices = useMemo(() => {
         return VOICE_OPTIONS.filter(v => v.regionKey === activeRegion);
     }, [activeRegion]);
 
-    // Select the first voice when region changes
     useEffect(() => {
-        if (filteredVoices.length > 0) {
-            setSelectedVoice(filteredVoices[0]);
+        // Only reset selected voice if the current one is not in the new region
+        if (!selectedVoice || selectedVoice.regionKey !== activeRegion) {
+            if (filteredVoices.length > 0) {
+                setSelectedVoice(filteredVoices[0]);
+            } else {
+                setSelectedVoice(null);
+            }
         }
-    }, [activeRegion, filteredVoices]);
+    }, [activeRegion, filteredVoices, selectedVoice]);
 
     const handleGenerate = async () => {
         if (!text.trim() || !selectedVoice) return;
         
+        // Stop any current playback
+        stopPlayback();
+        setAudioBuffer(null);
+        setDuration(0);
+        setCurrentTime(0);
+        
         setIsLoading(true);
         setError(null);
-        setAudioUrl(null);
         
         try {
+            // Get base64 string (Raw PCM)
             const base64Audio = await generateSpeech(text, selectedVoice.id, i18n.language);
             
-            // Convert base64 to Blob URL
-            const binaryString = window.atob(base64Audio);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            const blob = new Blob([bytes], { type: 'audio/wav' }); 
-            const url = URL.createObjectURL(blob);
-            setAudioUrl(url);
+            const ctx = getAudioContext();
+            const decodedBuffer = decodePCM(base64Audio, ctx);
+            
+            setAudioBuffer(decodedBuffer);
+            setDuration(decodedBuffer.duration);
+            
         } catch (err: any) {
             console.error(err);
             setError(err.message || t('errors.unknownError'));
@@ -84,19 +205,102 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
         }
     };
 
+    const stopPlayback = () => {
+        if (sourceNodeRef.current) {
+            try { sourceNodeRef.current.stop(); } catch(e) {}
+            sourceNodeRef.current = null;
+        }
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+        }
+        setIsPlaying(false);
+        pausedAtRef.current = 0;
+        startTimeRef.current = 0;
+        setCurrentTime(0);
+    };
+
+    const pausePlayback = () => {
+        if (sourceNodeRef.current) {
+            try { sourceNodeRef.current.stop(); } catch(e) {}
+            sourceNodeRef.current = null;
+        }
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+        }
+        // Calculate where we paused
+        const ctx = getAudioContext();
+        pausedAtRef.current += ctx.currentTime - startTimeRef.current;
+        setIsPlaying(false);
+    };
+
+    const playPlayback = () => {
+        if (!audioBuffer) return;
+        const ctx = getAudioContext();
+        
+        // Create a new source node
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        
+        source.onended = () => {
+            // Only reset if we reached the end naturally, not if we manually stopped/paused
+            // Checking time is a bit fuzzy, so we rely on state management usually.
+            // For simplicity, we just set playing to false.
+            // Note: onended fires even on .stop(), so we need to be careful.
+            // The updateLoop handles the UI time.
+        };
+
+        startTimeRef.current = ctx.currentTime;
+        
+        // If we were paused at the end, restart
+        if (pausedAtRef.current >= audioBuffer.duration) {
+            pausedAtRef.current = 0;
+        }
+
+        source.start(0, pausedAtRef.current);
+        sourceNodeRef.current = source;
+        setIsPlaying(true);
+
+        // Update loop for timer
+        const update = () => {
+            if (!sourceNodeRef.current) return;
+            const now = ctx.currentTime;
+            const rawTime = pausedAtRef.current + (now - startTimeRef.current);
+            const displayTime = Math.min(rawTime, audioBuffer.duration);
+            setCurrentTime(displayTime);
+
+            if (rawTime >= audioBuffer.duration) {
+                setIsPlaying(false);
+                pausedAtRef.current = 0; // Reset for next play
+                return;
+            }
+            
+            animationFrameRef.current = requestAnimationFrame(update);
+        };
+        update();
+    };
+
     const handlePlayPause = () => {
-        if (!audioRef.current || !audioUrl) return;
         if (isPlaying) {
-            audioRef.current.pause();
+            pausePlayback();
         } else {
-            audioRef.current.play();
+            playPlayback();
         }
     };
 
     const handleDownload = () => {
-        if (audioUrl) {
-            smartDownload(audioUrl, `voice_studio_${Date.now()}.wav`);
+        if (audioBuffer) {
+            const wavBlob = bufferToWav(audioBuffer);
+            const url = URL.createObjectURL(wavBlob);
+            smartDownload(url, `voice_studio_${Date.now()}.wav`);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
         }
+    };
+
+    const formatTime = (time: number) => {
+        const m = Math.floor(time / 60).toString().padStart(2, '0');
+        const s = Math.floor(time % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
     };
 
     return (
@@ -197,18 +401,12 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
                         
                         {/* Visualization */}
                         <div className="w-full flex-1 flex flex-col items-center justify-center py-8">
-                            {audioUrl ? (
+                            {audioBuffer ? (
                                 <div className="w-full max-w-sm">
                                     <AudioVisualizer isPlaying={isPlaying} />
-                                    <audio 
-                                        ref={audioRef} 
-                                        src={audioUrl} 
-                                        onPlay={() => setIsPlaying(true)} 
-                                        onPause={() => setIsPlaying(false)} 
-                                        onEnded={() => setIsPlaying(false)}
-                                        className="hidden" 
-                                    />
-                                    <div className="text-center mt-4 text-[var(--accent-cyan)] font-mono text-sm">00:00 / --:--</div>
+                                    <div className="text-center mt-4 text-[var(--accent-cyan)] font-mono text-sm">
+                                        {formatTime(currentTime)} / {formatTime(duration)}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="text-[var(--text-muted)] text-sm italic flex flex-col items-center gap-3 opacity-50">
@@ -227,7 +425,7 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
 
                         {/* Main Action Button */}
                         <div className="w-full flex gap-3 flex-wrap">
-                            {!audioUrl ? (
+                            {!audioBuffer ? (
                                 <button 
                                     onClick={handleGenerate} 
                                     disabled={!text.trim() || isLoading}
@@ -255,7 +453,12 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
                                         <i className="fas fa-download"></i> {t('common.download')}
                                     </button>
                                     <button 
-                                        onClick={() => { setAudioUrl(null); setText(''); }} 
+                                        onClick={() => { 
+                                            stopPlayback();
+                                            setAudioBuffer(null);
+                                            setDuration(0);
+                                            setCurrentTime(0);
+                                        }} 
                                         className="btn-secondary px-4 rounded-xl font-bold flex items-center justify-center hover:text-red-400 transition-colors"
                                     >
                                         <i className="fas fa-trash"></i>

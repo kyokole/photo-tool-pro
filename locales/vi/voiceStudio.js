@@ -15,7 +15,9 @@ export default {
                 "haiphong_male": "Nam Hải Phòng - Mạnh Mẽ",
                 "bacninh_female": "Nữ Bắc Ninh - Quan Họ",
                 "thaibinh_female_story": "Nữ Thái Bình - Đọc Truyện",
-                "namdinh_male_pod": "Nam Nam Định - Podcast"
+                "namdinh_male_pod": "Nam Nam Định - Podcast",
+                "quangninh_male": "Nam Quảng Ninh - Khỏe Khoắn",
+                "haiduong_female": "Nữ Hải Dương - Dịu Dàng"
             },
             // CENTRAL
             "central": {
@@ -23,7 +25,9 @@ export default {
                 "danang_male": "Nam Đà Nẵng - Sôi Động",
                 "nghean_male_story": "Nam Nghệ An - Kể Chuyện Đêm Khuya",
                 "hatinh_female": "Nữ Hà Tĩnh - Mộc Mạc",
-                "quangbinh_male": "Nam Quảng Bình - Trầm Ấm"
+                "quangbinh_male": "Nam Quảng Bình - Trầm Ấm",
+                "binhdinh_female": "Nữ Bình Định - Đất Võ",
+                "quangtri_male": "Nam Quảng Trị - Chân Chất"
             },
             // SOUTH
             "south": {
@@ -32,7 +36,16 @@ export default {
                 "cantho_female": "Nữ Cần Thơ - Ngọt Ngào",
                 "camau_male": "Nam Cà Mau - Chất Phác",
                 "vinhlong_female_story": "Nữ Vĩnh Long - Đọc Truyện",
-                "bentre_male": "Nam Bến Tre - Tự Sự"
+                "bentre_male": "Nam Bến Tre - Tự Sự",
+                "dongthap_female": "Nữ Đồng Tháp - Sen Hồng",
+                "vungtau_male": "Nam Vũng Tàu - Biển Khơi"
+            },
+            // SPECIAL (NEW)
+            "special": {
+                "ad_male_promo": "Giọng Nam - Quảng Cáo Sôi Động",
+                "ad_female_sales": "Giọng Nữ - Livestream Bán Hàng",
+                "kid_boy": "Bé Trai - Ngây Thơ",
+                "kid_girl": "Bé Gái - Dễ Thương"
             },
             // INTL
             "intl": {
@@ -48,16 +61,24 @@ export default {
             "bacninh": "Bắc Ninh",
             "thaibinh": "Thái Bình",
             "namdinh": "Nam Định",
+            "quangninh": "Quảng Ninh",
+            "haiduong": "Hải Dương",
             "hue": "Huế",
             "danang": "Đà Nẵng",
             "nghean": "Nghệ An",
             "hatinh": "Hà Tĩnh",
             "quangbinh": "Quảng Bình",
+            "binhdinh": "Bình Định",
+            "quangtri": "Quảng Trị",
             "saigon": "Sài Gòn",
             "cantho": "Cần Thơ",
             "camau": "Cà Mau",
             "vinhlong": "Vĩnh Long",
             "bentre": "Bến Tre",
+            "dongthap": "Đồng Tháp",
+            "vungtau": "Vũng Tàu",
+            "promo": "Quảng Cáo / Sales",
+            "kid": "Trẻ Em",
             "us": "Mỹ",
             "uk": "Anh"
         },
@@ -65,6 +86,7 @@ export default {
             "north": "Miền Bắc",
             "south": "Miền Nam",
             "central": "Miền Trung",
+            "special": "Chuyên Biệt",
             "intl": "Quốc tế"
         },
         "input": {
@@ -80,6 +102,6 @@ export default {
             "play": "Phát",
             "pause": "Tạm dừng"
         },
-        "infoText": "Hệ thống sử dụng công nghệ AI tiên tiến để giả lập các giọng vùng miền đặc trưng. Lựa chọn đúng 'Persona' (ví dụ: Tin tức, Đọc truyện) sẽ giúp giọng đọc có ngữ điệu phù hợp nhất với nội dung của bạn. Các giọng đọc truyện (Thái Bình, Nghệ An, Vĩnh Long) được tối ưu hóa cho tốc độ chậm rãi và diễn cảm."
+        "infoText": "Hệ thống sử dụng công nghệ AI tiên tiến để giả lập các giọng vùng miền đặc trưng. Lựa chọn đúng 'Persona' (ví dụ: Tin tức, Đọc truyện, Quảng cáo) sẽ giúp giọng đọc có ngữ điệu phù hợp nhất với nội dung của bạn. Các giọng chuyên biệt cho Quảng cáo có tiết tấu nhanh, năng lượng cao."
     }
 }

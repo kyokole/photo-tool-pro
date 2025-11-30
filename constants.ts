@@ -14,12 +14,13 @@ export const CREDIT_COSTS = {
     AUDIO_GENERATION: 2, // New cost for audio
 };
 
-// --- VOICE STUDIO CONSTANTS (Moved up to prevent circular reference issues with defaults) ---
+// --- VOICE STUDIO CONSTANTS ---
 
 export const VOICE_REGIONS = [
     { id: 'north', labelKey: 'voiceStudio.regions.north', icon: 'fas fa-landmark' },
     { id: 'central', labelKey: 'voiceStudio.regions.central', icon: 'fas fa-umbrella-beach' },
     { id: 'south', labelKey: 'voiceStudio.regions.south', icon: 'fas fa-water' },
+    { id: 'special', labelKey: 'voiceStudio.regions.special', icon: 'fas fa-star' }, // NEW REGION
     { id: 'intl', labelKey: 'voiceStudio.regions.intl', icon: 'fas fa-globe' },
 ];
 
@@ -42,6 +43,24 @@ export const VOICE_OPTIONS: VoiceOption[] = [
         regionKey: 'north', 
         icon: 'fas fa-book-open',
         provinceKey: 'hanoi'
+    },
+    { 
+        id: 'north_male_quangninh', 
+        nameKey: 'voiceStudio.voices.north.quangninh_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'north', 
+        icon: 'fas fa-mountain',
+        provinceKey: 'quangninh'
+    },
+    { 
+        id: 'north_female_haiduong', 
+        nameKey: 'voiceStudio.voices.north.haiduong_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'north', 
+        icon: 'fas fa-cookie-bite',
+        provinceKey: 'haiduong'
     },
     { 
         id: 'north_female_thaibinh_story', 
@@ -109,6 +128,24 @@ export const VOICE_OPTIONS: VoiceOption[] = [
         provinceKey: 'danang'
     },
     { 
+        id: 'central_female_binhdinh', 
+        nameKey: 'voiceStudio.voices.central.binhdinh_female', 
+        geminiVoice: 'Puck', 
+        gender: 'female', 
+        regionKey: 'central', 
+        icon: 'fas fa-swords', // Martial arts icon approximation
+        provinceKey: 'binhdinh'
+    },
+    { 
+        id: 'central_male_quangtri', 
+        nameKey: 'voiceStudio.voices.central.quangtri_male', 
+        geminiVoice: 'Fenrir', 
+        gender: 'male', 
+        regionKey: 'central', 
+        icon: 'fas fa-monument',
+        provinceKey: 'quangtri'
+    },
+    { 
         id: 'central_female_hatinh', 
         nameKey: 'voiceStudio.voices.central.hatinh_female', 
         geminiVoice: 'Puck', 
@@ -147,6 +184,24 @@ export const VOICE_OPTIONS: VoiceOption[] = [
         provinceKey: 'saigon'
     },
     { 
+        id: 'south_female_dongthap', 
+        nameKey: 'voiceStudio.voices.south.dongthap_female', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'south', 
+        icon: 'fas fa-water', // Lotus/Water
+        provinceKey: 'dongthap'
+    },
+    { 
+        id: 'south_male_vungtau', 
+        nameKey: 'voiceStudio.voices.south.vungtau_male', 
+        geminiVoice: 'Zephyr', 
+        gender: 'male', 
+        regionKey: 'south', 
+        icon: 'fas fa-umbrella-beach',
+        provinceKey: 'vungtau'
+    },
+    { 
         id: 'south_female_vinhlong_story', 
         nameKey: 'voiceStudio.voices.south.vinhlong_female_story', 
         geminiVoice: 'Kore', 
@@ -181,6 +236,44 @@ export const VOICE_OPTIONS: VoiceOption[] = [
         regionKey: 'south', 
         icon: 'fas fa-seedling',
         provinceKey: 'bentre'
+    },
+
+    // --- CHUYÊN BIỆT (SPECIAL: ADS, KIDS) ---
+    { 
+        id: 'special_ad_male_promo', 
+        nameKey: 'voiceStudio.voices.special.ad_male_promo', 
+        geminiVoice: 'Zephyr', 
+        gender: 'male', 
+        regionKey: 'special', 
+        icon: 'fas fa-bullhorn',
+        provinceKey: 'promo'
+    },
+    { 
+        id: 'special_ad_female_sales', 
+        nameKey: 'voiceStudio.voices.special.ad_female_sales', 
+        geminiVoice: 'Kore', 
+        gender: 'female', 
+        regionKey: 'special', 
+        icon: 'fas fa-shopping-bag',
+        provinceKey: 'promo'
+    },
+    { 
+        id: 'special_kid_boy', 
+        nameKey: 'voiceStudio.voices.special.kid_boy', 
+        geminiVoice: 'Puck', // Puck can sound younger
+        gender: 'male', 
+        regionKey: 'special', 
+        icon: 'fas fa-child',
+        provinceKey: 'kid'
+    },
+    { 
+        id: 'special_kid_girl', 
+        nameKey: 'voiceStudio.voices.special.kid_girl', 
+        geminiVoice: 'Kore', // Soft female voice
+        gender: 'female', 
+        regionKey: 'special', 
+        icon: 'fas fa-child-dress',
+        provinceKey: 'kid'
     },
 
     // --- QUỐC TẾ (INTERNATIONAL) ---
