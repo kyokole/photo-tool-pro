@@ -294,22 +294,22 @@ export const VOICE_OPTIONS: (VoiceOption & { stylePrompt: string })[] = [
     { 
         id: 'kid_boy_cute', 
         nameKey: 'voiceStudio.voices.special.kid_boy', 
-        geminiVoice: 'Puck', 
+        geminiVoice: 'Zephyr', 
         gender: 'male', 
         regionKey: 'special', 
         icon: 'fas fa-child',
         provinceKey: 'kid',
-        stylePrompt: "Đọc bằng giọng bé trai 6 tuổi, ngây thơ, trong sáng, hơi ngọng nghịu một chút cho dễ thương, giọng cao."
+        stylePrompt: "Đọc bằng giọng bé trai 6 tuổi (giọng trẻ con, cao, sáng), ngây thơ, trong sáng, lanh lợi, hơi ngọng nghịu một chút."
     },
     { 
         id: 'kid_girl_cute', 
         nameKey: 'voiceStudio.voices.special.kid_girl', 
-        geminiVoice: 'Puck', 
+        geminiVoice: 'Aoede', 
         gender: 'female', 
         regionKey: 'special', 
         icon: 'fas fa-female',
         provinceKey: 'kid',
-        stylePrompt: "Đọc bằng giọng bé gái 5 tuổi, điệu đà, nũng nịu, giọng cao vút và rất dễ thương."
+        stylePrompt: "Đọc bằng giọng bé gái 5 tuổi (giọng trẻ con, cao, trong vắt), điệu đà, nũng nịu, dễ thương như công chúa nhỏ."
     },
 
     // --- QUỐC TẾ (INTERNATIONAL) ---

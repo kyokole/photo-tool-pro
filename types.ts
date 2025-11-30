@@ -502,6 +502,7 @@ export interface VoiceStudioSettings {
     text: string;
     voiceId: string;
     language: 'vi' | 'en';
+    speed: number; // Added speed property
 }
 
 // LayoutResult moved here to prevent circular dependency

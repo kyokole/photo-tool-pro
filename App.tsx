@@ -1,4 +1,3 @@
-
 // FIX: Import 'useMemo' from React to resolve 'Cannot find name' error.
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -921,7 +920,7 @@ const App: React.FC = () => {
             resolve();
         } catch (error: any) {
             console.error("Failed to change password:", error);
-            if(error.code === 'auth/wrong-password'){
+            if(error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'){
                 reject(new Error(t('errors.incorrectOldPassword')))
             } else {
                  reject(new Error(error.message || t('errors.systemErrorPasswordChange')));

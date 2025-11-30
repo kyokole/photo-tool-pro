@@ -5,7 +5,11 @@ export default {
         "subtitle": "Convert text to professional speech",
         "settings": {
             "voice": "Select Voice",
-            "info": "Information"
+            "info": "Information",
+            "speed": "Reading Speed",
+            "speed_slow": "Slow",
+            "speed_normal": "Normal",
+            "speed_fast": "Fast"
         },
         "voices": {
             // NORTH
@@ -69,7 +73,7 @@ export default {
             "nghean": "Nghe An",
             "hatinh": "Ha Tinh",
             "quangbinh": "Quang Binh",
-            "binhdinh": "Binh Dinh",
+            "binhdinh": "Bình Định",
             "quangtri": "Quang Tri",
             "saigon": "Saigon",
             "cantho": "Can Tho",
@@ -92,7 +96,7 @@ export default {
         },
         "input": {
             "label": "Enter your text",
-            "placeholder": "Type the content you want to convert to speech here (Max 500 chars)..."
+            "placeholder": "Type the content you want to convert to speech here (Max 5000 chars)..."
         },
         "output": {
             "placeholder": "Audio waveform will appear here after generation."

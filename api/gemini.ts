@@ -218,15 +218,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Voice Studio Handler (NEW PROMPT ENGINEERING METHOD)
         if (action === 'generateSpeech') {
             const ai = getAi(false, true); 
-            const { text, voiceId, language, baseVoice } = payload;
+            const { text, voiceId, language, baseVoice, speed } = payload;
             
             // USE PROVIDED BASE VOICE OR FALLBACK
             // Base voices: 'Fenrir' (Male), 'Aoede' (Female) - these tend to be stable.
             const geminiBaseVoice = baseVoice || (voiceId.includes('male') && !voiceId.includes('female') ? 'Fenrir' : 'Aoede');
 
+            // Handle speed via Prompt Injection
+            let speedInstruction = "";
+            if (speed) {
+                if (speed < 0.8) speedInstruction = "Speaking pace: Very Slow, deliberate.";
+                else if (speed < 1.0) speedInstruction = "Speaking pace: Slow, relaxed.";
+                else if (speed > 1.2) speedInstruction = "Speaking pace: Fast, energetic.";
+                else if (speed > 1.5) speedInstruction = "Speaking pace: Very Fast, hurried.";
+                else speedInstruction = "Speaking pace: Normal, natural.";
+            }
+
+            const promptWithSpeed = `${text}\n\n[INSTRUCTION]\n${speedInstruction}`;
+
             const response = await ai.models.generateContent({
                 model: TTS_MODEL,
-                contents: { parts: [{ text: text }] }, // 'text' here includes the full prompt description
+                contents: { parts: [{ text: promptWithSpeed }] }, 
                 config: {
                     responseModalities: [Modality.AUDIO],
                     speechConfig: {

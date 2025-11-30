@@ -7,6 +7,7 @@ import type { VoiceOption } from '../types';
 import { generateSpeech } from '../services/geminiService';
 import { smartDownload } from '../utils/canvasUtils';
 import { CREDIT_COSTS } from '../constants';
+import { SliderInput } from './creativestudio/SliderInput';
 
 interface VoiceStudioProps {
     theme: string;
@@ -111,12 +112,59 @@ const AudioVisualizer = ({ isPlaying }: { isPlaying: boolean }) => {
     );
 };
 
+// Custom Speed Slider component
+const SpeedSlider: React.FC<{ value: number, onChange: (val: number) => void, t: any }> = ({ value, onChange, t }) => {
+    const sliderRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    useEffect(() => {
+        if (sliderRef.current) {
+            const min = 0.5;
+            const max = 2.0;
+            const percentage = ((value - min) / (max - min)) * 100;
+            sliderRef.current.style.setProperty('--progress-percent', `${percentage}%`);
+        }
+    }, [value]);
+
+    const getSpeedLabel = (val: number) => {
+        if (val < 0.8) return t('voiceStudio.settings.speed_slow');
+        if (val > 1.2) return t('voiceStudio.settings.speed_fast');
+        return t('voiceStudio.settings.speed_normal');
+    };
+
+    return (
+        <div className="relative">
+            <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-bold text-[var(--text-secondary)] uppercase">{t('voiceStudio.settings.speed')}</span>
+                <span className="text-xs font-bold text-[var(--accent-cyan)]">{value}x ({getSpeedLabel(value)})</span>
+            </div>
+            <div className="relative h-6 flex items-center">
+                <input
+                    ref={sliderRef}
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.1"
+                    value={value}
+                    onMouseDown={() => setIsDragging(true)}
+                    onMouseUp={() => setIsDragging(false)}
+                    onTouchStart={() => setIsDragging(true)}
+                    onTouchEnd={() => setIsDragging(false)}
+                    onChange={(e) => onChange(parseFloat(e.target.value))}
+                    className="custom-slider w-full"
+                />
+            </div>
+        </div>
+    );
+};
+
 const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => {
     const { t, i18n } = useTranslation();
     const [text, setText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [speed, setSpeed] = useState(1.0);
     
     // Audio Context State
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -192,8 +240,8 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
             // Combine the style prompt from constants with the user's text.
             const fullPrompt = `${selectedVoice.stylePrompt}\n\nNội dung cần đọc:\n${text}`;
 
-            // Pass the base geminiVoice to the service
-            const base64Audio = await generateSpeech(fullPrompt, selectedVoice.id, i18n.language, selectedVoice.geminiVoice);
+            // Pass the base geminiVoice AND SPEED to the service
+            const base64Audio = await generateSpeech(fullPrompt, selectedVoice.id, i18n.language, selectedVoice.geminiVoice, speed);
             
             const ctx = getAudioContext();
             const decodedBuffer = decodePCM(base64Audio, ctx);
@@ -322,17 +370,17 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
                 <div className="flex flex-col gap-6 overflow-visible lg:overflow-y-auto scrollbar-thin pr-2 pb-10">
                     
                     {/* Text Input */}
-                    <div className="bg-[var(--bg-component)] rounded-xl border border-[var(--border-color)] shadow-lg p-5 flex flex-col h-[300px]">
+                    <div className="bg-[var(--bg-component)] rounded-xl border border-[var(--border-color)] shadow-lg p-5 flex flex-col h-[300px] relative">
                         <label className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide mb-2">{t('voiceStudio.input.label')}</label>
                         <textarea
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             placeholder={t('voiceStudio.input.placeholder')}
                             className="flex-grow w-full bg-[var(--bg-deep-space)] border border-white/20 rounded-xl p-4 text-base resize-none focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-transparent transition-all placeholder-gray-600"
-                            maxLength={500}
+                            maxLength={5000}
                         />
                         <div className="text-right text-xs text-[var(--text-secondary)] mt-2">
-                            {text.length} / 500
+                            {text.length} / 5000
                         </div>
                     </div>
 
@@ -394,10 +442,19 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
                 <div className="flex flex-col gap-6">
                     {/* Output Card */}
                     <div className="bg-[var(--bg-component)] rounded-xl border border-[var(--border-color)] shadow-2xl p-6 flex flex-col justify-center items-center relative min-h-[300px]">
-                        <h3 className="absolute top-6 left-6 text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide mb-4">{t('auth.result')}</h3>
                         
+                        {/* Re-structured Header to prevent Overlap */}
+                        <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-white/10 pb-4">
+                            <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide">
+                                {t('auth.result')}
+                            </h3>
+                            <div className="w-full sm:w-1/2">
+                                <SpeedSlider value={speed} onChange={setSpeed} t={t} />
+                            </div>
+                        </div>
+
                         {/* Visualization */}
-                        <div className="w-full flex-1 flex flex-col items-center justify-center py-8">
+                        <div className="w-full flex-1 flex flex-col items-center justify-center py-4">
                             {audioBuffer ? (
                                 <div className="w-full max-w-sm">
                                     <AudioVisualizer isPlaying={isPlaying} />

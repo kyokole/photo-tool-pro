@@ -5,7 +5,11 @@ export default {
         "subtitle": "Chuyển văn bản thành giọng đọc chuyên nghiệp",
         "settings": {
             "voice": "Chọn Giọng Đọc",
-            "info": "Thông tin"
+            "info": "Thông tin",
+            "speed": "Tốc độ đọc",
+            "speed_slow": "Chậm",
+            "speed_normal": "Vừa",
+            "speed_fast": "Nhanh"
         },
         "voices": {
             // NORTH
@@ -92,7 +96,7 @@ export default {
         },
         "input": {
             "label": "Nhập văn bản của bạn",
-            "placeholder": "Nhập nội dung bạn muốn chuyển thành giọng nói tại đây (Tối đa 500 ký tự)..."
+            "placeholder": "Nhập nội dung bạn muốn chuyển thành giọng nói tại đây (Tối đa 5000 ký tự)..."
         },
         "output": {
             "placeholder": "Sóng âm thanh sẽ xuất hiện ở đây sau khi tạo."
