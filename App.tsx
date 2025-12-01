@@ -40,6 +40,7 @@ import MarketingStudio from './components/MarketingStudio';
 import ArtStyleStudio from './components/ArtStyleStudio'; 
 import VoiceStudio from './components/VoiceStudio'; 
 import MusicStudio from './components/MusicStudio'; // New import
+import TransactionHistoryModal from './components/TransactionHistoryModal'; // New import
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -128,6 +129,7 @@ const App: React.FC = () => {
   const [isAuthModalVisible, setIsAuthModalVisible] = useState<boolean>(false);
   const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] = useState<boolean>(false);
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState<boolean>(false);
+  const [isTransactionHistoryVisible, setIsTransactionHistoryVisible] = useState(false); // New state
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
@@ -1658,6 +1660,13 @@ const App: React.FC = () => {
             currentUser={currentUser} // Pass currentUser to handle payment logic
         />
       )}
+      {isTransactionHistoryVisible && (
+        <TransactionHistoryModal
+            isOpen={isTransactionHistoryVisible}
+            onClose={() => setIsTransactionHistoryVisible(false)}
+            currentUser={currentUser}
+        />
+      )}
       {isAuthModalVisible && (
         <AuthModal 
           onLogin={handleLogin}
@@ -1713,6 +1722,7 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         onChangePasswordClick={() => setIsChangePasswordModalVisible(true)}
         onSubscriptionExpired={() => setIsSubscriptionModalVisible(true)} // Open modal on manual click too
+        onTransactionHistoryClick={() => setIsTransactionHistoryVisible(true)} // New prop
         isImageUploaded={!!originalImage}
         isVip={isVip}
       />

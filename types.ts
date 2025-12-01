@@ -107,6 +107,18 @@ export interface User {
   providerId?: string;
 }
 
+// --- Transaction History Type ---
+export interface Transaction {
+    id: string;
+    uid: string;
+    packageId: string;
+    packageName: string;
+    amount: number;
+    type: 'credit' | 'vip';
+    timestamp: string; // ISO string
+    status: 'success' | 'pending' | 'failed';
+}
+
 // --- Types for the new Fashion Studio ---
 export type FashionCategory = 'female' | 'male' | 'girl' | 'boy';
 

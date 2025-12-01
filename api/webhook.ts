@@ -20,11 +20,11 @@ try {
 }
 
 // Hardcoded package map since we can't import from constants.ts (React dependency issue in node)
-const PACKAGE_MAP: Record<string, { type: 'credit' | 'vip', amount: number }> = {
-    'C100': { type: 'credit', amount: 100 },
-    'C500': { type: 'credit', amount: 500 },
-    'V30': { type: 'vip', amount: 30 },
-    'V365': { type: 'vip', amount: 365 },
+const PACKAGE_MAP: Record<string, { type: 'credit' | 'vip', amount: number, name: string }> = {
+    'C100': { type: 'credit', amount: 100, name: 'Gói Cơ Bản (100 Credits)' },
+    'C500': { type: 'credit', amount: 500, name: 'Gói Chuyên Nghiệp (500 Credits)' },
+    'V30': { type: 'vip', amount: 30, name: 'VIP 1 Tháng' },
+    'V365': { type: 'vip', amount: 365, name: 'VIP 1 Năm' },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -84,13 +84,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const userData = userDoc.data();
         const userRef = userDoc.ref;
 
-        // 6. Execute Update Transaction
+        // 6. Execute Update Transaction & Log History
         await db.runTransaction(async (transaction) => {
             const freshDoc = await transaction.get(userRef);
             if (!freshDoc.exists) throw "User disappeared!";
             
             const currentData = freshDoc.data();
             
+            // a) Update User Balance/Rights
             if (pkg.type === 'credit') {
                 const currentCredits = currentData?.credits || 0;
                 const newCredits = currentCredits + pkg.amount;
@@ -113,6 +114,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 transaction.update(userRef, { subscriptionEndDate: endDate.toISOString() });
                 console.log(`[Webhook] Extended VIP by ${pkg.amount} days for ${shortId}`);
             }
+
+            // b) Log Transaction
+            const transactionRef = db.collection('transactions').doc();
+            transaction.set(transactionRef, {
+                uid: userDoc.id,
+                shortId: shortId,
+                packageId: packageCode,
+                packageName: pkg.name,
+                amount: pkg.amount,
+                type: pkg.type,
+                timestamp: new Date().toISOString(),
+                status: 'success',
+                rawContent: content
+            });
         });
 
         return res.json({ 

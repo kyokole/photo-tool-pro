@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Settings, AppMode, User } from '../types';
 import { PassportIcon, BriefcaseIcon, SchoolIcon, IdPhotoIcon, UndoIcon, GuideIcon, SparklesIcon } from './icons';
@@ -68,6 +68,7 @@ interface SidebarProps {
   onLogout: () => void;
   onChangePasswordClick: () => void;
   onSubscriptionExpired: () => void;
+  onTransactionHistoryClick?: () => void; // New prop
   isImageUploaded: boolean;
   isVip: boolean;
 }
@@ -98,6 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onLogout,
     onChangePasswordClick,
     onSubscriptionExpired,
+    onTransactionHistoryClick,
     isImageUploaded,
     isVip
 }) => {
@@ -174,6 +176,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       }
   }
 
+  // --- ALERT LOGIC ---
+  const credits = currentUser?.credits || 0;
+
+  // 1. Logic for Credit Users: Alert if low (< 5) AND NOT VIP
+  const isLowCredits = !isVip && credits < 5;
+
+  // 2. Logic for VIP Users: Alert if expiring soon (< 3 days) AND NOT Admin
+  const daysUntilExpiry = useMemo(() => {
+      if (!currentUser || !currentUser.subscriptionEndDate) return 0;
+      const end = new Date(currentUser.subscriptionEndDate).getTime();
+      const now = new Date().getTime();
+      return Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+  }, [currentUser]);
+
+  const isVipExpiringSoon = isVip && !currentUser?.isAdmin && daysUntilExpiry <= 3 && daysUntilExpiry >= 0;
+
 
   return (
     <aside className="bg-[var(--bg-component)] w-full md:w-72 p-5 flex flex-col flex-shrink-0 border-r border-[var(--border-color)]">
@@ -199,13 +217,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             </div>
             
-            {/* New Credit Display with Top-Up Button */}
-            <div className="flex items-center justify-between bg-[var(--bg-deep-space)] p-2 rounded-md border border-white/5">
+            {/* Credit Display: Only blink red if NOT VIP and Low Credit */}
+            <div className={`flex items-center justify-between bg-[var(--bg-deep-space)] p-2 rounded-md border ${isLowCredits ? 'border-red-500/50 animate-pulse' : 'border-white/5'}`}>
                 <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1">
-                    <i className="fas fa-coins text-yellow-400"></i> Credit:
+                    <i className={`fas fa-coins ${isLowCredits ? 'text-red-400' : 'text-yellow-400'}`}></i> Credit:
                 </span>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{currentUser.credits || 0}</span>
+                    <span className={`text-sm font-bold ${isLowCredits ? 'text-red-400' : 'text-white'}`}>{credits}</span>
                     <button 
                         onClick={onSubscriptionExpired}
                         className="text-xs bg-[var(--accent-blue)] hover:bg-[var(--accent-cyan)] text-white px-2 py-0.5 rounded shadow-sm font-bold transition-colors"
@@ -216,8 +234,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             </div>
 
-             <div className="text-sm font-medium pl-1">
-                <span className="text-[var(--text-secondary)] text-xs">{t('user.expiry')}: </span>
+             {/* Subscription Expiry: Blink red if VIP is expiring soon */}
+             <div className={`text-sm font-medium pl-1 ${isVipExpiringSoon ? 'animate-pulse text-red-400' : ''}`}>
+                <span className={`text-xs ${isVipExpiringSoon ? 'text-red-400 font-bold' : 'text-[var(--text-secondary)]'}`}>{t('user.expiry')}: </span>
                 {currentUser.isAdmin ? (
                     <span className="text-[var(--accent-blue)]" title={t('user.permanent')}><i className="fas fa-infinity"></i></span>
                 ) : (
@@ -227,6 +246,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                     />
                 )}
             </div>
+            
+            {/* Transaction History Button */}
+            {onTransactionHistoryClick && (
+                <button 
+                    onClick={onTransactionHistoryClick}
+                    className="w-full text-xs text-[var(--text-secondary)] hover:text-white flex items-center justify-center gap-1 py-1 border-t border-[var(--border-color)] mt-1"
+                >
+                    <i className="fas fa-history"></i> {t('history.transactionsTitle')}
+                </button>
+            )}
+
             <div className={`grid ${currentUser.providerId === 'password' ? 'grid-cols-2' : 'grid-cols-1'} gap-2 pt-2 border-t border-[var(--border-color)]`}>
                 {currentUser.providerId === 'password' && (
                     <button 

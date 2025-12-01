@@ -208,7 +208,7 @@ export default {
     "accountHolder": "Account Holder",
     "bank": "Bank",
     "qrPrompt": "Or scan the QR code",
-    "qrAlt": "QR Code for Vietcombank"
+    "qrAlt": "QR Code for MBBank"
   },
   "auth": {
     "title": "Login or Register",

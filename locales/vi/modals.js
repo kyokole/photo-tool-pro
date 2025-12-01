@@ -208,7 +208,7 @@ export default {
     "accountHolder": "Chủ tài khoản",
     "bank": "Ngân hàng",
     "qrPrompt": "Hoặc quét mã QR",
-    "qrAlt": "Mã QR cho Vietcombank"
+    "qrAlt": "Mã QR cho MBBank"
   },
   "auth": {
     "title": "Đăng nhập hoặc Đăng ký",

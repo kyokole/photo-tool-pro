@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PAYMENT_PACKAGES } from '../constants';
@@ -78,8 +77,8 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
         const transferContent = `PHOTO ${shortUid} ${selectedPackage.shortCode}`.toUpperCase();
         
         // Generate VietQR Link
-        const bankId = 'VCB'; // Vietcombank
-        const accountNo = '9937601088'; // From donate modal
+        const bankId = 'MB'; // MBBank
+        const accountNo = '88996868777'; // MBBank Account
         const accountName = 'LE HOAI VU';
         // IMPORTANT: Ensure addInfo matches transferContent EXACTLY
         const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${selectedPackage.price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountName)}`;
@@ -102,7 +101,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                     <div className="space-y-4">
                         <div className="bg-[#1a1d24] p-3 rounded-lg border border-gray-700">
                             <p className="text-xs text-gray-500 uppercase">{t('paymentModal.bank')}</p>
-                            <p className="text-white font-mono font-bold">Vietcombank</p>
+                            <p className="text-white font-mono font-bold">MBBank</p>
                         </div>
                         <div className="bg-[#1a1d24] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
                             <div>

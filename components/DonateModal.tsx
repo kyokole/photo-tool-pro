@@ -9,7 +9,7 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const [copyButtonText, setCopyButtonText] = useState(t('donateModal.copy'));
     const [isQrZoomed, setIsQrZoomed] = useState(false);
-    const accountNumber = '9937601088';
+    const accountNumber = '88996868777';
 
     const handleCopy = () => {
         navigator.clipboard.writeText(accountNumber).then(() => {
@@ -18,7 +18,7 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
         });
     };
 
-    const qrCodeUrl = "https://lh3.googleusercontent.com/d/1dsMHrfbgXMNSQrG9tTR-WfEbNzJlrm92";
+    const qrCodeUrl = "https://lh3.googleusercontent.com/d/1cdTLlTz6nWF4flBGtR5mkd6onBjTA0XV";
 
     return (
         <>
@@ -59,7 +59,7 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
                         </div>
                          <div className="p-3 bg-[var(--bg-tertiary)] rounded-md">
                             <p className="text-xs text-[var(--text-secondary)]">{t('donateModal.bank')}</p>
-                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">Vietcombank</p>
+                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">MBBank</p>
                         </div>
                     </div>
                     
