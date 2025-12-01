@@ -299,6 +299,12 @@ export default {
     "contactButton": "Hỗ trợ thủ công",
     "closeButton": "Để sau"
   },
+  "paymentPackages": {
+    "credit_basic": "Gói Cơ Bản",
+    "credit_pro": "Gói Chuyên Nghiệp",
+    "vip_monthly": "VIP 1 Tháng",
+    "vip_yearly": "VIP 1 Năm"
+  },
   "paymentModal": {
     "title": "Nạp Tiền & Nâng Cấp",
     "subtitle": "Chọn gói phù hợp để bắt đầu sáng tạo không giới hạn",

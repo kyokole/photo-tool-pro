@@ -1,3 +1,4 @@
+
 export default {
   "admin": {
     "title": "Bảng điều khiển Quản trị viên",
@@ -12,6 +13,11 @@ export default {
     "notApplicable": "Không áp dụng",
     "noUsersFound": "Không tìm thấy người dùng nào.",
     "footerNote": "Quản lý người dùng và các gói đăng ký một cách cẩn thận.",
+    "simulator": {
+        "title": "Giả lập Ngân hàng (Bank Simulator)",
+        "description": "Nhập nội dung chuyển khoản để kiểm tra hệ thống tự động cộng tiền (Webhook).",
+        "send": "Gửi Webhook"
+    },
     "table": {
       "username": "Tên người dùng",
       "expiryDate": "Ngày hết hạn",

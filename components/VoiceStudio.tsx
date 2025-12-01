@@ -13,6 +13,8 @@ interface VoiceStudioProps {
     theme: string;
     setTheme: (theme: string) => void;
     isVip: boolean;
+    onInsufficientCredits?: () => void;
+    checkCredits: (cost: number) => boolean;
 }
 
 // --- Audio Utilities ---
@@ -158,7 +160,7 @@ const SpeedSlider: React.FC<{ value: number, onChange: (val: number) => void, t:
     );
 };
 
-const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => {
+const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip, onInsufficientCredits, checkCredits }) => {
     const { t, i18n } = useTranslation();
     const [text, setText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -225,6 +227,12 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
 
     const handleGenerate = async () => {
         if (!text.trim() || !selectedVoice) return;
+
+        // CLIENT-SIDE CREDIT CHECK
+        if (!checkCredits(CREDIT_COSTS.AUDIO_GENERATION)) {
+            if (onInsufficientCredits) onInsufficientCredits();
+            return;
+        }
         
         // Stop any current playback
         stopPlayback();
@@ -250,8 +258,13 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip }) => 
             setDuration(decodedBuffer.duration);
             
         } catch (err: any) {
-            console.error(err);
-            setError(err.message || t('errors.unknownError'));
+            const errorMsg = err.message || '';
+            if (errorMsg.includes("insufficient credits")) {
+                if (onInsufficientCredits) onInsufficientCredits();
+            } else {
+                console.error(err);
+                setError(errorMsg || t('errors.unknownError'));
+            }
         } finally {
             setIsLoading(false);
         }

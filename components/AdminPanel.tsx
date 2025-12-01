@@ -56,6 +56,8 @@ const UserRow: React.FC<{
         <tr className={`border-b border-white/10 ${user.isAdmin ? 'bg-blue-900/20' : 'hover:bg-white/5'}`}>
             <td className="p-3 font-medium">
                 {user.username}
+                {/* Display Short ID */}
+                <div className="text-xs text-gray-400 font-mono">ID: {user.shortId || 'N/A'}</div>
                 <div className="text-xs text-yellow-400 mt-1"><i className="fas fa-coins"></i> {user.credits || 0} Credits</div>
             </td>
             <td className="p-3">{new Date(user.subscriptionEndDate).toLocaleDateString(t('common.locale'))}</td>
@@ -101,6 +103,73 @@ const UserRow: React.FC<{
     );
 };
 
+// --- SIMULATOR COMPONENT ---
+const PaymentSimulator = () => {
+    const { t } = useTranslation();
+    const [simContent, setSimContent] = useState('');
+    const [simLoading, setSimLoading] = useState(false);
+    const [simResult, setSimResult] = useState('');
+
+    const handleSimulate = async () => {
+        if (!simContent) return;
+        setSimLoading(true);
+        setSimResult('');
+        
+        try {
+            const response = await fetch('/api/webhook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: simContent,
+                    amount: 50000 // Dummy amount
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setSimResult(`✅ Success: ${data.message} (${data.user})`);
+            } else {
+                setSimResult(`❌ Error: ${data.error}`);
+            }
+        } catch (e: any) {
+            setSimResult(`❌ Error: ${e.message}`);
+        } finally {
+            setSimLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-[#1C2128] rounded-lg shadow-xl border border-white/10 p-6 mb-6">
+            <h3 className="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+                <i className="fas fa-university"></i>
+                {t('admin.simulator.title')}
+            </h3>
+            <p className="text-sm text-gray-400 mb-4">{t('admin.simulator.description')}</p>
+            
+            <div className="flex gap-4">
+                <input 
+                    type="text" 
+                    value={simContent}
+                    onChange={(e) => setSimContent(e.target.value)}
+                    placeholder="VD: PHOTO A1B2C3 C100"
+                    className="flex-grow bg-[#0D1117] border border-gray-600 rounded p-2 text-white font-mono"
+                />
+                <button 
+                    onClick={handleSimulate} 
+                    disabled={simLoading || !simContent}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+                >
+                    {simLoading ? t('common.processing') : t('admin.simulator.send')}
+                </button>
+            </div>
+            {simResult && (
+                <div className={`mt-3 text-sm font-mono p-2 rounded ${simResult.startsWith('✅') ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
+                    {simResult}
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, onAddCredits, onResetPassword, onToggleAdmin, theme, setTheme }) => {
   const { t } = useTranslation();
@@ -129,6 +198,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, on
               <ThemeSelector currentTheme={theme} onChangeTheme={setTheme} />
             </div>
         </header>
+
+        {/* SIMULATOR */}
+        <PaymentSimulator />
 
         <div className="bg-[#1C2128] rounded-lg shadow-xl overflow-hidden border border-white/10">
           <div className="overflow-x-auto">

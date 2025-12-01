@@ -10,6 +10,7 @@ export default {
     "saveChanges": "Lưu thay đổi",
     "cancel": "Hủy",
     "confirm": "Xác nhận",
+    "back": "Quay lại",
     "locale": "vi-VN",
     "edit": "Sửa",
     "delete": "Xóa",

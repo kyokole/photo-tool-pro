@@ -12,14 +12,14 @@ interface UpgradeVipModalProps {
 
 const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, currentUser }) => {
     const { t } = useTranslation();
-    const [selectedPackage, setSelectedPackage] = useState<PaymentPackage | null>(null);
+    const [selectedPackage, setSelectedPackage] = useState<(PaymentPackage & { nameKey: string, shortCode: string }) | null>(null);
     const [step, setStep] = useState<'select' | 'payment'>('select');
 
     // Filter packages by type
     const creditPackages = PAYMENT_PACKAGES.filter(p => p.type === 'credit');
     const vipPackages = PAYMENT_PACKAGES.filter(p => p.type === 'vip');
 
-    const handlePackageClick = (pkg: PaymentPackage) => {
+    const handlePackageClick = (pkg: (PaymentPackage & { nameKey: string, shortCode: string })) => {
         setSelectedPackage(pkg);
         setStep('payment');
     };
@@ -34,7 +34,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
 
-    const renderPackageCard = (pkg: PaymentPackage) => (
+    const renderPackageCard = (pkg: (PaymentPackage & { nameKey: string, shortCode: string })) => (
         <div 
             key={pkg.id} 
             onClick={() => handlePackageClick(pkg)}
@@ -50,10 +50,10 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
             
             <div>
                 <h4 className={`font-bold text-lg mb-1 group-hover:text-yellow-400 transition-colors ${pkg.type === 'vip' ? 'text-purple-300' : 'text-white'}`}>
-                    {pkg.name}
+                    {t(pkg.nameKey)}
                 </h4>
                 <div className="text-gray-400 text-xs mb-2">
-                    {pkg.type === 'credit' ? `${pkg.amount} Credits` : `${pkg.amount} Ngày`}
+                    {pkg.type === 'credit' ? `${pkg.amount} Credits` : `${pkg.amount} ${t('countdown.days', { count: '' }).trim()}`}
                 </div>
             </div>
 
@@ -73,18 +73,15 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
     const renderPaymentStep = () => {
         if (!selectedPackage || !currentUser) return null;
 
-        // Generate dynamic transfer content: PTP [UID] [PACKAGE_ID]
-        // Using substring of UID for privacy/shortness if needed, but full UID is safer for uniqueness.
-        // Let's use first 5 chars of UID to keep it short for now, OR full UID if preferred. 
-        // For reliability, let's use a specific prefix.
-        const transferContent = `PTP ${currentUser.uid} ${selectedPackage.id}`.toUpperCase();
+        // Generate dynamic transfer content: PHOTO [ShortUID] [ShortPackage]
+        const shortUid = currentUser.uid.substring(0, 6).toUpperCase();
+        const transferContent = `PHOTO ${shortUid} ${selectedPackage.shortCode}`.toUpperCase();
         
         // Generate VietQR Link
-        // Bank: MB Bank (Example) or Vietcombank. Let's assume a default bank for now or use the one from donate modal.
-        // Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>
         const bankId = 'VCB'; // Vietcombank
         const accountNo = '9937601088'; // From donate modal
         const accountName = 'LE HOAI VU';
+        // IMPORTANT: Ensure addInfo matches transferContent EXACTLY
         const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${selectedPackage.price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountName)}`;
 
         return (
@@ -92,7 +89,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                 <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 bg-white rounded-2xl">
                     <img src={qrUrl} alt="VietQR" className="max-w-full h-auto rounded-lg shadow-md mb-4" />
                     <p className="text-gray-500 text-xs text-center">
-                        Quét mã bằng ứng dụng ngân hàng
+                        {t('paymentModal.scanQr')}
                     </p>
                 </div>
                 
@@ -123,7 +120,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                         <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-500/50 flex justify-between items-center relative overflow-hidden">
                             <div className="relative z-10">
                                 <p className="text-xs text-blue-300 uppercase font-bold">{t('paymentModal.content')}</p>
-                                <p className="text-white font-mono font-bold text-sm break-all">{transferContent}</p>
+                                <p className="text-white font-mono font-bold text-lg tracking-wide">{transferContent}</p>
                                 <p className="text-[10px] text-yellow-500 mt-1 italic">* {t('paymentModal.contentNote')}</p>
                             </div>
                             <button onClick={() => navigator.clipboard.writeText(transferContent)} className="text-blue-400 hover:text-blue-300 relative z-10">
@@ -161,7 +158,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                             {step === 'select' ? t('paymentModal.title') : t('paymentModal.paymentTitle')}
                         </h2>
                         <p className="text-gray-400 text-xs mt-1">
-                            {step === 'select' ? t('paymentModal.subtitle') : `${t('paymentModal.selectedPackage')}: ${selectedPackage?.name}`}
+                            {step === 'select' ? t('paymentModal.subtitle') : `${t('paymentModal.selectedPackage')}: ${t(selectedPackage?.nameKey || '')}`}
                         </p>
                     </div>
                     <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">

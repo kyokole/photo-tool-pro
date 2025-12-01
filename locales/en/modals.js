@@ -299,6 +299,12 @@ export default {
     "contactButton": "Manual Support",
     "closeButton": "Later"
   },
+  "paymentPackages": {
+    "credit_basic": "Basic Package",
+    "credit_pro": "Pro Package",
+    "vip_monthly": "VIP 1 Month",
+    "vip_yearly": "VIP 1 Year"
+  },
   "paymentModal": {
     "title": "Top-up & Upgrade",
     "subtitle": "Choose a package to start creating without limits",

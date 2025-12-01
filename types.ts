@@ -101,6 +101,7 @@ export interface User {
   username: string;
   subscriptionEndDate: string; // ISO 8601 date string
   credits: number; // New: Credit balance
+  shortId?: string; // New: Short ID for banking transactions (6 chars)
   isAdmin?: boolean;
   deviceFingerprint?: string;
   providerId?: string;

@@ -15,11 +15,15 @@ export const CREDIT_COSTS = {
 };
 
 // --- PAYMENT PACKAGES ---
-export const PAYMENT_PACKAGES: PaymentPackage[] = [
+// nameKey: Key for translation in modals.js
+// shortCode: Short code for banking transfer content (e.g. C100, V30)
+export const PAYMENT_PACKAGES: (PaymentPackage & { nameKey: string, shortCode: string })[] = [
     {
         id: 'credit_basic',
         type: 'credit',
-        name: 'Gói Cơ Bản',
+        name: 'Gói Cơ Bản', // Fallback
+        nameKey: 'paymentPackages.credit_basic',
+        shortCode: 'C100',
         amount: 100,
         price: 50000,
         originalPrice: 65000,
@@ -27,7 +31,9 @@ export const PAYMENT_PACKAGES: PaymentPackage[] = [
     {
         id: 'credit_pro',
         type: 'credit',
-        name: 'Gói Chuyên Nghiệp',
+        name: 'Gói Chuyên Nghiệp', // Fallback
+        nameKey: 'paymentPackages.credit_pro',
+        shortCode: 'C500',
         amount: 500,
         price: 200000,
         originalPrice: 250000,
@@ -36,7 +42,9 @@ export const PAYMENT_PACKAGES: PaymentPackage[] = [
     {
         id: 'vip_monthly',
         type: 'vip',
-        name: 'VIP 1 Tháng',
+        name: 'VIP 1 Tháng', // Fallback
+        nameKey: 'paymentPackages.vip_monthly',
+        shortCode: 'V30',
         amount: 30, // days
         price: 400000,
         originalPrice: 500000,
@@ -44,7 +52,9 @@ export const PAYMENT_PACKAGES: PaymentPackage[] = [
     {
         id: 'vip_yearly',
         type: 'vip',
-        name: 'VIP 1 Năm',
+        name: 'VIP 1 Năm', // Fallback
+        nameKey: 'paymentPackages.vip_yearly',
+        shortCode: 'V365',
         amount: 365, // days
         price: 3000000,
         originalPrice: 4800000,

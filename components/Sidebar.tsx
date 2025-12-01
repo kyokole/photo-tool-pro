@@ -199,12 +199,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             </div>
             
-            {/* New Credit Display */}
+            {/* New Credit Display with Top-Up Button */}
             <div className="flex items-center justify-between bg-[var(--bg-deep-space)] p-2 rounded-md border border-white/5">
                 <span className="text-xs text-[var(--text-secondary)] flex items-center gap-1">
                     <i className="fas fa-coins text-yellow-400"></i> Credit:
                 </span>
-                <span className="text-sm font-bold text-white">{currentUser.credits || 0}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{currentUser.credits || 0}</span>
+                    <button 
+                        onClick={onSubscriptionExpired}
+                        className="text-xs bg-[var(--accent-blue)] hover:bg-[var(--accent-cyan)] text-white px-2 py-0.5 rounded shadow-sm font-bold transition-colors"
+                        title={t('paymentModal.title')}
+                    >
+                        <i className="fas fa-plus"></i>
+                    </button>
+                </div>
             </div>
 
              <div className="text-sm font-medium pl-1">

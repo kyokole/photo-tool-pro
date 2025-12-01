@@ -10,6 +10,7 @@ export default {
     "saveChanges": "Save Changes",
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "back": "Back",
     "locale": "en-US",
     "edit": "Edit",
     "delete": "Delete",

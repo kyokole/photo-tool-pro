@@ -12,6 +12,8 @@ interface MusicStudioProps {
     theme: string;
     setTheme: (theme: string) => void;
     isVip: boolean;
+    onInsufficientCredits?: () => void;
+    checkCredits: (cost: number) => boolean;
 }
 
 const VinylRecord: React.FC<{ imageUrl: string | null, isPlaying: boolean }> = ({ imageUrl, isPlaying }) => {
@@ -38,7 +40,7 @@ const VinylRecord: React.FC<{ imageUrl: string | null, isPlaying: boolean }> = (
     );
 };
 
-const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => {
+const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip, onInsufficientCredits, checkCredits }) => {
     const { t, i18n } = useTranslation();
     const [settings, setSettings] = useState<MusicSettings>({
         topic: '',
@@ -79,6 +81,13 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
 
     const handleGenerateSong = async () => {
         if (!settings.topic) return;
+
+        // CLIENT-SIDE CREDIT CHECK
+        if (!checkCredits(CREDIT_COSTS.MUSIC_GENERATION)) {
+            if (onInsufficientCredits) onInsufficientCredits();
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
         setSong(null);
@@ -106,8 +115,13 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
             setIsArtLoading(false);
 
         } catch (e: any) {
-            console.error(e);
-            setError(e.message || t('errors.unknownError'));
+            const errorMsg = e.message || '';
+            if (errorMsg.includes("insufficient credits")) {
+                if (onInsufficientCredits) onInsufficientCredits();
+            } else {
+                console.error(e);
+                setError(errorMsg || t('errors.unknownError'));
+            }
             setIsArtLoading(false);
         } finally {
             setIsLoading(false);
@@ -160,6 +174,12 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
         }
 
         // CASE 3: Not Playing + No Buffer -> GENERATE (COSTS CREDITS)
+        // CLIENT-SIDE CREDIT CHECK FOR AUDIO
+        if (!checkCredits(CREDIT_COSTS.AUDIO_GENERATION)) {
+            if (onInsufficientCredits) onInsufficientCredits();
+            return;
+        }
+
         setIsLoading(true);
         try {
             const prompt = `[Style: ${song.stylePrompt}] \n\n ${song.lyrics}`;
@@ -190,8 +210,13 @@ const MusicStudio: React.FC<MusicStudioProps> = ({ theme, setTheme, isVip }) => 
             playBuffer(newBuffer);
             
         } catch (e: any) {
-            console.error(e);
-            alert("Error playing demo audio: " + e.message);
+            const errorMsg = e.message || '';
+            if (errorMsg.includes("insufficient credits")) {
+                if (onInsufficientCredits) onInsufficientCredits();
+            } else {
+                console.error(e);
+                alert("Error playing demo audio: " + errorMsg);
+            }
         } finally {
             setIsLoading(false);
         }

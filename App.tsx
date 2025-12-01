@@ -53,6 +53,23 @@ const loadSettingsFromSession = (): Settings => {
     return DEFAULT_SETTINGS;
 };
 
+// Payment Success Modal Component
+const PaymentSuccessModal: React.FC<{ onClose: () => void }> = ({ onClose }) => (
+    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+        <div className="bg-[#1a1d24] border border-yellow-500 rounded-2xl p-8 text-center max-w-sm relative overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Confetti Effect (CSS only simplified) */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+            
+            <div className="text-6xl mb-4 animate-bounce">🎉</div>
+            <h2 className="text-2xl font-bold text-yellow-400 mb-2 uppercase">Thanh toán thành công!</h2>
+            <p className="text-white text-sm mb-6">Tài khoản của bạn đã được nâng cấp. Cảm ơn bạn đã ủng hộ!</p>
+            <button onClick={onClose} className="btn-gradient text-white font-bold py-2 px-6 rounded-full shadow-lg hover:scale-105 transition-transform">
+                Tuyệt vời
+            </button>
+        </div>
+    </div>
+);
+
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
   
@@ -112,11 +129,16 @@ const App: React.FC = () => {
   const [isChangePasswordModalVisible, setIsChangePasswordModalVisible] = useState<boolean>(false);
   const [isVerificationModalVisible, setIsVerificationModalVisible] = useState<boolean>(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
   const fileUploadRef = useRef<HTMLInputElement>(null);
   const outfitUploadRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isNewRegistration = useRef(false);
+  
+  // Refs to track previous values for payment success detection
+  const prevCreditsRef = useRef<number>(0);
+  const prevExpiryRef = useRef<string>('');
 
   const isVip = useMemo(() => {
     if (!currentUser) return false;
@@ -132,6 +154,11 @@ const App: React.FC = () => {
       if (!currentUser) return false;
       return (currentUser.credits || 0) >= cost;
   }, [currentUser, isVip]);
+
+  // Handler to open subscription modal when insufficient credits
+  const handleInsufficientCredits = useCallback(() => {
+      setIsSubscriptionModalVisible(true);
+  }, []);
 
   useEffect(() => {
     if (!isAuthLoading) {
@@ -329,20 +356,50 @@ const App: React.FC = () => {
                     subscriptionEndDate: expiryDate.toISOString(),
                     credits: 10, // Give some free credits to start
                     isAdmin: false,
+                    shortId: user.uid.substring(0, 6).toUpperCase() // Generate Short ID
                 };
                 await setDoc(userDocRef, userData);
+            } else {
+                // Ensure shortId exists for existing users
+                if (!userDocSnap.data().shortId) {
+                    await updateDoc(userDocRef, { 
+                        shortId: user.uid.substring(0, 6).toUpperCase() 
+                    });
+                }
             }
 
             // Real-time listener
             const unsubDoc = onSnapshot(userDocRef, (doc) => {
                 const userData = doc.data();
                 if (userData) {
+                    const newCredits = userData.credits || 0;
+                    const newExpiry = userData.subscriptionEndDate;
+
+                    // Payment Success Detection
+                    if (prevCreditsRef.current > 0 && newCredits > prevCreditsRef.current) {
+                        setShowPaymentSuccess(true);
+                        setIsSubscriptionModalVisible(false);
+                    }
+                    if (prevExpiryRef.current && newExpiry !== prevExpiryRef.current) {
+                         const oldD = new Date(prevExpiryRef.current);
+                         const newD = new Date(newExpiry);
+                         if (newD > oldD) {
+                             setShowPaymentSuccess(true);
+                             setIsSubscriptionModalVisible(false);
+                         }
+                    }
+                    
+                    // Update Refs
+                    prevCreditsRef.current = newCredits;
+                    prevExpiryRef.current = newExpiry;
+
                     const appUser: User = {
                         uid: user.uid,
                         username: user.email!,
                         isAdmin: userData.isAdmin,
-                        subscriptionEndDate: userData.subscriptionEndDate,
-                        credits: userData.credits || 0, // Fallback to 0 if undefined
+                        subscriptionEndDate: newExpiry,
+                        credits: newCredits, 
+                        shortId: userData.shortId,
                         providerId: user.providerData?.[0]?.providerId
                     };
                     setCurrentUser(appUser);
@@ -1429,7 +1486,7 @@ const App: React.FC = () => {
                                 <>
                                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     {t('common.processing')}
                                 </>
@@ -1543,9 +1600,21 @@ const App: React.FC = () => {
       case 'art_style_studio':
           return <ArtStyleStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'voice_studio':
-          return <VoiceStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+          return <VoiceStudio 
+                    theme={theme} 
+                    setTheme={setTheme} 
+                    isVip={isVip} 
+                    onInsufficientCredits={handleInsufficientCredits}
+                    checkCredits={checkCredits}
+                 />;
       case 'music_studio':
-          return <MusicStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
+          return <MusicStudio 
+                    theme={theme} 
+                    setTheme={setTheme} 
+                    isVip={isVip}
+                    onInsufficientCredits={handleInsufficientCredits}
+                    checkCredits={checkCredits}
+                 />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1578,6 +1647,7 @@ const App: React.FC = () => {
   return (
     <div className="text-[var(--text-primary)] min-h-screen font-sans flex flex-col md:flex-row overflow-hidden bg-[var(--bg-primary)] transition-colors duration-300">
       {isLoading && <LoadingOverlay />}
+      {showPaymentSuccess && <PaymentSuccessModal onClose={() => setShowPaymentSuccess(false)} />}
       {isGuideVisible && <UserGuideModal onClose={() => setIsGuideVisible(false)} />}
       {isAboutModalVisible && <AboutModal onClose={() => setIsAboutModalVisible(false)} onDonateClick={handleOpenDonateModal} />}
       {isDonateModalVisible && <DonateModal onClose={() => setIsDonateModalVisible(false)} />}
@@ -1642,7 +1712,7 @@ const App: React.FC = () => {
         currentUser={currentUser}
         onLogout={handleLogout}
         onChangePasswordClick={() => setIsChangePasswordModalVisible(true)}
-        onSubscriptionExpired={handleSubscriptionExpired}
+        onSubscriptionExpired={() => setIsSubscriptionModalVisible(true)} // Open modal on manual click too
         isImageUploaded={!!originalImage}
         isVip={isVip}
       />
