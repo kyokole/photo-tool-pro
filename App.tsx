@@ -141,6 +141,8 @@ const App: React.FC = () => {
   // Refs to track previous values for payment success detection
   const prevCreditsRef = useRef<number>(0);
   const prevExpiryRef = useRef<string>('');
+  // NEW: Track first load to prevent false positive "Payment Success" on login
+  const isFirstLoadRef = useRef<boolean>(true);
 
   const isVip = useMemo(() => {
     if (!currentUser) return false;
@@ -340,6 +342,9 @@ const App: React.FC = () => {
             setCurrentUser(null);
             setIsVerificationModalVisible(false);
             setIsAuthLoading(false);
+            // Reset refs on logout
+            isFirstLoadRef.current = true;
+            prevCreditsRef.current = 0;
             return;
         }
 
@@ -377,23 +382,28 @@ const App: React.FC = () => {
                     const newCredits = userData.credits || 0;
                     const newExpiry = userData.subscriptionEndDate;
 
-                    // Payment Success Detection
-                    if (prevCreditsRef.current > 0 && newCredits > prevCreditsRef.current) {
-                        setShowPaymentSuccess(true);
-                        setIsSubscriptionModalVisible(false);
-                    }
-                    if (prevExpiryRef.current && newExpiry !== prevExpiryRef.current) {
-                         const oldD = new Date(prevExpiryRef.current);
-                         const newD = new Date(newExpiry);
-                         if (newD > oldD) {
-                             setShowPaymentSuccess(true);
-                             setIsSubscriptionModalVisible(false);
-                         }
+                    // Only check for payment success AFTER the first load
+                    // The first load just initializes the state
+                    if (!isFirstLoadRef.current) {
+                        // Payment Success Detection
+                        if (prevCreditsRef.current >= 0 && newCredits > prevCreditsRef.current) {
+                            setShowPaymentSuccess(true);
+                            setIsSubscriptionModalVisible(false);
+                        }
+                        if (prevExpiryRef.current && newExpiry !== prevExpiryRef.current) {
+                             const oldD = new Date(prevExpiryRef.current);
+                             const newD = new Date(newExpiry);
+                             if (newD > oldD) {
+                                 setShowPaymentSuccess(true);
+                                 setIsSubscriptionModalVisible(false);
+                             }
+                        }
                     }
                     
-                    // Update Refs
+                    // Update Refs & Flags
                     prevCreditsRef.current = newCredits;
                     prevExpiryRef.current = newExpiry;
+                    isFirstLoadRef.current = false; // First load is done
 
                     const appUser: User = {
                         uid: user.uid,
@@ -1291,7 +1301,7 @@ const App: React.FC = () => {
   const handleSetActiveWizardSection = (section: AccordionSection) => {
     setActiveWizardSection(section);
     setEnabledWizardSections(prev => {
-        const sectionOrder: AccordionSection[] = ['layout', 'background', 'outfit', 'face'];
+        const sectionOrder: AccordionSection[] = ['layout', 'outfit', 'face', 'background'];
         const enabledSet = new Set(prev);
         enabledSet.add(section);
         

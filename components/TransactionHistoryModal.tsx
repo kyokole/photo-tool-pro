@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getDbInstance } from '../services/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import type { Transaction, User } from '../types';
 
 interface TransactionHistoryModalProps {
@@ -22,16 +22,23 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                 setIsLoading(true);
                 try {
                     const db = getDbInstance();
+                    // FIX: Removed 'orderBy' to avoid composite index requirement.
+                    // We will fetch all user transactions and sort them on the client side.
                     const q = query(
                         collection(db, 'transactions'),
-                        where('uid', '==', currentUser.uid),
-                        orderBy('timestamp', 'desc')
+                        where('uid', '==', currentUser.uid)
                     );
                     const querySnapshot = await getDocs(q);
                     const list: Transaction[] = [];
                     querySnapshot.forEach((doc) => {
                         list.push({ id: doc.id, ...doc.data() } as Transaction);
                     });
+                    
+                    // Sort locally by timestamp descending (newest first)
+                    list.sort((a, b) => {
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                    });
+                    
                     setTransactions(list);
                 } catch (error) {
                     console.error("Error fetching transactions:", error);

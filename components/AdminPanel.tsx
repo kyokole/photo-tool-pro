@@ -7,7 +7,7 @@ import ResetPasswordModal from './ResetPasswordModal';
 import ToggleAdminModal from './ToggleAdminModal';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { getDbInstance } from '../services/firebase';
-import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
+import { collection, getDocs, query, limit } from 'firebase/firestore';
 
 interface AdminPanelProps {
   currentUser: User;
@@ -245,13 +245,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, on
               setIsTxLoading(true);
               try {
                   const db = getDbInstance();
-                  // Limit to last 50 transactions for performance
-                  const q = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'), limit(50));
+                  // FIX: Removed 'orderBy' to avoid composite index requirement.
+                  // Limit to last 50 transactions (approx) and sort on client.
+                  const q = query(collection(db, 'transactions'), limit(50));
                   const querySnapshot = await getDocs(q);
                   const list: Transaction[] = [];
                   querySnapshot.forEach((doc) => {
                       list.push({ id: doc.id, ...doc.data() } as Transaction);
                   });
+                  
+                  // Sort locally by timestamp descending (newest first)
+                  list.sort((a, b) => {
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                  });
+                  
                   setTransactions(list);
               } catch (error) {
                   console.error("Error fetching global transactions:", error);
