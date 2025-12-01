@@ -1,144 +1,226 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PAYMENT_PACKAGES } from '../constants';
+import type { PaymentPackage, PackageType, User } from '../types';
 
 interface UpgradeVipModalProps {
     onClose: () => void;
-    onContact: () => void;
+    onContact: () => void; // Fallback to manual contact
+    currentUser?: User | null;
 }
 
-const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact }) => {
+const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, currentUser }) => {
     const { t } = useTranslation();
+    const [selectedPackage, setSelectedPackage] = useState<PaymentPackage | null>(null);
+    const [step, setStep] = useState<'select' | 'payment'>('select');
+
+    // Filter packages by type
+    const creditPackages = PAYMENT_PACKAGES.filter(p => p.type === 'credit');
+    const vipPackages = PAYMENT_PACKAGES.filter(p => p.type === 'vip');
+
+    const handlePackageClick = (pkg: PaymentPackage) => {
+        setSelectedPackage(pkg);
+        setStep('payment');
+    };
+
+    const handleBack = () => {
+        setStep('select');
+        setSelectedPackage(null);
+    };
+
+    // Format currency
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    };
+
+    const renderPackageCard = (pkg: PaymentPackage) => (
+        <div 
+            key={pkg.id} 
+            onClick={() => handlePackageClick(pkg)}
+            className={`relative bg-[#1a1d24] rounded-xl p-4 border transition-all cursor-pointer group hover:scale-[1.02] flex flex-col justify-between min-h-[140px]
+                ${pkg.popular ? 'border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.1)]' : 'border-gray-700 hover:border-gray-500'}
+            `}
+        >
+            {pkg.popular && (
+                <div className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm z-10">
+                    HOT
+                </div>
+            )}
+            
+            <div>
+                <h4 className={`font-bold text-lg mb-1 group-hover:text-yellow-400 transition-colors ${pkg.type === 'vip' ? 'text-purple-300' : 'text-white'}`}>
+                    {pkg.name}
+                </h4>
+                <div className="text-gray-400 text-xs mb-2">
+                    {pkg.type === 'credit' ? `${pkg.amount} Credits` : `${pkg.amount} Ngày`}
+                </div>
+            </div>
+
+            <div>
+                {pkg.originalPrice && (
+                    <div className="text-gray-600 text-xs line-through">
+                        {formatCurrency(pkg.originalPrice)}
+                    </div>
+                )}
+                <div className="text-yellow-400 font-bold text-xl">
+                    {formatCurrency(pkg.price)}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderPaymentStep = () => {
+        if (!selectedPackage || !currentUser) return null;
+
+        // Generate dynamic transfer content: PTP [UID] [PACKAGE_ID]
+        // Using substring of UID for privacy/shortness if needed, but full UID is safer for uniqueness.
+        // Let's use first 5 chars of UID to keep it short for now, OR full UID if preferred. 
+        // For reliability, let's use a specific prefix.
+        const transferContent = `PTP ${currentUser.uid} ${selectedPackage.id}`.toUpperCase();
+        
+        // Generate VietQR Link
+        // Bank: MB Bank (Example) or Vietcombank. Let's assume a default bank for now or use the one from donate modal.
+        // Format: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<CONTENT>
+        const bankId = 'VCB'; // Vietcombank
+        const accountNo = '9937601088'; // From donate modal
+        const accountName = 'LE HOAI VU';
+        const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${selectedPackage.price}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(accountName)}`;
+
+        return (
+            <div className="flex flex-col md:flex-row gap-8 h-full">
+                <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 bg-white rounded-2xl">
+                    <img src={qrUrl} alt="VietQR" className="max-w-full h-auto rounded-lg shadow-md mb-4" />
+                    <p className="text-gray-500 text-xs text-center">
+                        Quét mã bằng ứng dụng ngân hàng
+                    </p>
+                </div>
+                
+                <div className="w-full md:w-1/2 flex flex-col justify-center space-y-6">
+                    <div>
+                        <h3 className="text-white font-bold text-xl mb-2">{t('paymentModal.transferInfo')}</h3>
+                        <p className="text-gray-400 text-sm">{t('paymentModal.autoActivationNote')}</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="bg-[#1a1d24] p-3 rounded-lg border border-gray-700">
+                            <p className="text-xs text-gray-500 uppercase">{t('paymentModal.bank')}</p>
+                            <p className="text-white font-mono font-bold">Vietcombank</p>
+                        </div>
+                        <div className="bg-[#1a1d24] p-3 rounded-lg border border-gray-700 flex justify-between items-center">
+                            <div>
+                                <p className="text-xs text-gray-500 uppercase">{t('paymentModal.accountNo')}</p>
+                                <p className="text-white font-mono font-bold text-lg">{accountNo}</p>
+                            </div>
+                            <button onClick={() => navigator.clipboard.writeText(accountNo)} className="text-blue-400 hover:text-blue-300">
+                                <i className="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div className="bg-[#1a1d24] p-3 rounded-lg border border-gray-700">
+                            <p className="text-xs text-gray-500 uppercase">{t('paymentModal.amount')}</p>
+                            <p className="text-yellow-400 font-mono font-bold text-xl">{formatCurrency(selectedPackage.price)}</p>
+                        </div>
+                        <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-500/50 flex justify-between items-center relative overflow-hidden">
+                            <div className="relative z-10">
+                                <p className="text-xs text-blue-300 uppercase font-bold">{t('paymentModal.content')}</p>
+                                <p className="text-white font-mono font-bold text-sm break-all">{transferContent}</p>
+                                <p className="text-[10px] text-yellow-500 mt-1 italic">* {t('paymentModal.contentNote')}</p>
+                            </div>
+                            <button onClick={() => navigator.clipboard.writeText(transferContent)} className="text-blue-400 hover:text-blue-300 relative z-10">
+                                <i className="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 mt-auto">
+                        <button onClick={handleBack} className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-bold transition-colors">
+                            {t('common.back')}
+                        </button>
+                        <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold transition-colors">
+                            {t('paymentModal.iHavePaid')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div
-            className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in"
             onClick={onClose}
         >
             <div
-                className="bg-[#0f1115] w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden border border-gray-800 flex flex-col"
+                className="bg-[#0f1115] w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden border border-gray-800 flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Main Content Area: 2 Columns */}
-                <div className="flex flex-col md:flex-row">
-                    
-                    {/* LEFT COLUMN: CREDIT */}
-                    <div className="w-full md:w-1/2 p-6 md:p-10 border-b md:border-b-0 md:border-r border-gray-800">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="text-yellow-400">
-                                <i className="fas fa-coins text-2xl"></i>
-                            </div>
-                            <h3 className="text-yellow-400 font-bold uppercase tracking-wider text-sm">
-                                {t('upgradeVipModal.creditTitle')}
-                            </h3>
-                        </div>
-                        
-                        <h2 className="text-white text-2xl md:text-3xl font-extrabold mb-3">
-                            {t('upgradeVipModal.creditSubtitle')}
+                {/* Header */}
+                <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-[#13151a]">
+                    <div>
+                        <h2 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 uppercase tracking-wider">
+                            {step === 'select' ? t('paymentModal.title') : t('paymentModal.paymentTitle')}
                         </h2>
-                        <p className="text-gray-400 text-sm mb-8">
-                            {t('upgradeVipModal.creditDesc')}
-                        </p>
-
-                        <div className="space-y-4">
-                            {/* 100 Credit */}
-                            <div className="bg-[#1a1d24] rounded-xl p-4 flex justify-between items-center border border-gray-700 hover:border-gray-500 transition-colors cursor-pointer group">
-                                <div>
-                                    <div className="text-white font-bold text-lg group-hover:text-yellow-400 transition-colors">{t('upgradeVipModal.credit100')}</div>
-                                    <div className="text-gray-500 text-sm">{t('upgradeVipModal.standardLabel')}</div>
-                                </div>
-                                <div className="text-yellow-400 font-bold text-xl">50.000 VNĐ</div>
-                            </div>
-
-                            {/* 500 Credit - HOT */}
-                            <div className="bg-[#1a1d24] rounded-xl p-4 flex justify-between items-center border border-yellow-600/50 hover:border-yellow-500 transition-colors cursor-pointer relative group">
-                                <div className="absolute -top-3 right-4 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
-                                    HOT
-                                </div>
-                                <div>
-                                    <div className="text-white font-bold text-lg group-hover:text-yellow-400 transition-colors">{t('upgradeVipModal.credit500')}</div>
-                                    <div className="text-gray-500 text-sm">{t('upgradeVipModal.bestValue')}</div>
-                                </div>
-                                <div className="text-yellow-400 font-bold text-xl">200.000 VNĐ</div>
-                            </div>
-                        </div>
-
-                        <p className="text-gray-500 text-xs mt-6 italic">
-                            {t('upgradeVipModal.creditNote')}
+                        <p className="text-gray-400 text-xs mt-1">
+                            {step === 'select' ? t('paymentModal.subtitle') : `${t('paymentModal.selectedPackage')}: ${selectedPackage?.name}`}
                         </p>
                     </div>
+                    <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+                        <i className="fas fa-times text-xl"></i>
+                    </button>
+                </div>
 
-                    {/* RIGHT COLUMN: VIP */}
-                    <div className="w-full md:w-1/2 p-6 md:p-10 bg-[#0f1115]">
-                        <div className="flex items-center justify-center gap-3 mb-8">
-                            <div className="text-purple-400 animate-pulse">
-                                <i className="fas fa-crown text-2xl"></i>
-                            </div>
-                            <h3 className="text-purple-400 font-bold uppercase tracking-wider text-sm">
-                                {t('upgradeVipModal.vipTitle')}
-                            </h3>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* Standard Member Card */}
-                            <div className="bg-[#16181d] rounded-xl p-4 border border-gray-800 opacity-60">
-                                <h4 className="text-gray-400 font-bold mb-4">{t('upgradeVipModal.memberStandard')}</h4>
-                                <ul className="space-y-3 text-xs text-gray-500">
-                                    <li className="flex items-center gap-2">
-                                        <i className="fas fa-coins text-yellow-600"></i> {t('upgradeVipModal.standardBenefit1')}
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <i className="fas fa-ban text-red-800"></i> {t('upgradeVipModal.standardBenefit2')}
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <i className="fas fa-lock text-gray-600"></i> {t('upgradeVipModal.standardBenefit3')}
-                                    </li>
-                                </ul>
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                    {step === 'select' ? (
+                        <div className="flex flex-col md:flex-row gap-8">
+                            {/* LEFT: CREDIT PACKAGES */}
+                            <div className="w-full md:w-1/2">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <i className="fas fa-coins text-yellow-400 text-xl"></i>
+                                    <h3 className="text-white font-bold uppercase tracking-wide text-sm">{t('paymentModal.creditPackages')}</h3>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
+                                    {creditPackages.map(renderPackageCard)}
+                                </div>
+                                <p className="text-gray-500 text-xs mt-4 italic">
+                                    * {t('upgradeVipModal.creditNote')}
+                                </p>
                             </div>
 
-                            {/* VIP Member Card */}
-                            <div className="bg-[#1b1924] rounded-xl p-4 border-2 border-purple-500 relative shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white text-[10px] font-bold px-3 py-0.5 rounded-full shadow-sm">
-                                    {t('upgradeVipModal.recommended')}
+                            {/* RIGHT: VIP PACKAGES */}
+                            <div className="w-full md:w-1/2">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <i className="fas fa-crown text-purple-400 text-xl animate-pulse"></i>
+                                    <h3 className="text-white font-bold uppercase tracking-wide text-sm">{t('paymentModal.vipPackages')}</h3>
                                 </div>
-                                <div className="flex justify-between items-start mb-4">
-                                    <h4 className="text-white font-bold">{t('upgradeVipModal.memberVip')}</h4>
-                                    <div className="bg-purple-500 rounded-full p-0.5">
-                                        <i className="fas fa-check text-white text-[10px] w-3 h-3 flex items-center justify-center"></i>
-                                    </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
+                                    {vipPackages.map(renderPackageCard)}
                                 </div>
-                                <ul className="space-y-3 text-xs text-gray-300">
-                                    <li className="flex items-center gap-2">
-                                        <span className="text-purple-400 font-bold">∞</span> {t('upgradeVipModal.vipBenefit1')}
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <i className="fas fa-tint-slash text-blue-400"></i> {t('upgradeVipModal.vipBenefit2')}
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <i className="fas fa-unlock text-green-400"></i> {t('upgradeVipModal.vipBenefit3')}
-                                    </li>
-                                </ul>
+                                
+                                {/* VIP Benefits List */}
+                                <div className="mt-6 bg-[#16181d] rounded-xl p-4 border border-gray-800">
+                                    <h4 className="text-gray-300 font-bold text-xs mb-3 uppercase">{t('paymentModal.vipBenefits')}</h4>
+                                    <ul className="space-y-2 text-xs text-gray-400">
+                                        <li className="flex items-center gap-2"><i className="fas fa-check text-green-400"></i> {t('upgradeVipModal.vipBenefit1')}</li>
+                                        <li className="flex items-center gap-2"><i className="fas fa-check text-green-400"></i> {t('upgradeVipModal.vipBenefit2')}</li>
+                                        <li className="flex items-center gap-2"><i className="fas fa-check text-green-400"></i> {t('upgradeVipModal.vipBenefit3')}</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
+                    ) : (
+                        renderPaymentStep()
+                    )}
+                </div>
+
+                {/* Footer (Only for select step) */}
+                {step === 'select' && (
+                    <div className="p-4 bg-[#13151a] border-t border-gray-800 text-center">
+                        <button onClick={onContact} className="text-xs text-blue-400 hover:text-blue-300 underline">
+                            {t('paymentModal.manualSupport')}
+                        </button>
                     </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className="bg-[#0f1115] p-6 flex flex-col items-center justify-center border-t border-gray-800">
-                    <button
-                        onClick={onContact}
-                        className="w-full max-w-lg bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-blue-900/20 flex items-center justify-center gap-3 transform hover:scale-[1.02]"
-                    >
-                        <i className="fab fa-facebook-messenger text-xl"></i>
-                        <span className="text-lg">{t('upgradeVipModal.contactButton')}</span>
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="mt-4 text-gray-500 hover:text-gray-300 text-sm font-medium transition-colors"
-                    >
-                        {t('upgradeVipModal.closeButton')}
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );

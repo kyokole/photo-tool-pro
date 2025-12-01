@@ -539,3 +539,16 @@ export interface LayoutResult {
   x0: number;
   y0: number;
 }
+
+// --- PAYMENT TYPES ---
+export type PackageType = 'credit' | 'vip';
+
+export interface PaymentPackage {
+    id: string;
+    type: PackageType;
+    name: string;
+    amount: number; // Credits amount OR Days amount
+    price: number; // VND
+    originalPrice?: number; // Optional: to show strike-through price
+    popular?: boolean; // Highlight badge
+}

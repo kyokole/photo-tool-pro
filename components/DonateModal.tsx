@@ -18,7 +18,7 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
         });
     };
 
-    const qrCodeUrl = "https://lh3.googleusercontent.com/d/1Kv_IbPoTsDzBrBZincoqX63dJKwhJ-53";
+    const qrCodeUrl = "https://lh3.googleusercontent.com/d/1dsMHrfbgXMNSQrG9tTR-WfEbNzJlrm92";
 
     return (
         <>
@@ -83,7 +83,7 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
                         <img 
                             src={qrCodeUrl}
                             alt={t('donateModal.qrAlt')}
-                            className="max-w-[80vw] max-h-[80vh] w-auto h-auto rounded-lg shadow-2xl"
+                            className="max-w-[95vw] max-h-[95vh] w-auto h-auto rounded-lg shadow-2xl"
                         />
                          <button 
                             onClick={() => setIsQrZoomed(false)} 

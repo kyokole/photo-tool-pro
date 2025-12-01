@@ -1,5 +1,5 @@
 
-import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption, VoiceOption } from './types';
+import type { Settings, HeadshotStyle, AspectRatio, FashionAspectRatio, FashionStyle, FamilyStudioSettings, SelectOption, TemplateOption, VoiceOption, PaymentPackage } from './types';
 
 export * from './constants/familyStudioConstants';
 export * from './constants/footballConstants';
@@ -13,6 +13,44 @@ export const CREDIT_COSTS = {
     AUDIO_GENERATION: 2, 
     MUSIC_GENERATION: 5, // Includes Lyrics + Cover Art + Demo
 };
+
+// --- PAYMENT PACKAGES ---
+export const PAYMENT_PACKAGES: PaymentPackage[] = [
+    {
+        id: 'credit_basic',
+        type: 'credit',
+        name: 'Gói Cơ Bản',
+        amount: 100,
+        price: 50000,
+        originalPrice: 65000,
+    },
+    {
+        id: 'credit_pro',
+        type: 'credit',
+        name: 'Gói Chuyên Nghiệp',
+        amount: 500,
+        price: 200000,
+        originalPrice: 250000,
+        popular: true,
+    },
+    {
+        id: 'vip_monthly',
+        type: 'vip',
+        name: 'VIP 1 Tháng',
+        amount: 30, // days
+        price: 400000,
+        originalPrice: 500000,
+    },
+    {
+        id: 'vip_yearly',
+        type: 'vip',
+        name: 'VIP 1 Năm',
+        amount: 365, // days
+        price: 3000000,
+        originalPrice: 4800000,
+        popular: true,
+    }
+];
 
 // --- MUSIC STUDIO CONSTANTS ---
 export const MUSIC_GENRES = [

@@ -1585,6 +1585,7 @@ const App: React.FC = () => {
         <UpgradeVipModal 
             onClose={() => setIsSubscriptionModalVisible(false)}
             onContact={handleContactFromExpiredModal}
+            currentUser={currentUser} // Pass currentUser to handle payment logic
         />
       )}
       {isAuthModalVisible && (
