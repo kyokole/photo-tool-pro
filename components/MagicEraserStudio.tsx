@@ -172,22 +172,22 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoLoadError(false);
         
         try {
-            addLog("Initializing process...");
+            addLog("Initializing extraction agent...");
             await new Promise(r => setTimeout(r, 500));
             
-            addLog(`Target Source: ${videoSource.toUpperCase()}`);
-            addLog(`Analyzing URL structure: ${videoUrl.substring(0, 30)}...`);
+            addLog(`Target Protocol: ${videoSource.toUpperCase()}`);
+            addLog(`Connecting to URL: ${videoUrl.substring(0, 30)}...`);
             
             if (videoUrl.match(/\.(mp4|mov)$/i)) {
                  addLog("Direct media file detected.");
                  setVideoProgress(30);
             } else {
-                 addLog("Page URL detected. Starting Deep Scraping...");
+                 addLog("Detecting page structure...");
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Bypassing overlay protections...");
+                 addLog("Scanning internal JSON hydration data...");
                  setVideoProgress(30);
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Searching for high-bitrate source stream...");
+                 addLog("Identifying highest bitrate source stream...");
                  setVideoProgress(60);
             }
 
@@ -198,17 +198,14 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (!responseUrl) throw new Error("Source Extraction Failed. No valid stream found.");
             
             addLog("Source stream located successfully.");
-            addLog("Sanitizing URL parameters...");
-            // Sanitize logs for display
             const displayUrl = responseUrl.length > 50 ? responseUrl.substring(0, 40) + '...' : responseUrl;
-            addLog(`Clean URL: ${displayUrl}`);
+            addLog(`Clean Source URL: ${displayUrl}`);
             setVideoProgress(90);
             await new Promise(r => setTimeout(r, 600));
             
-            addLog("Finalizing extraction...");
+            addLog("Verifying stream integrity...");
             setVideoProgress(100);
             
-            // Fix URL encoding issues in the response if any remain
             let finalUrl = responseUrl;
             if (finalUrl.includes('&amp;')) {
                 finalUrl = finalUrl.replace(/&amp;/g, '&');
@@ -216,7 +213,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             
             setProcessedVideoUrl(finalUrl);
             setVideoFinished(true);
-            addLog("COMPLETE. Ready for download.");
+            addLog("EXTRACTION COMPLETE. Ready for download.");
             
             addToHistory({
                 id: Date.now().toString(),
@@ -455,7 +452,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             <div className="bg-[var(--bg-component)] p-6 rounded-2xl shadow-lg border border-[var(--border-color)] flex flex-col items-center justify-center min-h-[400px]">
                 {isVideoProcessing && (
                     <div className="w-full">
-                         <p className="text-sm text-[var(--text-secondary)] mb-2 font-mono">System Output:</p>
+                         <p className="text-sm text-[var(--text-secondary)] mb-2 font-mono">Extractor Log:</p>
                          <TerminalLog logs={processLogs} />
                     </div>
                 )}
@@ -491,7 +488,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                              {/* Overlay tip for black screen */}
                              <div className="absolute bottom-16 left-0 right-0 text-center pointer-events-none z-10">
                                  <div className="inline-block bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded text-[10px] text-yellow-300">
-                                     <i className="fas fa-lightbulb mr-1"></i> Video gốc từ Sora/Veo thường dùng codec AV1/HEVC. Nếu trình duyệt không phát được hình, vui lòng tải về.
+                                     <i className="fas fa-lightbulb mr-1"></i> Video gốc từ Sora/Veo thường dùng codec AV1/HEVC. Nếu trình duyệt không phát được hình, vui lòng tải về để xem.
                                  </div>
                              </div>
                         </div>
@@ -510,44 +507,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                     </div>
                 )}
             </div>
-        </div>
-    );
-
-    return (
-        <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 font-sans animate-fade-in h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
-            <header className="w-full max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-6 flex-shrink-0">
-                <div />
-                <div className="text-center">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text" style={{ fontFamily: "'Exo 2', sans-serif" }}>
-                        {t('magicEraser.title')}
-                    </h1>
-                    <p className="text-[var(--text-secondary)] mt-2 text-lg tracking-wide">{t('magicEraser.subtitle')}</p>
-                </div>
-                <div className="flex justify-end"><ThemeSelector currentTheme={theme} onChangeTheme={setTheme} /></div>
-            </header>
-
-            <main className="w-full max-w-7xl mx-auto flex-1 min-h-0 lg:overflow-hidden flex flex-col">
-                <div className="flex justify-center mb-6">
-                    <div className="flex bg-[var(--bg-tertiary)] p-1 rounded-xl border border-[var(--border-color)]">
-                        <button
-                            onClick={() => setActiveTab('image')}
-                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'image' ? 'bg-[var(--bg-interactive)] text-[var(--accent-cyan)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'}`}
-                        >
-                            <i className="fas fa-image"></i> {t('magicEraser.tabs.image')}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('video')}
-                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'video' ? 'bg-[var(--bg-interactive)] text-[var(--accent-cyan)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'}`}
-                        >
-                            <i className="fas fa-video"></i> {t('magicEraser.tabs.video')}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-visible lg:overflow-y-auto scrollbar-thin pb-10">
-                    {activeTab === 'image' ? renderImageTab() : renderVideoTab()}
-                </div>
-            </main>
         </div>
     );
 };
