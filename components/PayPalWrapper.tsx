@@ -28,6 +28,7 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
     }
 
     // Convert VND to USD roughly for PayPal
+    // PayPal expects string with 2 decimal places
     const usdAmount = (amount / 25000).toFixed(2);
 
     return (
@@ -39,31 +40,38 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
             )}
             <PayPalScriptProvider options={{ "clientId": clientId, currency: "USD" }}>
                 <PayPalButtons
-                    // KEY FIX: Force destroy and recreation of button when package/amount/lang changes.
-                    // This solves the issue of descriptions not updating or UI caching old order data.
+                    // CRITICAL FIX: The 'key' prop forces React to completely destroy and recreate 
+                    // the PayPal button instance whenever the package or language changes.
+                    // This ensures 'createOrder' always uses the fresh props and PayPal's UI updates correctly.
                     key={`${packageId}-${usdAmount}-${i18n.language}`}
                     
                     style={{ layout: "horizontal", height: 45, tagline: false, label: "pay" }}
-                    createOrder={(_data, actions) => {
-                        // IMPORTANT: Pass userId and packageId in 'custom_id' for Webhook
+                    
+                    createOrder={(data, actions) => {
+                        // IMPORTANT: Pass userId and packageId in 'custom_id' for Webhook verification
                         const customData = JSON.stringify({ uid: userId, packageId: packageId });
                         
-                        // Localize descriptions
-                        const itemDescription = t('paymentModal.paypalItemDesc', { defaultValue: 'AI Photo Suite Service Package' });
-                        const orderDescription = t('paymentModal.paypalOrderDesc', { packageName, defaultValue: `Payment for: ${packageName}` });
-
+                        // THIS IS THE KEY FIX FOR VISIBILITY:
+                        // 1. 'description': This appears at the top level on mobile.
+                        // 2. 'soft_descriptor': Appears on credit card statement (Max 22 chars).
+                        // 3. 'items': Must match the total exactly to be displayed.
+                        
                         return actions.order.create({
                             intent: "CAPTURE",
                             application_context: {
                                 brand_name: "AI PHOTO SUITE",
-                                shipping_preference: "NO_SHIPPING", // Digital goods, no shipping needed
-                                user_action: "PAY_NOW"
+                                shipping_preference: "NO_SHIPPING", // Hides shipping address, making Product Name more visible
+                                user_action: "PAY_NOW",
+                                landing_page: "NO_PREFERENCE"
                             },
                             purchase_units: [
                                 {
                                     reference_id: packageId,
-                                    description: orderDescription, // Main description visible on mobile/header
+                                    // FIX: Put the Package Name DIRECTLY in the top description. 
+                                    // This is what shows up on the main PayPal screen usually.
+                                    description: `${packageName}`, 
                                     custom_id: customData,
+                                    soft_descriptor: "AI PHOTO VIP", // Max 22 chars
                                     amount: {
                                         currency_code: "USD",
                                         value: usdAmount,
@@ -76,8 +84,8 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
                                     },
                                     items: [
                                         {
-                                            name: packageName, // Specific Item Name
-                                            description: itemDescription,
+                                            name: packageName, // Specific Item Name (e.g., "VIP 1 Month")
+                                            description: "Full Access to AI Features", // Sub-description
                                             unit_amount: {
                                                 currency_code: "USD",
                                                 value: usdAmount
