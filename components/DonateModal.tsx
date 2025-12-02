@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,7 +19,8 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
         });
     };
 
-    const qrCodeUrl = "https://lh3.googleusercontent.com/d/1cdTLlTz6nWF4flBGtR5mkd6onBjTA0XV";
+    const qrCodeUrl = "https://lh3.googleusercontent.com/d/10ZyxwBH8Sr2XyV_eMuaGNlrv8dpB0Iut";
+    const paypalLink = "https://www.paypal.com/paypalme/lehoaivu"; // Replace with your actual PayPal.Me link or keep generic
 
     return (
         <>
@@ -59,8 +61,19 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
                         </div>
                          <div className="p-3 bg-[var(--bg-tertiary)] rounded-md">
                             <p className="text-xs text-[var(--text-secondary)]">{t('donateModal.bank')}</p>
-                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">MBBank</p>
+                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">MB Bank</p>
                         </div>
+                        
+                        {/* PayPal Button */}
+                        <a 
+                            href={paypalLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 p-3 bg-[#0070BA] hover:bg-[#003087] text-white rounded-md transition-colors w-full"
+                        >
+                            <i className="fab fa-paypal text-xl"></i>
+                            <span className="font-bold">{t('donateModal.donatePaypal')}</span>
+                        </a>
                     </div>
                     
                     <div className="mt-6 text-center">

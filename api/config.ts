@@ -18,6 +18,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.VITE_FIREBASE_APP_ID,
+    // Add PayPal Client ID here (It is public)
+    paypalClientId: process.env.VITE_PAYPAL_CLIENT_ID
   };
   
   // Basic validation to ensure variables are present on the server

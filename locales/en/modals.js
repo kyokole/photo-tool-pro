@@ -208,7 +208,8 @@ export default {
     "accountHolder": "Account Holder",
     "bank": "Bank",
     "qrPrompt": "Or scan the QR code",
-    "qrAlt": "QR Code for MBBank"
+    "qrAlt": "QR Code for MBBank",
+    "donatePaypal": "Donate via PayPal"
   },
   "auth": {
     "title": "Login or Register",
@@ -283,7 +284,7 @@ export default {
     "creditTitle": "Credit Packages",
     "creditSubtitle": "Buy Credits",
     "creditDesc": "Credits are used for generation and do not expire.",
-    "creditNote": "Pay by scanning the QR code in your banking app.",
+    "creditNote": "Pay by scanning the QR code or via PayPal.",
     "vipTitle": "VIP Packages",
     "memberStandard": "Standard Member",
     "memberVip": "VIP Benefits",
@@ -315,14 +316,20 @@ export default {
     "paymentTitle": "Payment",
     "selectedPackage": "Selected Package",
     "transferInfo": "Transfer Information",
-    "autoActivationNote": "The system will automatically activate the package within 1-3 minutes after receiving payment.",
+    "autoActivationNote": "The system will automatically activate the package instantly.",
     "bank": "Bank",
     "accountNo": "Account No",
     "amount": "Amount",
     "content": "Transfer Content (Memo)",
     "contentNote": "Please enter this content EXACTLY for automatic processing.",
     "iHavePaid": "I Have Paid",
-    "scanQr": "Scan QR with Banking App"
+    "scanQr": "Scan QR with Banking App",
+    "payWithPayPal": "Pay with PayPal",
+    "paypalDesc": "Secure payment, instant activation.",
+    "total": "Total",
+    "approx": "Approx.",
+    "loadingPaypal": "Loading PayPal...",
+    "paymentSuccess": "Payment successful! Your package has been activated."
   },
   "verificationModal": {
     "title": "Verify Your Email",

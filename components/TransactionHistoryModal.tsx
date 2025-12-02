@@ -58,6 +58,13 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
             hour: '2-digit', minute: '2-digit'
         });
     };
+    
+    const formatCurrency = (amount: number, currency: string = 'VND') => {
+         if (currency === 'USD') {
+             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+         }
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    };
 
     return (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm p-4" onClick={onClose}>
@@ -83,8 +90,8 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                             {transactions.map(tx => (
                                 <div key={tx.id} className="bg-[var(--bg-tertiary)] p-4 rounded-lg flex items-center justify-between border border-white/5 hover:border-[var(--accent-cyan)]/30 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'vip' ? 'bg-purple-900/50 text-purple-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
-                                            <i className={`fas ${tx.type === 'vip' ? 'fa-crown' : 'fa-coins'}`}></i>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.gateway === 'PAYPAL' ? 'bg-blue-900/50 text-blue-400' : (tx.type === 'vip' ? 'bg-purple-900/50 text-purple-400' : 'bg-yellow-900/50 text-yellow-400')}`}>
+                                            <i className={`fab ${tx.gateway === 'PAYPAL' ? 'fa-paypal' : (tx.type === 'vip' ? 'fa-crown' : 'fa-coins')}`}></i>
                                         </div>
                                         <div>
                                             <p className="font-bold text-white text-sm">{tx.packageName || tx.packageId}</p>
@@ -95,7 +102,9 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                                         <p className={`font-bold ${tx.type === 'vip' ? 'text-purple-400' : 'text-yellow-400'}`}>
                                             +{tx.amount} {tx.type === 'vip' ? t('countdown.days', { count: '' }).trim() : 'Credits'}
                                         </p>
-                                        <p className="text-[10px] text-green-400 uppercase font-bold tracking-wider">{t('batch.status.success')}</p>
+                                        {tx.price && (
+                                             <p className="text-[10px] text-gray-400 mt-0.5">{formatCurrency(tx.price, tx.currency)}</p>
+                                        )}
                                     </div>
                                 </div>
                             ))}

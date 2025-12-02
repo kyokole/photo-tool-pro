@@ -117,6 +117,10 @@ export interface Transaction {
     type: 'credit' | 'vip';
     timestamp: string; // ISO string
     status: 'success' | 'pending' | 'failed';
+    price?: number; // Added price
+    currency?: string; // Added currency
+    gateway?: 'PAYPAL' | 'VIETQR'; // Added gateway source
+    orderId?: string; // PayPal Order ID
 }
 
 // --- Types for the new Fashion Studio ---

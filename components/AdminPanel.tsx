@@ -118,7 +118,10 @@ const TransactionRow: React.FC<{ transaction: Transaction, users: User[] }> = ({
         });
     };
     
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number, currency: string = 'VND') => {
+        if (currency === 'USD') {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        }
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
 
@@ -130,15 +133,18 @@ const TransactionRow: React.FC<{ transaction: Transaction, users: User[] }> = ({
                 <div className="text-xs text-gray-500 font-mono">{transaction.shortId}</div>
             </td>
             <td className="p-3">
-                 <span className={`text-xs font-bold px-2 py-1 rounded ${transaction.type === 'vip' ? 'bg-purple-900/50 text-purple-300' : 'bg-yellow-900/50 text-yellow-300'}`}>
-                    {transaction.packageName || transaction.packageId}
-                 </span>
+                 <div className="flex items-center gap-2">
+                    {transaction.gateway === 'PAYPAL' && <i className="fab fa-paypal text-blue-400" title="PayPal"></i>}
+                    <span className={`text-xs font-bold px-2 py-1 rounded ${transaction.type === 'vip' ? 'bg-purple-900/50 text-purple-300' : 'bg-yellow-900/50 text-yellow-300'}`}>
+                        {transaction.packageName || transaction.packageId}
+                    </span>
+                 </div>
             </td>
             <td className="p-3 font-mono text-sm text-green-400">
-                {formatCurrency(transaction.price || 0)} {/* Note: Transaction type needs price if saved */}
+                {formatCurrency(transaction.price || 0, transaction.currency)}
             </td>
             <td className="p-3 text-xs text-gray-400 max-w-[150px] truncate" title={(transaction as any).rawContent}>
-                {(transaction as any).rawContent || 'N/A'}
+                {(transaction as any).rawContent || (transaction.gateway === 'PAYPAL' ? `Order: ${transaction.orderId}` : 'N/A')}
             </td>
             <td className="p-3 text-right">
                 <span className="text-green-500 font-bold text-xs uppercase">{transaction.status}</span>

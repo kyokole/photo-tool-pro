@@ -208,7 +208,8 @@ export default {
     "accountHolder": "Chủ tài khoản",
     "bank": "Ngân hàng",
     "qrPrompt": "Hoặc quét mã QR",
-    "qrAlt": "Mã QR cho MBBank"
+    "qrAlt": "Mã QR cho MBBank",
+    "donatePaypal": "Ủng hộ qua PayPal"
   },
   "auth": {
     "title": "Đăng nhập hoặc Đăng ký",
@@ -283,7 +284,7 @@ export default {
     "creditTitle": "Gói Credit",
     "creditSubtitle": "Mua Credit",
     "creditDesc": "Credit dùng để tạo ảnh, không giới hạn thời gian.",
-    "creditNote": "Thanh toán bằng cách quét mã QR trên ứng dụng ngân hàng.",
+    "creditNote": "Thanh toán bằng cách quét mã QR hoặc PayPal.",
     "vipTitle": "Gói VIP",
     "memberStandard": "Thành viên Thường",
     "memberVip": "Quyền lợi VIP",
@@ -315,14 +316,20 @@ export default {
     "paymentTitle": "Thanh Toán",
     "selectedPackage": "Gói đã chọn",
     "transferInfo": "Thông tin chuyển khoản",
-    "autoActivationNote": "Hệ thống sẽ tự động kích hoạt gói trong vòng 1-3 phút sau khi nhận được tiền.",
+    "autoActivationNote": "Hệ thống sẽ tự động kích hoạt gói ngay lập tức sau khi xác nhận thanh toán.",
     "bank": "Ngân hàng",
     "accountNo": "Số tài khoản",
     "amount": "Số tiền",
     "content": "Nội dung chuyển khoản",
     "contentNote": "Vui lòng nhập CHÍNH XÁC nội dung này để hệ thống tự động xử lý.",
     "iHavePaid": "Tôi đã chuyển khoản",
-    "scanQr": "Quét mã bằng ứng dụng ngân hàng"
+    "scanQr": "Quét mã bằng ứng dụng ngân hàng",
+    "payWithPayPal": "Thanh toán qua PayPal",
+    "paypalDesc": "Thanh toán an toàn, kích hoạt ngay lập tức.",
+    "total": "Tổng cộng",
+    "approx": "Xấp xỉ",
+    "loadingPaypal": "Đang tải PayPal...",
+    "paymentSuccess": "Thanh toán thành công! Gói của bạn đã được kích hoạt."
   },
   "verificationModal": {
     "title": "Xác thực Email của bạn",
