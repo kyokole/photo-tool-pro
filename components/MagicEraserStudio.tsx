@@ -151,7 +151,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
              if (msg.includes('429') || msg.includes('quota') || msg.includes('overloaded')) {
                 setImageError(t('errors.generationOverloaded'));
             } else {
-                setImageError(t('magicEraser.errors.processingFailed') + (msg ? `: ${msg}` : ''));
+                setImageError(t('magicEraser.errors.imageFailed') + (msg ? `: ${msg}` : ''));
             }
         } finally {
             setIsImageProcessing(false);
@@ -234,7 +234,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (msg.includes('overloaded') || msg.includes('503')) {
                  setVideoError(t('errors.generationOverloaded'));
             } else {
-                 setVideoError(t('magicEraser.errors.processingFailed') + (msg ? `: ${msg}` : ''));
+                 setVideoError(t('magicEraser.errors.videoFailed') + (msg ? `: ${msg}` : ''));
             }
         } finally {
             setIsVideoProcessing(false);

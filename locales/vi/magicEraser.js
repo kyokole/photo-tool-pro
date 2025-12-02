@@ -55,7 +55,8 @@ export default {
             "noFile": "Vui lòng dán liên kết.",
             "invalidUrl": "Liên kết không hợp lệ.",
             "fileTooLarge": "Kích thước tệp quá lớn.",
-            "processingFailed": "Không tìm thấy video gốc. Vui lòng kiểm tra lại link."
+            "imageFailed": "Xử lý ảnh thất bại.",
+            "videoFailed": "Không tìm thấy video gốc. Vui lòng kiểm tra lại link."
         }
     }
 }

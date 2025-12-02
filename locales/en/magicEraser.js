@@ -55,7 +55,8 @@ export default {
             "noFile": "Please upload a file or paste a link.",
             "invalidUrl": "Invalid URL.",
             "fileTooLarge": "File size is too large.",
-            "processingFailed": "Processing failed. Please try again."
+            "imageFailed": "Image processing failed.",
+            "videoFailed": "Original video source not found. Please check the link."
         }
     }
 }
