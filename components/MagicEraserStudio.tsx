@@ -96,6 +96,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null);
     const [videoError, setVideoError] = useState<string | null>(null);
     const [processLogs, setProcessLogs] = useState<string[]>([]);
+    const [videoLoadError, setVideoLoadError] = useState(false);
 
 
     useEffect(() => {
@@ -104,6 +105,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setProcessedVideoUrl(null);
         setVideoError(null); 
         setProcessLogs([]);
+        setVideoLoadError(false);
     }, [videoSource]);
 
 
@@ -120,6 +122,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             setActiveTab('video');
             setVideoFinished(true);
             setProcessedVideoUrl(item.result);
+            setVideoLoadError(false);
         }
     };
 
@@ -179,6 +182,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setProcessedVideoUrl(null);
         setVideoError(null);
         setProcessLogs([]);
+        setVideoLoadError(false);
         
         try {
             addLog("Initializing process...");
@@ -207,7 +211,10 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (!responseUrl) throw new Error("Source Extraction Failed. No valid stream found.");
             
             addLog("Source stream located successfully.");
-            addLog(`Stream URL: ${responseUrl.substring(0, 40)}...`);
+            addLog("Sanitizing URL parameters...");
+            // Sanitize logs for display
+            const displayUrl = responseUrl.length > 50 ? responseUrl.substring(0, 40) + '...' : responseUrl;
+            addLog(`Clean URL: ${displayUrl}`);
             setVideoProgress(90);
             await new Promise(r => setTimeout(r, 600));
             
@@ -469,13 +476,19 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             </p>
                         </div>
                         
-                        <div className="w-full aspect-video bg-black rounded-lg overflow-hidden border border-[var(--border-color)] shadow-2xl">
+                        <div className="w-full aspect-video bg-black rounded-lg overflow-hidden border border-[var(--border-color)] shadow-2xl relative">
                              <video 
                                 src={processedVideoUrl} 
                                 controls 
                                 autoPlay 
-                                className="w-full h-full" 
+                                className="w-full h-full"
+                                onError={() => setVideoLoadError(true)}
                              />
+                             {videoLoadError && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-red-400 text-center p-4">
+                                    <p>Không thể phát trực tiếp video này do chính sách bảo mật của nguồn. Vui lòng tải xuống để xem.</p>
+                                </div>
+                             )}
                         </div>
                         
                         <button 

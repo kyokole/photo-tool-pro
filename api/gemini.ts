@@ -646,14 +646,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                             }
                         });
-                        const html = await response.text();
-                        const unescapedHtml = html.replace(/\\\//g, '/');
+                        let html = await response.text();
+                        
+                        // CRITICAL FIX: Decode HTML Entities & Escaped Slashes
+                        // Sora URLs often contain &amp; instead of & which breaks signature verification
+                        html = html
+                            .replace(/&amp;/g, '&')
+                            .replace(/\\u0026/g, '&')
+                            .replace(/\\\//g, '/');
 
                         // Platform specific logic
-                        const soraMatch = unescapedHtml.match(/"(https?:\/\/cdn\.openai\.com\/sora\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
-                        const ogMatch = unescapedHtml.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
-                        const twMatch = unescapedHtml.match(/name="twitter:player:stream" content="([^"]+)"/i);
-                        const mp4Match = unescapedHtml.match(/"(https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
+                        const soraMatch = html.match(/"(https?:\/\/cdn\.openai\.com\/sora\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
+                        const ogMatch = html.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
+                        const twMatch = html.match(/name="twitter:player:stream" content="([^"]+)"/i);
+                        const mp4Match = html.match(/"(https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
+                        
+                        // Specific logic for Sora to find the highest quality signed URL
+                        // Sora JSON often contains multiple renditions, we want the main one
+                        // The regex above targets cdn.openai.com/sora/*.mp4
                         
                         if (soraMatch && soraMatch[1]) {
                              resultVideoUrl = soraMatch[1];
