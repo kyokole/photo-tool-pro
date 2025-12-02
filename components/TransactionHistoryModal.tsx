@@ -164,7 +164,7 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                                                         <div className="flex items-center gap-2 text-xs text-gray-500">
                                                             {getGatewayIcon(tx.gateway)}
                                                             <span className="font-mono bg-black/30 px-1.5 py-0.5 rounded text-[10px]">
-                                                                {tx.gateway === 'PAYPAL' ? `ID: ${tx.orderId?.slice(-8)}` : `Mã: ${tx.shortId}`}
+                                                                {tx.gateway === 'PAYPAL' ? `${t('history.id')}: ${tx.orderId?.slice(-8)}` : `${t('history.code')}: ${tx.shortId}`}
                                                             </span>
                                                         </div>
                                                     </div>

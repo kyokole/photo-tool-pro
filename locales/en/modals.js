@@ -306,7 +306,11 @@ export default {
     "credit_basic": "Basic Package",
     "credit_pro": "Pro Package",
     "vip_monthly": "VIP 1 Month",
-    "vip_yearly": "VIP 1 Year"
+    "vip_yearly": "VIP 1 Year",
+    "C100": "Basic Package (100 Credits)",
+    "C500": "Pro Package (500 Credits)",
+    "V30": "VIP 1 Month",
+    "V365": "VIP 1 Year"
   },
   "paymentModal": {
     "title": "Top-up & Upgrade",
@@ -331,7 +335,9 @@ export default {
     "total": "Total",
     "approx": "Approx.",
     "loadingPaypal": "Loading PayPal...",
-    "paymentSuccess": "Payment successful! Your package has been activated."
+    "paymentSuccess": "Payment successful! Your package has been activated.",
+    "paypalItemDesc": "AI Photo Suite Service Package",
+    "paypalOrderDesc": "Payment for: {{packageName}}"
   },
   "verificationModal": {
     "title": "Verify Your Email",

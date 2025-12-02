@@ -7,13 +7,14 @@ import { useTranslation } from 'react-i18next';
 interface PayPalWrapperProps {
     amount: number; // Amount in USD (approx) or we convert
     packageId: string; // ID of the package
+    packageName: string; // Name of the package to display on PayPal
     userId: string; // Current User ID
     onSuccess: () => void;
     onError: (msg: string) => void;
     label?: string;
 }
 
-const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, userId, onSuccess, onError }) => {
+const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packageName, userId, onSuccess, onError }) => {
     const { t } = useTranslation();
     const [clientId, setClientId] = useState<string | null>(null);
     const [isPending, setIsPending] = useState(false);
@@ -26,9 +27,7 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, userId
         return <div className="text-xs text-gray-500 text-center animate-pulse">{t('paymentModal.loadingPaypal')}</div>;
     }
 
-    // Convert VND to USD roughly for PayPal (Since PayPal usually requires international currency or specific setup)
-    // Assuming 25,000 VND = 1 USD for simplicity or use the exact passed amount if logic handles it.
-    // For this example, we will assume `amount` passed in is in VND and convert.
+    // Convert VND to USD roughly for PayPal
     const usdAmount = (amount / 25000).toFixed(2);
 
     return (
@@ -42,20 +41,42 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, userId
                 <PayPalButtons
                     style={{ layout: "horizontal", height: 45, tagline: false }}
                     createOrder={(_data, actions) => {
-                        // IMPORTANT: We pass userId and packageId in 'custom_id'
-                        // so that the Webhook can identify the user even if the client closes.
+                        // IMPORTANT: Pass userId and packageId in 'custom_id' for Webhook
                         const customData = JSON.stringify({ uid: userId, packageId: packageId });
                         
+                        // Localize descriptions
+                        const itemDescription = t('paymentModal.paypalItemDesc', { defaultValue: 'AI Photo Suite Service Package' });
+                        const orderDescription = t('paymentModal.paypalOrderDesc', { packageName, defaultValue: `Payment for: ${packageName}` });
+
                         return actions.order.create({
                             intent: "CAPTURE",
                             purchase_units: [
                                 {
+                                    reference_id: packageId,
+                                    description: orderDescription,
+                                    custom_id: customData,
                                     amount: {
                                         currency_code: "USD",
                                         value: usdAmount,
+                                        breakdown: {
+                                            item_total: {
+                                                currency_code: "USD",
+                                                value: usdAmount
+                                            }
+                                        }
                                     },
-                                    description: `PhotoToolPro: ${packageId}`,
-                                    custom_id: customData 
+                                    items: [
+                                        {
+                                            name: packageName,
+                                            description: itemDescription,
+                                            unit_amount: {
+                                                currency_code: "USD",
+                                                value: usdAmount
+                                            },
+                                            quantity: "1",
+                                            category: "DIGITAL_GOODS"
+                                        }
+                                    ]
                                 },
                             ],
                         });
@@ -63,11 +84,9 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, userId
                     onApprove={async (data, actions) => {
                         setIsPending(true);
                         try {
-                            // Capture the funds from the transaction
                             const details = await actions.order?.capture();
                             if (!details) throw new Error("Capture failed");
                             
-                            // Verify on backend (Client-side trigger)
                             const verified = await verifyPayPalTransaction(data.orderID, userId, packageId);
                             
                             if (verified) {

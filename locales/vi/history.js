@@ -17,6 +17,8 @@ export default {
             "pending": "Đang xử lý",
             "failed": "Thất bại"
         },
-        "showingRecent": "Hiển thị {{count}} giao dịch gần nhất."
+        "showingRecent": "Hiển thị {{count}} giao dịch gần nhất.",
+        "code": "Mã",
+        "id": "ID"
     }
 }

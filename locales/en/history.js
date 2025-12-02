@@ -17,6 +17,8 @@ export default {
             "pending": "Pending",
             "failed": "Failed"
         },
-        "showingRecent": "Showing {{count}} recent transactions."
+        "showingRecent": "Showing {{count}} recent transactions.",
+        "code": "Code",
+        "id": "ID"
     }
 }

@@ -306,7 +306,11 @@ export default {
     "credit_basic": "Gói Cơ Bản",
     "credit_pro": "Gói Chuyên Nghiệp",
     "vip_monthly": "VIP 1 Tháng",
-    "vip_yearly": "VIP 1 Năm"
+    "vip_yearly": "VIP 1 Năm",
+    "C100": "Gói Cơ Bản (100 Credits)",
+    "C500": "Gói Chuyên Nghiệp (500 Credits)",
+    "V30": "VIP 1 Tháng",
+    "V365": "VIP 1 Năm"
   },
   "paymentModal": {
     "title": "Nạp Tiền & Nâng Cấp",
@@ -331,7 +335,9 @@ export default {
     "total": "Tổng cộng",
     "approx": "Xấp xỉ",
     "loadingPaypal": "Đang tải PayPal...",
-    "paymentSuccess": "Thanh toán thành công! Gói của bạn đã được kích hoạt."
+    "paymentSuccess": "Thanh toán thành công! Gói của bạn đã được kích hoạt.",
+    "paypalItemDesc": "Gói dịch vụ AI Photo Suite",
+    "paypalOrderDesc": "Thanh toán cho: {{packageName}}"
   },
   "verificationModal": {
     "title": "Xác thực Email của bạn",

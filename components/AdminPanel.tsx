@@ -57,7 +57,7 @@ const UserRow: React.FC<{
         <tr className={`border-b border-white/10 ${user.isAdmin ? 'bg-blue-900/20' : 'hover:bg-white/5'}`}>
             <td className="p-3 font-medium">
                 {user.username}
-                <div className="text-xs text-gray-400 font-mono">ID: {user.shortId || 'N/A'}</div>
+                <div className="text-xs text-gray-400 font-mono">{t('history.code')}: {user.shortId || 'N/A'}</div>
                 <div className="text-xs text-yellow-400 mt-1"><i className="fas fa-coins"></i> {user.credits || 0} Credits</div>
             </td>
             <td className="p-3">{new Date(user.subscriptionEndDate).toLocaleDateString(t('common.locale'))}</td>
@@ -112,7 +112,7 @@ const TransactionRow: React.FC<{ transaction: Transaction, users: User[] }> = ({
     const username = user ? user.username : (transaction.uid.substring(0, 8) + '...');
 
     const formatDate = (isoString: string) => {
-        return new Date(isoString).toLocaleString('vi-VN', {
+        return new Date(isoString).toLocaleString(t('common.locale') === 'vi' ? 'vi-VN' : 'en-US', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
@@ -125,6 +125,9 @@ const TransactionRow: React.FC<{ transaction: Transaction, users: User[] }> = ({
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
     };
 
+    // Translate package name using packageId if possible, fallback to stored name
+    const packageName = t(`paymentPackages.${transaction.packageId}`, { defaultValue: transaction.packageName || transaction.packageId });
+
     return (
         <tr className="border-b border-white/10 hover:bg-white/5">
             <td className="p-3 text-sm text-gray-300">{formatDate(transaction.timestamp)}</td>
@@ -136,7 +139,7 @@ const TransactionRow: React.FC<{ transaction: Transaction, users: User[] }> = ({
                  <div className="flex items-center gap-2">
                     {transaction.gateway === 'PAYPAL' && <i className="fab fa-paypal text-blue-400" title="PayPal"></i>}
                     <span className={`text-xs font-bold px-2 py-1 rounded ${transaction.type === 'vip' ? 'bg-purple-900/50 text-purple-300' : 'bg-yellow-900/50 text-yellow-300'}`}>
-                        {transaction.packageName || transaction.packageId}
+                        {packageName}
                     </span>
                  </div>
             </td>
@@ -147,7 +150,7 @@ const TransactionRow: React.FC<{ transaction: Transaction, users: User[] }> = ({
                 {(transaction as any).rawContent || (transaction.gateway === 'PAYPAL' ? `Order: ${transaction.orderId}` : 'N/A')}
             </td>
             <td className="p-3 text-right">
-                <span className="text-green-500 font-bold text-xs uppercase">{transaction.status}</span>
+                <span className="text-green-500 font-bold text-xs uppercase">{t(`history.status.${transaction.status}`, { defaultValue: transaction.status })}</span>
             </td>
         </tr>
     );
@@ -346,7 +349,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, users, onGrant, on
             // TRANSACTIONS TAB
             <div className="bg-[#1C2128] rounded-lg shadow-xl overflow-hidden border border-white/10">
                 {isTxLoading ? (
-                    <div className="text-center p-8 text-gray-400">Loading transactions...</div>
+                    <div className="text-center p-8 text-gray-400">{t('common.loading')}...</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-[#E6EDF3]">

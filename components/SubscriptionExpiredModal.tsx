@@ -191,6 +191,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                             <PayPalWrapper 
                                 amount={selectedPackage.price}
                                 packageId={selectedPackage.id}
+                                packageName={t(selectedPackage.nameKey)}
                                 userId={currentUser.uid}
                                 onSuccess={() => {
                                     alert(t('paymentModal.paymentSuccess'));
