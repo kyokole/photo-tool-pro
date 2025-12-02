@@ -39,9 +39,11 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
             )}
             <PayPalScriptProvider options={{ "clientId": clientId, currency: "USD" }}>
                 <PayPalButtons
+                    // KEY FIX: Force destroy and recreation of button when package/amount/lang changes.
+                    // This solves the issue of descriptions not updating or UI caching old order data.
+                    key={`${packageId}-${usdAmount}-${i18n.language}`}
+                    
                     style={{ layout: "horizontal", height: 45, tagline: false, label: "pay" }}
-                    // QUAN TRỌNG: forceReRender buộc nút PayPal vẽ lại khi các giá trị này thay đổi
-                    forceReRender={[usdAmount, packageId, packageName, i18n.language]}
                     createOrder={(_data, actions) => {
                         // IMPORTANT: Pass userId and packageId in 'custom_id' for Webhook
                         const customData = JSON.stringify({ uid: userId, packageId: packageId });
@@ -52,16 +54,15 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
 
                         return actions.order.create({
                             intent: "CAPTURE",
-                            // CẤU HÌNH QUAN TRỌNG ĐỂ HIỂN THỊ ĐÚNG
                             application_context: {
                                 brand_name: "AI PHOTO SUITE",
-                                shipping_preference: "NO_SHIPPING", // Tắt địa chỉ giao hàng -> Hiện chi tiết gói
+                                shipping_preference: "NO_SHIPPING", // Digital goods, no shipping needed
                                 user_action: "PAY_NOW"
                             },
                             purchase_units: [
                                 {
                                     reference_id: packageId,
-                                    description: orderDescription, // Mô tả chính
+                                    description: orderDescription, // Main description visible on mobile/header
                                     custom_id: customData,
                                     amount: {
                                         currency_code: "USD",
@@ -75,8 +76,8 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
                                     },
                                     items: [
                                         {
-                                            name: packageName, // Tên gói (VD: Gói Cơ Bản)
-                                            description: itemDescription, // Mô tả phụ
+                                            name: packageName, // Specific Item Name
+                                            description: itemDescription,
                                             unit_amount: {
                                                 currency_code: "USD",
                                                 value: usdAmount
