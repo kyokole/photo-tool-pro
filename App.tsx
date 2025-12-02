@@ -115,6 +115,7 @@ const App: React.FC = () => {
   const [isAboutModalVisible, setIsAboutModalVisible] = useState<boolean>(false);
   const [isDonateModalVisible, setIsDonateModalVisible] = useState<boolean>(false);
   const [isSubscriptionModalVisible, setIsSubscriptionModalVisible] = useState<boolean>(false);
+  const [subscriptionModalReason, setSubscriptionModalReason] = useState<string | null>(null); // New: Reason for showing modal
   const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState<boolean>(false);
   const [isTermsModalVisible, setIsTermsModalVisible] = useState<boolean>(false);
   const [appMode, setAppMode] = useState<AppMode>('headshot');
@@ -161,6 +162,7 @@ const App: React.FC = () => {
 
   // Handler to open subscription modal when insufficient credits
   const handleInsufficientCredits = useCallback(() => {
+      setSubscriptionModalReason(null); // Default reason
       setIsSubscriptionModalVisible(true);
   }, []);
 
@@ -389,6 +391,7 @@ const App: React.FC = () => {
                         if (prevCreditsRef.current >= 0 && newCredits > prevCreditsRef.current) {
                             setShowPaymentSuccess(true);
                             setIsSubscriptionModalVisible(false);
+                            setSubscriptionModalReason(null); // Reset reason
                         }
                         if (prevExpiryRef.current && newExpiry !== prevExpiryRef.current) {
                              const oldD = new Date(prevExpiryRef.current);
@@ -396,6 +399,7 @@ const App: React.FC = () => {
                              if (newD > oldD) {
                                  setShowPaymentSuccess(true);
                                  setIsSubscriptionModalVisible(false);
+                                 setSubscriptionModalReason(null); // Reset reason
                              }
                         }
                     }
@@ -452,6 +456,7 @@ const App: React.FC = () => {
                 if (targetIsRestricted && !userIsVip) {
                     // Redirect to Beauty Studio requires VIP, so we don't go there
                     // Instead, show modal and stay on default
+                    setSubscriptionModalReason('vip_exclusive'); // Set specific reason
                     setIsSubscriptionModalVisible(true);
                     setPostLoginRedirect(null);
                 } else if (targetIsVipTool && !userIsVip) {
@@ -511,6 +516,7 @@ const App: React.FC = () => {
     if (currentUser && !isVip) {
         if (!checkCredits(cost)) {
             // Logged in but not enough credits -> Show Upgrade Modal
+            setSubscriptionModalReason(null);
             setIsSubscriptionModalVisible(true);
             return;
         }
@@ -577,6 +583,7 @@ const App: React.FC = () => {
 
         if (errorStringForSearch.includes('insufficient credits')) {
              // Fallback if backend throws 402
+             setSubscriptionModalReason(null);
              setIsSubscriptionModalVisible(true);
         } else if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
             setIdPhotoError(t('errors.quotaExceeded'));
@@ -672,6 +679,8 @@ const App: React.FC = () => {
                     setPostLoginRedirect('id_photo');
                     setIsAuthModalVisible(true);
                 } else {
+                    // BATCH MODE IS VIP ONLY
+                    setSubscriptionModalReason('vip_exclusive');
                     setIsSubscriptionModalVisible(true);
                 }
 
@@ -704,6 +713,7 @@ const App: React.FC = () => {
 
   const handleGenerateBatch = useCallback(async () => {
     if (!isVip) {
+        setSubscriptionModalReason('vip_exclusive');
         setIsSubscriptionModalVisible(true);
         return;
     }
@@ -773,6 +783,7 @@ const App: React.FC = () => {
 
     if (currentUser && !isVip) {
         if (!checkCredits(totalCost)) {
+            setSubscriptionModalReason(null);
             setIsSubscriptionModalVisible(true);
             return;
         }
@@ -818,6 +829,7 @@ const App: React.FC = () => {
             console.error("Headshot generation failed with error:", errorStringForSearch);
             
             if (errorStringForSearch.includes('insufficient credits')) {
+                 setSubscriptionModalReason(null);
                  setIsSubscriptionModalVisible(true);
             } else if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
                 setHeadshotError(t('errors.quotaExceeded'));
@@ -846,6 +858,7 @@ const App: React.FC = () => {
 
       const cost = fashionStudioSettings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
       if (!checkCredits(cost)) {
+          setSubscriptionModalReason(null);
           setIsSubscriptionModalVisible(true);
           return;
       }
@@ -882,6 +895,7 @@ const App: React.FC = () => {
             console.error("Fashion Studio generation failed with error:", errorStringForSearch);
             
             if (errorStringForSearch.includes('insufficient credits')) {
+                 setSubscriptionModalReason(null);
                  setIsSubscriptionModalVisible(true);
             } else if (errorStringForSearch.includes('429') && (errorStringForSearch.includes('resource_exhausted') || errorStringForSearch.includes('rate limit'))) {
                 setFashionStudioError(t('errors.quotaExceeded'));
@@ -1139,6 +1153,7 @@ const App: React.FC = () => {
   const handleBeautyStudioSelect = () => {
     if (currentUser) {
         if (!isVip) {
+            setSubscriptionModalReason('vip_exclusive');
             setIsSubscriptionModalVisible(true);
             return;
         }
@@ -1398,9 +1413,9 @@ const App: React.FC = () => {
       if (expiry.getTime() === 0) {
         return; 
       }
-
       // Logic: If expired, they are just regular members now.
       // They can still use tools but must pay credits.
+      setSubscriptionModalReason(null); // Default reason
       setIsSubscriptionModalVisible(true);
     }
   }, [currentUser]);
@@ -1665,9 +1680,13 @@ const App: React.FC = () => {
       {isDonateModalVisible && <DonateModal onClose={() => setIsDonateModalVisible(false)} />}
       {isSubscriptionModalVisible && (
         <UpgradeVipModal 
-            onClose={() => setIsSubscriptionModalVisible(false)}
+            onClose={() => {
+                setIsSubscriptionModalVisible(false);
+                setSubscriptionModalReason(null);
+            }}
             onContact={handleContactFromExpiredModal}
             currentUser={currentUser} // Pass currentUser to handle payment logic
+            reason={subscriptionModalReason}
         />
       )}
       {isTransactionHistoryVisible && (
@@ -1731,7 +1750,10 @@ const App: React.FC = () => {
         currentUser={currentUser}
         onLogout={handleLogout}
         onChangePasswordClick={() => setIsChangePasswordModalVisible(true)}
-        onSubscriptionExpired={() => setIsSubscriptionModalVisible(true)} // Open modal on manual click too
+        onSubscriptionExpired={() => {
+             setSubscriptionModalReason(null); // Default reason
+             setIsSubscriptionModalVisible(true);
+        }}
         onTransactionHistoryClick={() => setIsTransactionHistoryVisible(true)} // New prop
         isImageUploaded={!!originalImage}
         isVip={isVip}

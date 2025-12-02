@@ -9,9 +9,10 @@ interface UpgradeVipModalProps {
     onClose: () => void;
     onContact: () => void; // Fallback to manual contact
     currentUser?: User | null;
+    reason?: string | null; // Optional reason for showing the modal
 }
 
-const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, currentUser }) => {
+const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, currentUser, reason }) => {
     const { t } = useTranslation();
     const [selectedPackage, setSelectedPackage] = useState<(PaymentPackage & { nameKey: string, shortCode: string }) | null>(null);
     const [step, setStep] = useState<'select' | 'payment'>('select');
@@ -231,13 +232,30 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                         <i className="fas fa-times text-xl"></i>
                     </button>
                 </div>
+                
+                {/* Warning Banner for VIP Exclusive Features */}
+                {reason === 'vip_exclusive' && step === 'select' && (
+                    <div className="bg-gradient-to-r from-purple-900/80 to-blue-900/80 border-b border-white/10 p-4 flex items-start gap-3 animate-fade-in">
+                        <div className="p-2 bg-black/30 rounded-full text-yellow-400 flex-shrink-0">
+                            <i className="fas fa-crown text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 className="text-yellow-400 font-bold text-sm uppercase tracking-wide">
+                                {t('upgradeVipModal.vipOnlyTitle')}
+                            </h3>
+                            <p className="text-gray-300 text-xs mt-1 leading-relaxed">
+                                {t('upgradeVipModal.vipOnlyDesc')}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 md:p-10">
                     {step === 'select' ? (
                         <div className="flex flex-col md:flex-row gap-8">
-                            {/* LEFT: CREDIT PACKAGES */}
-                            <div className="w-full md:w-1/2">
+                            {/* LEFT: CREDIT PACKAGES (Dim if VIP Exclusive) */}
+                            <div className={`w-full md:w-1/2 transition-opacity duration-300 ${reason === 'vip_exclusive' ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                                 <div className="flex items-center gap-2 mb-4">
                                     <i className="fas fa-coins text-yellow-400 text-xl"></i>
                                     <h3 className="text-white font-bold uppercase tracking-wide text-sm">{t('paymentModal.creditPackages')}</h3>
@@ -251,7 +269,7 @@ const UpgradeVipModal: React.FC<UpgradeVipModalProps> = ({ onClose, onContact, c
                             </div>
 
                             {/* RIGHT: VIP PACKAGES */}
-                            <div className="w-full md:w-1/2">
+                            <div className={`w-full md:w-1/2 ${reason === 'vip_exclusive' ? 'ring-2 ring-yellow-500/50 rounded-xl p-2 bg-yellow-500/5' : ''}`}>
                                 <div className="flex items-center gap-2 mb-4">
                                     <i className="fas fa-crown text-purple-400 text-xl animate-pulse"></i>
                                     <h3 className="text-white font-bold uppercase tracking-wide text-sm">{t('paymentModal.vipPackages')}</h3>

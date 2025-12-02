@@ -298,7 +298,9 @@ export default {
     "standardLabel": "Standard",
     "recommended": "Recommended",
     "contactButton": "Manual Support",
-    "closeButton": "Later"
+    "closeButton": "Later",
+    "vipOnlyTitle": "VIP Exclusive Feature",
+    "vipOnlyDesc": "The feature you selected is for VIP members only and does not support individual Credit payments. Please subscribe to unlock."
   },
   "paymentPackages": {
     "credit_basic": "Basic Package",

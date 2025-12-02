@@ -67,42 +67,41 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
 
     // Hàm xác định icon và màu sắc dựa trên loại giao dịch
     const getTransactionStyle = (tx: Transaction) => {
-        if (tx.gateway === 'PAYPAL') {
-            return { 
-                icon: 'fa-paypal', 
-                lib: 'fab', // Brand icon
-                color: 'text-blue-400', 
-                bg: 'bg-blue-500/20',
-                border: 'border-blue-500/30'
-            };
-        }
         if (tx.type === 'vip') {
             return { 
-                icon: 'fa-crown', 
-                lib: 'fas', // Solid icon
+                icon: 'fas fa-crown', // Vương miện rõ ràng hơn
                 color: 'text-purple-400', 
-                bg: 'bg-purple-500/20',
-                border: 'border-purple-500/30'
+                bg: 'bg-purple-500/10',
+                border: 'border-purple-500/20',
+                label: 'Gói VIP'
             };
         }
         // Mặc định là Credit
         return { 
-            icon: 'fa-coins', 
-            lib: 'fas', // Solid icon
+            icon: 'fas fa-coins', // Tiền xu
             color: 'text-yellow-400', 
-            bg: 'bg-yellow-500/20',
-            border: 'border-yellow-500/30'
+            bg: 'bg-yellow-500/10',
+            border: 'border-yellow-500/20',
+            label: 'Gói Credit'
         };
     };
 
+    const getGatewayIcon = (gateway?: string) => {
+        if (gateway === 'PAYPAL') return <i className="fab fa-paypal text-blue-400" title="PayPal"></i>;
+        return <i className="fas fa-university text-green-400" title="Chuyển khoản"></i>;
+    }
+
     return (
         <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-[#1C2128] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-[var(--border-color)] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#0d1117] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-[var(--border-color)] overflow-hidden" onClick={e => e.stopPropagation()}>
                 
                 {/* Header */}
                 <header className="flex justify-between items-center p-5 border-b border-[var(--border-color)] bg-[#161b22]">
                     <div>
-                         <h2 className="text-xl font-bold text-white">{t('history.transactionsTitle')}</h2>
+                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <i className="fas fa-history text-[var(--accent-blue)]"></i>
+                            {t('history.transactionsTitle')}
+                         </h2>
                          <p className="text-xs text-gray-400 mt-1">{t('history.subtitle')}</p>
                     </div>
                     <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
@@ -122,8 +121,8 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                         </div>
                     ) : transactions.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center">
-                            <div className="w-24 h-24 bg-[var(--bg-tertiary)] rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-gray-700 opacity-50">
-                                <i className="fas fa-receipt text-4xl text-gray-500"></i>
+                             <div className="w-24 h-24 bg-[var(--bg-tertiary)] rounded-full flex items-center justify-center mb-4 border border-dashed border-gray-600">
+                                <i className="fas fa-receipt text-4xl text-gray-600"></i>
                             </div>
                             <h3 className="text-white font-semibold mb-1 text-lg">{t('history.noTransactions')}</h3>
                             <p className="text-sm text-gray-500">{t('history.noTransactionsDesc')}</p>
@@ -137,59 +136,50 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                                 const packageName = t(`paymentPackages.${tx.packageId}`, { defaultValue: tx.packageName || tx.packageId });
                                 
                                 return (
-                                    <div key={tx.id} className="group relative bg-[#1C2128] p-4 rounded-xl border border-white/5 hover:border-[var(--accent-cyan)]/50 transition-all duration-200 hover:shadow-lg hover:bg-[#262c36]">
-                                        <div className="flex items-start gap-4">
-                                            {/* Icon Box */}
-                                            <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl shadow-inner border ${style.bg} ${style.color} ${style.border}`}>
-                                                <i className={`${style.lib} ${style.icon}`}></i>
+                                    <div key={tx.id} className="bg-[#161b22] rounded-xl p-4 border border-white/5 hover:border-[var(--accent-cyan)]/30 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            {/* Icon lớn bên trái */}
+                                            <div className={`w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-xl ${style.bg} ${style.color} border ${style.border}`}>
+                                                <i className={style.icon}></i>
                                             </div>
 
-                                            {/* Main Content */}
+                                            {/* Nội dung chính */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h4 className="font-bold text-white text-base truncate pr-2">
-                                                            {packageName}
-                                                        </h4>
-                                                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                                                            <span>{time}</span>
-                                                            <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                                                            <span>{date}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className={`font-bold text-lg ${tx.status === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                                                            +{tx.amount} {tx.type === 'vip' ? t('history.days') : 'Credits'}
-                                                        </div>
-                                                        <div className="text-xs font-mono text-gray-400 mt-0.5">
-                                                            {tx.price ? formatCurrency(tx.price, tx.currency) : t('history.free')}
-                                                        </div>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <h4 className="font-bold text-white text-sm sm:text-base truncate pr-2">
+                                                        {packageName}
+                                                    </h4>
+                                                    {/* Số lượng nhận được - Highlight màu xanh/vàng */}
+                                                    <div className={`font-bold text-base ${tx.status === 'success' ? 'text-green-400' : 'text-gray-400'}`}>
+                                                        +{tx.amount} {tx.type === 'vip' ? t('history.days') : 'Credits'}
                                                     </div>
                                                 </div>
-
-                                                {/* Footer Info */}
-                                                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
-                                                    <div className="flex items-center gap-2 text-gray-500 font-mono bg-black/20 px-2 py-1 rounded select-all">
-                                                        <i className="fas fa-hashtag text-[10px]"></i> 
-                                                        {tx.gateway === 'PAYPAL' ? tx.orderId?.substring(0, 12) + '...' : tx.shortId}
+                                                
+                                                <div className="flex justify-between items-end">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                            <i className="far fa-clock"></i>
+                                                            <span>{time}, {date}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                            {getGatewayIcon(tx.gateway)}
+                                                            <span className="font-mono bg-black/30 px-1.5 py-0.5 rounded text-[10px]">
+                                                                {tx.gateway === 'PAYPAL' ? `ID: ${tx.orderId?.slice(-8)}` : `Mã: ${tx.shortId}`}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {tx.gateway === 'PAYPAL' ? (
-                                                            <span className="flex items-center gap-1 text-blue-400 font-bold bg-blue-400/10 px-2 py-0.5 rounded">
-                                                                <i className="fab fa-paypal"></i> PayPal
-                                                            </span>
-                                                        ) : (
-                                                            <span className="flex items-center gap-1 text-gray-300 bg-gray-700/30 px-2 py-0.5 rounded">
-                                                                <i className="fas fa-qrcode"></i> {t('history.bankTransfer')}
-                                                            </span>
-                                                        )}
-                                                        
-                                                        <span className={`px-2 py-0.5 rounded font-bold uppercase ${
-                                                            tx.status === 'success' ? 'bg-green-500/10 text-green-400' : 
-                                                            tx.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-red-500/10 text-red-400'
+
+                                                    {/* Giá tiền - Luôn hiển thị số tiền, kể cả 0 */}
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-bold text-white/90">
+                                                            {formatCurrency(tx.price || 0, tx.currency)}
+                                                        </div>
+                                                        <div className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${
+                                                            tx.status === 'success' ? 'text-green-500' : 
+                                                            tx.status === 'pending' ? 'text-yellow-500' : 'text-red-500'
                                                         }`}>
                                                             {tx.status === 'success' ? t('history.status.success') : (tx.status === 'pending' ? t('history.status.pending') : t('history.status.failed'))}
-                                                        </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -203,7 +193,7 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
                 
                 {/* Footer Summary */}
                 {transactions.length > 0 && (
-                    <footer className="p-4 border-t border-[var(--border-color)] bg-[#161b22] text-center text-xs text-gray-500">
+                    <footer className="p-3 border-t border-[var(--border-color)] bg-[#161b22] text-center text-xs text-gray-500">
                         {t('history.showingRecent', { count: transactions.length })}
                     </footer>
                 )}

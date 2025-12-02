@@ -298,7 +298,9 @@ export default {
     "standardLabel": "Tiêu chuẩn",
     "recommended": "Khuyên dùng",
     "contactButton": "Hỗ trợ thủ công",
-    "closeButton": "Để sau"
+    "closeButton": "Để sau",
+    "vipOnlyTitle": "Tính năng Độc quyền VIP",
+    "vipOnlyDesc": "Tính năng bạn chọn chỉ dành cho thành viên VIP và không hỗ trợ thanh toán bằng Credit lẻ. Vui lòng đăng ký VIP để mở khóa."
   },
   "paymentPackages": {
     "credit_basic": "Gói Cơ Bản",
