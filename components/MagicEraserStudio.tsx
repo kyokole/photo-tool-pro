@@ -476,19 +476,35 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             </p>
                         </div>
                         
-                        <div className="w-full aspect-video bg-black rounded-lg overflow-hidden border border-[var(--border-color)] shadow-2xl relative">
+                        <div className="w-full aspect-video bg-black rounded-lg overflow-hidden border border-[var(--border-color)] shadow-2xl relative group">
                              <video 
                                 src={processedVideoUrl} 
                                 controls 
                                 autoPlay 
+                                playsInline
                                 className="w-full h-full"
                                 onError={() => setVideoLoadError(true)}
                              />
                              {videoLoadError && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-red-400 text-center p-4">
-                                    <p>Không thể phát trực tiếp video này do chính sách bảo mật của nguồn. Vui lòng tải xuống để xem.</p>
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-red-400 text-center p-6 z-20">
+                                    <div className="flex flex-col items-center gap-2">
+                                         <i className="fas fa-video-slash text-3xl mb-2"></i>
+                                         <p className="font-bold">Không thể phát trực tiếp (Lỗi Codec)</p>
+                                         <p className="text-xs text-gray-400">Video sử dụng chuẩn nén cao cấp (AV1/HEVC) mà trình duyệt chưa hỗ trợ.</p>
+                                    </div>
                                 </div>
                              )}
+                             {/* Overlay tip for black screen */}
+                             <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded text-[10px] text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 max-w-[80%]">
+                                 <i className="fas fa-lightbulb mr-1"></i> Màn hình đen? Hãy tải về và xem bằng VLC Player.
+                             </div>
+                        </div>
+                        
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 w-full text-center">
+                            <p className="text-xs text-blue-300">
+                                <i className="fas fa-info-circle mr-1"></i>
+                                Video gốc từ Sora/Veo thường dùng codec AV1/HEVC. Nếu trình duyệt không phát được hình, vui lòng tải về.
+                            </p>
                         </div>
                         
                         <button 

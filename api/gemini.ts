@@ -630,17 +630,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { url, type } = payload;
                 let resultVideoUrl = "";
 
-                // --- IMPROVED URL HANDLING ---
                 if (url) {
-                    // 1. Check for direct video links FIRST (Quick pass)
                     if (url.match(/\.(mp4|mov)$/i)) {
-                        // Directly return the input URL as it is likely a direct file link
-                        // The frontend will handle downloading it as "Original Source"
                         return res.json({ videoUrl: url });
                     }
 
                     try {
-                        // 2. For Platform links (Veo/Sora), we need to fetch the HTML
                         const response = await fetch(url, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -648,33 +643,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         });
                         let html = await response.text();
                         
-                        // CRITICAL FIX: Decode HTML Entities & Escaped Slashes
-                        // Sora URLs often contain &amp; instead of & which breaks signature verification
                         html = html
                             .replace(/&amp;/g, '&')
                             .replace(/\\u0026/g, '&')
+                            .replace(/\\u002F/g, '/')
                             .replace(/\\\//g, '/');
 
-                        // Platform specific logic
+                        const twitterMatch = html.match(/name="twitter:player:stream" content="([^"]+)"/i);
+                        const videoSourceMatch = html.match(/<source\s+[^>]*src="([^"]+)"/i);
                         const soraMatch = html.match(/"(https?:\/\/cdn\.openai\.com\/sora\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
                         const ogMatch = html.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
-                        const twMatch = html.match(/name="twitter:player:stream" content="([^"]+)"/i);
                         const mp4Match = html.match(/"(https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
                         
-                        // Specific logic for Sora to find the highest quality signed URL
-                        // Sora JSON often contains multiple renditions, we want the main one
-                        // The regex above targets cdn.openai.com/sora/*.mp4
-                        
-                        if (soraMatch && soraMatch[1]) {
+                        // Priority: Twitter (Stream) -> Source Tag (HTML5) -> Sora CDN -> OG Video -> Any MP4
+                        if (twitterMatch && twitterMatch[1]) {
+                            resultVideoUrl = twitterMatch[1];
+                        } else if (videoSourceMatch && videoSourceMatch[1]) {
+                            resultVideoUrl = videoSourceMatch[1];
+                        } else if (soraMatch && soraMatch[1]) {
                              resultVideoUrl = soraMatch[1];
                         } else if (ogMatch && ogMatch[1]) {
                             resultVideoUrl = ogMatch[1];
-                        } else if (twMatch && twMatch[1]) {
-                            resultVideoUrl = twMatch[1];
                         } else if (mp4Match && mp4Match[1]) {
                             resultVideoUrl = mp4Match[1];
                         } else {
-                            // Fallback: just return the original URL and let frontend handle (or fail)
                             resultVideoUrl = url;
                         }
                     } catch (err) {
