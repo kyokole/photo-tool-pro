@@ -10,7 +10,18 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
     const { t } = useTranslation();
     const [copyButtonText, setCopyButtonText] = useState(t('donateModal.copy'));
     const [isQrZoomed, setIsQrZoomed] = useState(false);
-    const accountNumber = '88996868777';
+    
+    // --- CẤU HÌNH THÔNG TIN DONATE TẠI ĐÂY ---
+    const accountNumber = '88996868777'; // Số tài khoản ngân hàng
+    const accountName = 'LE HOAI VU'; // Tên chủ tài khoản
+    const bankName = 'MB Bank'; // Tên ngân hàng
+    
+    // Link QR Code (Thay bằng link ảnh QR của bạn nếu cần)
+    const qrCodeUrl = "https://lh3.googleusercontent.com/d/10ZyxwBH8Sr2XyV_eMuaGNlrv8dpB0Iut";
+    
+    // Link PayPal.Me của bạn (Đã cập nhật từ ảnh chụp màn hình)
+    const paypalLink = "https://www.paypal.com/paypalme/kyokole"; 
+    // ------------------------------------------
 
     const handleCopy = () => {
         navigator.clipboard.writeText(accountNumber).then(() => {
@@ -18,9 +29,6 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
             setTimeout(() => setCopyButtonText(t('donateModal.copy')), 2000);
         });
     };
-
-    const qrCodeUrl = "https://lh3.googleusercontent.com/d/10ZyxwBH8Sr2XyV_eMuaGNlrv8dpB0Iut";
-    const paypalLink = "https://www.paypal.com/paypalme/lehoaivu"; // Replace with your actual PayPal.Me link or keep generic
 
     return (
         <>
@@ -57,11 +65,11 @@ const DonateModal: React.FC<DonateModalProps> = ({ onClose }) => {
                         </div>
                          <div className="p-3 bg-[var(--bg-tertiary)] rounded-md">
                             <p className="text-xs text-[var(--text-secondary)]">{t('donateModal.accountHolder')}</p>
-                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">LE HOAI VU</p>
+                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">{accountName}</p>
                         </div>
                          <div className="p-3 bg-[var(--bg-tertiary)] rounded-md">
                             <p className="text-xs text-[var(--text-secondary)]">{t('donateModal.bank')}</p>
-                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">MB Bank</p>
+                            <p className="text-lg font-mono font-semibold text-[var(--text-primary)]">{bankName}</p>
                         </div>
                         
                         {/* PayPal Button */}
