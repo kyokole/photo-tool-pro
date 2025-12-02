@@ -77,6 +77,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     const [videoStatusText, setVideoStatusText] = useState('');
     const [videoFinished, setVideoFinished] = useState(false);
     const [processedVideoUrl, setProcessedVideoUrl] = useState<string | null>(null);
+    const [videoError, setVideoError] = useState<string | null>(null); // ADDED: Dedicated Video Error State
 
     const videoInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,13 +96,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoUrl('');
         setVideoFinished(false);
         setProcessedVideoUrl(null);
-        setError(null); // Fix: Defined but not used in original context
+        setVideoError(null); 
     }, [videoSource]);
-
-    // Explicit helper to set error
-    const setError = (msg: string | null) => {
-        // Just a helper to handle different error states if needed later
-    };
 
 
     const addToHistory = (item: EraserHistoryItem) => {
@@ -156,7 +152,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         } catch (error: any) {
             console.error("Eraser failed:", error);
             const msg = error instanceof Error ? error.message : String(error);
-             if (msg.includes('429') || msg.includes('quota')) {
+             if (msg.includes('429') || msg.includes('quota') || msg.includes('overloaded')) {
                 setImageError(t('errors.generationOverloaded'));
             } else {
                 setImageError(t('magicEraser.errors.processingFailed') + (msg ? `: ${msg}` : ''));
@@ -172,6 +168,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             setVideoFile(e.target.files[0]);
             setVideoFinished(false);
             setVideoProgress(0);
+            setVideoError(null);
         }
     };
 
@@ -185,6 +182,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             setVideoFinished(false);
             setVideoProgress(0);
             setVideoInputType('file');
+            setVideoError(null);
         }
     };
 
@@ -196,6 +194,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoProgress(0);
         setVideoFinished(false);
         setProcessedVideoUrl(null);
+        setVideoError(null);
         setVideoStatusText(t('magicEraser.status.uploading'));
 
         const steps = [
@@ -235,11 +234,16 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                 name: videoInputType === 'file' && videoFile ? videoFile.name : 'Video Link'
             });
 
-        } catch (e) {
+        } catch (e: any) {
             clearInterval(progressInterval);
             setIsVideoProcessing(false);
             setVideoProgress(0);
-            alert(t('magicEraser.errors.processingFailed'));
+            const msg = e.message || '';
+            if (msg.includes('overloaded') || msg.includes('503')) {
+                 setVideoError(t('errors.generationOverloaded'));
+            } else {
+                 setVideoError(t('magicEraser.errors.processingFailed') + (msg ? `: ${msg}` : ''));
+            }
         } finally {
             setIsVideoProcessing(false);
         }
@@ -393,8 +397,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             {videoInputType === 'file' ? t('magicEraser.video.inputType.file') : t('magicEraser.video.inputType.url')}
                         </h3>
                         
-                        {/* Context-Aware Switcher: Only show if not 'General' OR let user manually override if needed. 
-                            For better UX based on feedback, we'll hide it for 'General' since it confuses users. */}
+                        {/* Context-Aware Switcher: Only show if not 'General' OR let user manually override if needed. */}
                         {videoSource !== 'general' && (
                             <div className="flex gap-1 bg-[var(--bg-deep-space)] p-1 rounded-lg border border-[var(--border-color)]">
                                 <button 
@@ -470,6 +473,14 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                         )}
                     </div>
                 </div>
+
+                {/* Video Error Display */}
+                {videoError && (
+                    <div className="bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg text-center text-sm animate-fade-in">
+                        <i className="fas fa-exclamation-circle mr-2"></i>
+                        {videoError}
+                    </div>
+                )}
 
                 <button 
                     onClick={handleVideoSubmit}

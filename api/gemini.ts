@@ -36,6 +36,12 @@ try {
 // --- HELPER: ERROR PARSING ---
 const processGoogleError = (error: any): string => {
     const rawMessage = error.message || String(error);
+    
+    // Check for Overloaded specifically
+    if (rawMessage.includes('overloaded') || rawMessage.includes('503')) {
+        return "Máy chủ AI đang quá tải (High Traffic). Vui lòng thử lại sau giây lát.";
+    }
+
     try {
         const jsonMatch = rawMessage.match(/\{.*\}/s);
         if (jsonMatch) {
@@ -44,7 +50,7 @@ const processGoogleError = (error: any): string => {
                 const msg = errorObj.error.message;
                 if (msg.includes('inline_data')) return "Dữ liệu ảnh không hợp lệ hoặc bị lỗi định dạng.";
                 if (msg.includes('safety')) return "Ảnh bị chặn bởi bộ lọc an toàn của Google.";
-                if (msg.includes('quota') || msg.includes('429')) return "Hệ thống đang quá tải, vui lòng thử lại sau.";
+                if (msg.includes('quota') || msg.includes('429')) return "Hệ thống đang bận (Quota Exceeded). Đang chuyển kênh xử lý...";
                 return `Lỗi từ AI: ${msg}`;
             }
         }
@@ -79,7 +85,6 @@ const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promi
             const userDoc = await userRef.get();
 
             if (!userDoc.exists) {
-                // User authenticated but not in DB yet (rare but possible)
                 return { isVip: !!clientVipStatus, isAdmin: false, uid, credits: 0 };
             }
 
@@ -96,11 +101,10 @@ const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promi
 
             return { isVip, isAdmin, uid, credits: userData?.credits || 0 };
         } catch (error) {
-            console.error("Server Auth Verification Failed (likely config):", error);
+            console.error("Server Auth Verification Failed:", error);
         }
     }
 
-    // Fallback: If server auth fails (no config) but token exists, treat as a "User" not "Guest".
     if (idToken) {
         return { isVip: !!clientVipStatus, isAdmin: false, uid: 'fallback-user', credits: 0 };
     }
@@ -154,100 +158,74 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, 
     return config;
 };
 
-// HELPER: Get AI Client with Key Fallback
-// useBackup = true will attempt to use VEO_API_KEY, effectively acting as a backup for images.
 const getAi = (useBackup: boolean = false) => {
     let apiKey;
-    
     if (useBackup) {
-        // Fallback Strategy: Use VEO key if Primary is exhausted
         apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY;
     } else {
-        // Default Strategy: Use Gemini Key
         apiKey = process.env.GEMINI_API_KEY;
     }
-    
-    if (!apiKey) apiKey = process.env.API_KEY; // Final fallback
+    if (!apiKey) apiKey = process.env.API_KEY;
     if (!apiKey) throw new Error("Server API Key missing.");
     return new GoogleGenAI({ apiKey });
 };
 
-// --- HANDLER ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
     
     const { action, payload, idToken, clientVipStatus } = req.body || {};
     if (!action) return res.status(400).json({ error: 'Missing action' });
 
-    // Xác định xem Client đã thanh toán chưa (thông qua flag isPaid gửi lên)
     const clientPaid = payload?.isPaid === true;
+    const { isVip, uid } = await getUserStatus(idToken, clientVipStatus);
 
-    const { isVip, isAdmin, uid, credits } = await getUserStatus(idToken, clientVipStatus);
-
-    // --- LOGIC WATERMARK ---
     let shouldAddWatermark = true;
-
-    if (isVip) {
-        shouldAddWatermark = false; // VIP luôn sạch
-    } else if (clientPaid) {
-        shouldAddWatermark = false; // Client đã trả tiền thành công -> sạch
+    if (isVip || clientPaid) {
+        shouldAddWatermark = false;
     } else if (uid && !isVip && !clientPaid) {
-        // User thường mà chưa trả tiền -> Watermark
-        shouldAddWatermark = true;
-    } else {
-        // Khách -> Watermark
         shouldAddWatermark = true;
     }
 
-    // --- HÀM XỬ LÝ ẢNH ---
     const processOutputImage = async (base64Data: string | undefined): Promise<string> => {
         if (!base64Data) throw new Error("Không có dữ liệu ảnh được tạo.");
-        
         if (shouldAddWatermark) {
             const inputBuffer = Buffer.from(base64Data, 'base64');
             const watermarkedBuffer = await addWatermark(inputBuffer);
             return `data:image/png;base64,${watermarkedBuffer.toString('base64')}`;
         }
-        
-        // Ảnh sạch
         return `data:image/png;base64,${base64Data}`;
     };
 
-    // --- RETRY / FALLBACK WRAPPER ---
-    // Hàm này sẽ thử chạy logic chính với key mặc định.
-    // Nếu gặp lỗi quota (429), nó sẽ tự động thử lại với key dự phòng (VEO_API_KEY).
+    // --- SMART RETRY WRAPPER ---
     const runWithFallback = async (logicFn: (ai: GoogleGenAI) => Promise<any>) => {
         try {
-            // Lần 1: Dùng Key chính
             const ai = getAi(false);
             return await logicFn(ai);
         } catch (error: any) {
             const msg = (error.message || String(error)).toLowerCase();
-            // Kiểm tra các mã lỗi liên quan đến hết hạn ngạch
-            if (msg.includes('429') || msg.includes('quota') || msg.includes('resource_exhausted')) {
-                console.warn(`[Quota Exceeded] Switching to Backup Key (VEO) for action: ${action}`);
+            // Retry on Quota (429) OR Overloaded (503)
+            if (msg.includes('429') || msg.includes('quota') || msg.includes('resource_exhausted') || msg.includes('overloaded') || msg.includes('503')) {
+                console.warn(`[Smart Retry] Switching to Backup Key due to error: ${msg}`);
                 try {
-                    // Lần 2: Dùng Key dự phòng (VEO)
+                    // Short delay for overload
+                    if (msg.includes('overloaded') || msg.includes('503')) {
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                    }
                     const aiBackup = getAi(true); 
                     return await logicFn(aiBackup);
                 } catch (backupError: any) {
-                    // Nếu backup cũng lỗi thì ném lỗi gốc hoặc lỗi mới
                     console.error("[Backup Failed]", backupError);
                     throw backupError; 
                 }
             }
-            throw error; // Các lỗi khác (400, 500...) ném ra ngay
+            throw error;
         }
     };
 
     try {
-        // --- GỌI AI API ---
-        
-        // Voice Studio Handler (Không áp dụng fallback ảnh, dùng logic riêng của audio)
         if (action === 'generateSpeech') {
-            const ai = getAi(true); // Audio thường dùng key Veo/Backup cho ổn định
-            const { text, voiceId, language, baseVoice, speed } = payload;
-            
+            const ai = getAi(true);
+            const { text, voiceId, baseVoice, speed } = payload;
             const geminiBaseVoice = baseVoice || (voiceId.includes('male') && !voiceId.includes('female') ? 'Fenrir' : 'Aoede');
 
             let speedInstruction = "";
@@ -258,7 +236,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 else if (speed > 1.5) speedInstruction = "Speaking pace: Very Fast, hurried.";
                 else speedInstruction = "Speaking pace: Normal, natural.";
             }
-
             const promptWithSpeed = `${text}\n\n[INSTRUCTION]\n${speedInstruction}`;
 
             const response = await ai.models.generateContent({
@@ -276,15 +253,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
             if (!audioData) throw new Error("Không tạo được âm thanh.");
-            
             return res.json({ audioData });
         }
 
-        // Veo Video (Luôn dùng key Veo)
         if (action === 'generateVeoVideo') {
             const ai = getAi(true);
             const { base64Image, prompt } = payload;
-                
             let operation = await ai.models.generateVideos({
                 model: VEO_MODEL,
                 prompt: prompt, 
@@ -311,9 +285,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.json({ videoUrl: `data:video/mp4;base64,${vidBase64}` });
         }
 
-        // --- CÁC TÁC VỤ XỬ LÝ HÌNH ẢNH (Áp dụng Fallback) ---
-        // Chúng ta không khởi tạo `ai` ở ngoài nữa, mà dùng `runWithFallback` cung cấp `ai`
-        
         const imageSize = resolveImageSize(payload, isVip);
         const selectedModel = selectModel(imageSize);
 
@@ -323,63 +294,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                      const { originalImage, settings } = payload;
                      const buildIdPhotoPrompt = (s: any) => {
                          let p = `**NHIỆM VỤ:** Tạo ảnh thẻ chuyên nghiệp (ID Photo). Cắt lấy phần đầu và vai chuẩn thẻ. `;
-                         
-                         // 1. NỀN
                          if (s.background.mode === 'ai' && s.background.customPrompt) {
                              p += `**1. NỀN:** AI Background: "${s.background.customPrompt}". Bokeh nhẹ. `;
                          } else {
                              const c = s.background.mode === 'custom' ? s.background.customColor : (s.background.mode === 'white' ? '#FFFFFF' : '#E0E8F0');
                              p += `**1. NỀN:** Màu đơn sắc ${c}. Tách nền sạch sẽ, không lem tóc. `;
                          }
-
-                         // 2. TRANG PHỤC
                          if (s.outfit.mode === 'upload') {
                              p += `**2. TRANG PHỤC:** Thay bằng bộ đồ ở ảnh tham chiếu thứ 2. Giữ cấu trúc cơ thể tự nhiên. `;
                          } else if (!s.outfit.keepOriginal) {
                              const outfitName = s.outfit.mode === 'preset' ? s.outfit.preset : s.outfit.customPrompt;
                              p += `**2. TRANG PHỤC:** Thay thế toàn bộ trang phục gốc thành "${outfitName}". Đảm bảo cổ áo và vai cân đối, chuyên nghiệp. `;
                          }
-                         
-                         // 3. TÓC & GƯƠNG MẶT (Phần quan trọng nhất)
-                         p += `**3. GƯƠNG MẶT & TÓC:** `;
-                         p += `Giữ nguyên 100% đặc điểm nhận dạng khuôn mặt (mắt, mũi, miệng, dáng mặt). `;
-                         
+                         p += `**3. GƯƠNG MẶT & TÓC:** Giữ nguyên 100% đặc điểm nhận dạng khuôn mặt. `;
                          if (s.face.hairStyle !== 'keep_original') {
                              let hairDesc = "";
-                             let action = "Thay đổi hoàn toàn kiểu tóc gốc.";
-                             
-                             if (s.face.hairStyle === 'auto') {
-                                 hairDesc = "Tóc buộc gọn gàng ra sau, lộ rõ hai tai và trán, không để tóc che mặt, không để tóc xõa xuống vai.";
-                                 action = "Xóa bỏ tóc cũ đang phủ trên vai. Vẽ lại phần cổ và vai bị tóc che. Tạo kiểu tóc mới:";
-                             } else if (s.face.hairStyle === 'slicked_back') {
-                                 hairDesc = "Vuốt ngược gọn gàng (slicked back), lộ trán và tai.";
-                                 action = "Xóa bỏ tóc cũ. Tạo kiểu tóc mới:";
-                             } else if (s.face.hairStyle === 'down') {
-                                 hairDesc = "Tóc thả tự nhiên, suôn mượt, vén gọn sau tai.";
-                             } else {
-                                 hairDesc = s.face.hairStyle;
-                             }
-                             
-                             p += `${action} "${hairDesc}". `;
+                             if (s.face.hairStyle === 'auto') hairDesc = "Tóc buộc gọn gàng ra sau, lộ rõ hai tai và trán.";
+                             else if (s.face.hairStyle === 'slicked_back') hairDesc = "Vuốt ngược gọn gàng (slicked back).";
+                             else if (s.face.hairStyle === 'down') hairDesc = "Tóc thả tự nhiên, suôn mượt.";
+                             p += `Thay đổi tóc thành: "${hairDesc}". `;
                          } else {
                              p += `Giữ nguyên kiểu tóc gốc. `;
                          }
-
-                         if (s.face.smoothSkin) p += `Làm mịn da nhẹ nhàng (giữ kết cấu da). `;
-                         if (s.face.slightSmile) p += `Điều chỉnh miệng cười mỉm nhẹ thân thiện. `;
-                         
+                         if (s.face.smoothSkin) p += `Làm mịn da nhẹ nhàng. `;
+                         if (s.face.slightSmile) p += `Cười mỉm nhẹ. `;
                          return p;
                      };
-
                      const prompt = buildIdPhotoPrompt(settings);
                      const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
-                     
-                     if (payload.outfitImagePart) {
-                         parts.splice(1, 0, payload.outfitImagePart);
-                     }
-
+                     if (payload.outfitImagePart) parts.splice(1, 0, payload.outfitImagePart);
                      let modelRatio = settings.aspectRatio === '5x5' ? '1:1' : '3:4';
-
                      const geminiRes = await ai.models.generateContent({
                         model: selectedModel,
                         contents: { parts },
@@ -389,26 +333,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                      return res.json({ imageData });
                  });
             }
-
             case 'generateHeadshot': {
                  return await runWithFallback(async (ai) => {
                      const { imagePart, prompt: p } = payload;
                      const prompt = `[TASK] Headshot. ${p}. [QUALITY] ${imageSize}, Photorealistic.`;
-                     
                      const geminiRes = await ai.models.generateContent({
                         model: selectedModel,
                         contents: { parts: [imagePart, { text: prompt }] },
-                        config: { 
-                            responseModalities: [Modality.IMAGE], 
-                            imageConfig: getImageConfig(selectedModel, imageSize, undefined, 4) 
-                        }
+                        config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize, undefined, 4) }
                      });
-                     
                      const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                      return res.json({ imageData });
                  });
             }
-
             case 'performRestoration':
             case 'performDocumentRestoration': {
                 return await runWithFallback(async (ai) => {
@@ -423,7 +360,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.json({ imageData });
                 });
             }
-
             case 'generateFashionPhoto': {
                 return await runWithFallback(async (ai) => {
                     const { imagePart, settings } = payload;
@@ -437,7 +373,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.json({ imageData });
                 });
             }
-            
              case 'generateFootballPhoto': {
                 return await runWithFallback(async (ai) => {
                     const { settings } = payload;
@@ -451,7 +386,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.json({ imageData });
                 });
             }
-
             case 'generateBeautyPhoto': {
                 return await runWithFallback(async (ai) => {
                     const { baseImage, tool, subFeature, style } = payload;
@@ -466,7 +400,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.json({ imageData });
                 });
             }
-            
             case 'generateFourSeasonsPhoto': {
                 return await runWithFallback(async (ai) => {
                     const { imagePart, scene, season, aspectRatio, customDescription } = payload;
@@ -480,17 +413,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.json({ imageData });
                 });
             }
-
             case 'generateMarketingImage': {
                 return await runWithFallback(async (ai) => {
                     const { productImagePart, referenceImagePart, productDetails, settings } = payload;
                     const parts: Part[] = [];
                     if (productImagePart) parts.push(productImagePart);
                     if (referenceImagePart) parts.push(referenceImagePart);
-
                     const prompt = `[TASK] Marketing Image. Product: ${productDetails.brand} ${productDetails.name}. Template: ${settings.templateId}. Tone: ${settings.tone}. Features: ${productDetails.features}. [QUALITY] 8K, Advertising.`;
                     parts.push({ text: prompt });
-
                     const geminiRes = await ai.models.generateContent({
                         model: selectedModel,
                         contents: { parts },
@@ -500,24 +430,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     return res.json({ imageData, prompt });
                 });
             }
-
             case 'generateArtStyleImages': {
                 return await runWithFallback(async (ai) => {
                     const { modelFile, otherFiles, styles, quality, aspect, count, userPrompt } = payload;
                     const parts: Part[] = [];
-                    
-                    if (!modelFile?.base64 || typeof modelFile.base64 !== 'string') {
-                        return res.status(400).json({ error: "Dữ liệu ảnh Model không hợp lệ." });
-                    }
-
+                    if (!modelFile?.base64) return res.status(400).json({ error: "Dữ liệu ảnh Model không hợp lệ." });
                     parts.push({ inlineData: { data: modelFile.base64, mimeType: modelFile.mimeType } });
                     if (otherFiles.clothing?.base64) parts.push({ inlineData: { data: otherFiles.clothing.base64, mimeType: otherFiles.clothing.mimeType } });
                     if (otherFiles.accessories?.base64) parts.push({ inlineData: { data: otherFiles.accessories.base64, mimeType: otherFiles.accessories.mimeType } });
                     if (otherFiles.product?.base64) parts.push({ inlineData: { data: otherFiles.product.base64, mimeType: otherFiles.product.mimeType } });
-
                     const prompt = `[TASK] Commercial Composite. Inputs: Main Model + optional Clothing/Product. Styles: ${styles.join(', ')}. Description: ${userPrompt}. [INSTRUCTION] Blend inputs naturally. High fashion. Ratio: ${aspect}. Quality: ${quality}.`;
                     parts.push({ text: prompt });
-
                     const generationPromises = [];
                     for(let i=0; i<count; i++) {
                         generationPromises.push(ai.models.generateContent({
@@ -526,25 +449,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize, aspect) }
                         }));
                     }
-                    
                     const results = await Promise.all(generationPromises);
                     const images = [];
                     for(const r of results) {
                         const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                        if(data) {
-                            const processed = await processOutputImage(data);
-                            images.push(processed);
-                        }
+                        if(data) images.push(await processOutputImage(data));
                     }
                     return res.json({ images });
                 });
             }
-
             case 'generateBatchImages': {
                 return await runWithFallback(async (ai) => {
                     const { prompt, aspectRatio, numOutputs } = payload;
                     const parts = [{ text: `[TASK] Generate Image. Prompt: ${prompt}. Aspect: ${aspectRatio}.` }];
-                    
                     const generationPromises = [];
                     for(let i=0; i < numOutputs; i++) {
                          generationPromises.push(ai.models.generateContent({
@@ -553,40 +470,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize, aspectRatio) }
                         }));
                     }
-                    
                     const results = await Promise.all(generationPromises);
                     const images = [];
                     for(const r of results) {
                         const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                        if(data) {
-                            const processed = await processOutputImage(data);
-                            images.push(processed);
-                        }
+                        if(data) images.push(await processOutputImage(data));
                     }
                     return res.json({ images });
                 });
             }
-
             case 'generateImagesFromFeature': {
                  return await runWithFallback(async (ai) => {
                      const { featureAction, formData } = payload;
                      let parts: Part[] = [];
                      let prompt = "";
-                     
                      if (featureAction === 'couple_compose') {
                          if (formData.person_left_image?.base64) parts.push({ inlineData: { data: formData.person_left_image.base64, mimeType: formData.person_left_image.mimeType } });
                          if (formData.person_right_image?.base64) parts.push({ inlineData: { data: formData.person_right_image.base64, mimeType: formData.person_right_image.mimeType } });
                          if (formData.custom_background?.base64) parts.push({ inlineData: { data: formData.custom_background.base64, mimeType: formData.custom_background.mimeType } });
-                         
                          prompt = `[TASK] Generate couple photo. Face Consistency: ${formData.face_consistency}. Action: ${formData.affection_action}. Background: ${formData.couple_background || "Custom"}. Style: ${formData.aesthetic_style}.`;
                      } else {
                          prompt = `Execute Feature: ${featureAction}. Data: ${JSON.stringify(formData)}`;
                      }
                      parts.push({ text: prompt });
-
                      const numImages = payload.numImages || 1;
                      const generationPromises = [];
-                     
                      for(let i=0; i<numImages; i++) {
                          generationPromises.push(ai.models.generateContent({
                             model: selectedModel,
@@ -594,21 +502,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(selectedModel, imageSize) }
                          }));
                      }
-
                      const results = await Promise.all(generationPromises);
                      const images = [];
                      for(const r of results) {
                         const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-                        if(data) {
-                            const processed = await processOutputImage(data);
-                            images.push(processed.split(',')[1]); 
-                        }
+                        if(data) images.push((await processOutputImage(data)).split(',')[1]);
                      }
-                     
                      return res.json({ images: images, successCount: images.length });
                  });
             }
-            
              case 'generateFamilyPhoto':
              case 'generateFamilyPhoto_3_Pass': {
                  return await runWithFallback(async (ai) => {
@@ -624,40 +526,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                      return res.json({ imageData, similarityScores: [], debug: null });
                  });
              }
-             
-             // --- MUSIC STUDIO GENERATION (Text Only - No Fallback Needed Usually but kept simple) ---
              case 'generateSongContent': {
-                 const ai = getAi(false); // Text model is cheap, no fallback needed usually
+                 const ai = getAi(false);
                  const { topic, genre, mood, language } = payload;
-                 const prompt = `
-                 ACT AS A PROFESSIONAL SONGWRITER.
-                 Task: Write lyrics and metadata for a new song.
-                 Topic: ${topic}
-                 Genre: ${genre}
-                 Mood: ${mood}
-                 Language: ${language}
-                 
-                 OUTPUT FORMAT: JSON with keys: title, lyrics, chords, description, stylePrompt.
-                 - 'lyrics': Full lyrics with Verse/Chorus structure.
-                 - 'chords': Simple guitar chord progression (e.g. C - G - Am - F).
-                 - 'description': A detailed visual description for the Album Cover Art (e.g., "A neon-lit cyberpunk street with rain").
-                 - 'stylePrompt': A short description of the music style and rhythm for vocal synthesis (e.g., "Slow, emotional ballad, soft voice").
-                 `;
-                 
+                 const prompt = `ACT AS A PROFESSIONAL SONGWRITER. Topic: ${topic} Genre: ${genre} Mood: ${mood} Language: ${language} OUTPUT JSON: title, lyrics, chords, description, stylePrompt.`;
                  const geminiRes = await ai.models.generateContent({
                     model: TEXT_MODEL,
                     contents: { parts: [{ text: prompt }] },
                     config: { responseMimeType: "application/json" }
                  });
-                 
                  return res.json(JSON.parse(geminiRes.text || '{}'));
              }
-             
              case 'generateAlbumArt': {
                  return await runWithFallback(async (ai) => {
                      const { description } = payload;
                      const prompt = `[TASK] Album Cover Art. ${description}. [QUALITY] High resolution, artistic, vinyl style.`;
-                     
                      const geminiRes = await ai.models.generateContent({
                         model: selectedModel,
                         contents: { parts: [{ text: prompt }] },
@@ -667,55 +550,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                      return res.json({ imageData });
                  });
              }
-             
-            // --- MAGIC ERASER: IMAGE & VIDEO ---
             case 'removeWatermark': {
                  return await runWithFallback(async (ai) => {
                      const { imagePart, highQuality } = payload;
-                     
-                     // Explicitly use High Quality Model if requested, otherwise Standard
                      const modelToUse = highQuality ? MODEL_PRO : MODEL_FLASH;
-                     const imgSize = highQuality ? '2K' : '1K'; // 2K is sufficient for Eraser
-
-                     // Advanced Eraser Prompt
+                     const imgSize = highQuality ? '2K' : '1K';
                      const prompt = "TASK: Magic Eraser / Inpainting. Remove all watermarks, text overlays, logos, and unwanted objects. Restore the background naturally. Return a clean, high-quality image. Do not alter the main subject.";
-                     
                      const geminiRes = await ai.models.generateContent({
                         model: modelToUse,
                         contents: { parts: [imagePart, { text: prompt }] },
                         config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(modelToUse, imgSize) }
                      });
-                     
                      const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                      return res.json({ imageData });
                  });
             }
-            
             case 'removeVideoWatermark': {
                 const { url, file, type } = payload;
-
-                // Mock Logic for Video Processing (Since we can't process real video in 10s Vercel timeout)
-                // In a real production app, this would trigger a background job or call a dedicated video API.
-                // For this demo, we validate inputs and return a success signal or a placeholder URL.
-
-                // Validation
                 if (!url && !file) return res.status(400).json({ error: "No video source provided." });
-
-                // Simulate Processing Time
                 await new Promise(resolve => setTimeout(resolve, 3000));
-
-                // If it's a URL (Veo/Sora), we pretend we processed it and return it (or a clean version if we had one)
-                if (url) {
-                    return res.json({ videoUrl: url }); 
-                }
-                
-                // If it's a file upload (which implies general video), we return a demo success video
-                // because we can't re-host user uploads in Vercel functions easily without blob storage.
+                if (url) return res.json({ videoUrl: url }); 
                 return res.json({ videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" });
             }
-
-            // Text Actions - Vision but output Text (DetectOutfit, etc.)
-            // We use runWithFallback here too because they use Image Input which might trigger quota on Flash-Image model
             case 'detectOutfit':
             case 'generateVideoPrompt':
             case 'generatePromptFromImage': {
@@ -723,7 +579,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                      const { base64Image, mimeType, userIdea, isFaceLockEnabled, language } = payload;
                      let prompt = "";
                      const parts: Part[] = [];
-
                      if (action === 'detectOutfit') {
                          prompt = "Describe outfit.";
                          parts.push({ inlineData: { data: base64Image, mimeType } });
@@ -734,24 +589,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                          prompt = `Describe image. ${isFaceLockEnabled ? 'Focus face.' : ''} Language: ${language}.`;
                          parts.push({ inlineData: { data: base64Image, mimeType } });
                      }
-                     
                      parts.push({ text: prompt });
-                     // Vision tasks use TEXT_MODEL (gemini-2.5-flash) which supports vision
                      const geminiRes = await ai.models.generateContent({
                         model: TEXT_MODEL,
                         contents: { parts },
                         config: { responseMimeType: action.includes('JSON') || action === 'generateVideoPrompt' ? "application/json" : undefined }
                      });
-                     
                      if (action === 'detectOutfit') return res.json({ outfit: geminiRes.text });
                      if (action === 'generateVideoPrompt') return res.json({ prompts: JSON.parse(geminiRes.text || '{}') });
                      if (action === 'generatePromptFromImage') return res.json({ prompt: geminiRes.text });
-                     
                      return res.json({ text: geminiRes.text });
                  });
             }
-
-            // Text Only Actions - No Fallback needed (Cheap/Free)
             case 'generateMarketingAdCopy': 
             case 'generateMarketingVideoScript':
             case 'getHotTrends': {
@@ -759,7 +608,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const { product, tone, imagePart, language } = payload;
                  let prompt = "";
                  const parts: Part[] = [];
-
                  if (action === 'generateMarketingAdCopy') {
                      prompt = `Write ad copy for ${product.name}. Language: ${language}.`;
                      if(imagePart) parts.push(imagePart);
@@ -769,19 +617,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  } else if (action === 'getHotTrends') {
                      prompt = "List 5 fashion trends JSON.";
                  }
-                 
                  parts.push({ text: prompt });
                  const geminiRes = await ai.models.generateContent({
                     model: TEXT_MODEL,
                     contents: { parts },
                     config: { responseMimeType: action === 'getHotTrends' ? "application/json" : undefined }
                  });
-                 
                  if (action === 'getHotTrends') return res.json({ trends: JSON.parse(geminiRes.text || '[]') });
-                 
                  return res.json({ text: geminiRes.text });
             }
-
             default:
                 return res.status(400).json({ error: "Unknown action" });
         }
