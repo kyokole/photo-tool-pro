@@ -29,7 +29,8 @@ export default {
     "beautyStudio": "Beauty Studio",
     "familyStudio": "Family Photo Composite",
     "voiceStudio": "AI Voice Studio",
-    "musicStudio": "AI Music Studio"
+    "musicStudio": "AI Music Studio",
+    "magicEraser": "Magic Eraser Studio"
   },
   "utilities": {
     "guide": "User Guide",

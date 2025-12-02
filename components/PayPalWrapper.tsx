@@ -31,6 +31,10 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
     // PayPal expects string with 2 decimal places
     const usdAmount = (amount / 25000).toFixed(2);
 
+    // Determine PayPal Locale based on App Language
+    // Nếu app là tiếng Việt -> PayPal hiện tiếng Việt. Nếu Anh -> hiện tiếng Anh (Mỹ).
+    const paypalLocale = i18n.language === 'vi' ? 'vi_VN' : 'en_US';
+
     return (
         <div className="w-full relative z-0">
             {isPending && (
@@ -38,40 +42,42 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
                     <div className="text-white font-bold">{t('common.processing')}</div>
                 </div>
             )}
-            <PayPalScriptProvider options={{ "clientId": clientId, currency: "USD" }}>
+            <PayPalScriptProvider options={{ 
+                "clientId": clientId, 
+                currency: "USD",
+                locale: paypalLocale // Cấu hình ngôn ngữ hiển thị nút và popup PayPal
+            }}>
                 <PayPalButtons
-                    // CRITICAL FIX: The 'key' prop forces React to completely destroy and recreate 
-                    // the PayPal button instance whenever the package or language changes.
-                    // This ensures 'createOrder' always uses the fresh props and PayPal's UI updates correctly.
-                    key={`${packageId}-${usdAmount}-${i18n.language}`}
+                    // QUAN TRỌNG: Thêm paypalLocale vào key để ép React vẽ lại nút khi đổi ngôn ngữ
+                    key={`${packageId}-${usdAmount}-${paypalLocale}`}
                     
                     style={{ layout: "horizontal", height: 45, tagline: false, label: "pay" }}
                     
                     createOrder={(data, actions) => {
-                        // IMPORTANT: Pass userId and packageId in 'custom_id' for Webhook verification
+                        // Dữ liệu dùng cho Webhook xác thực
                         const customData = JSON.stringify({ uid: userId, packageId: packageId });
                         
-                        // THIS IS THE KEY FIX FOR VISIBILITY:
-                        // 1. 'description': This appears at the top level on mobile.
-                        // 2. 'soft_descriptor': Appears on credit card statement (Max 22 chars).
-                        // 3. 'items': Must match the total exactly to be displayed.
-                        
+                        // --- CHIẾN THUẬT HIỂN THỊ THÔNG TIN ---
+                        // Đưa tên gói vào brand_name để nó hiện to nhất trên Mobile
+                        // packageName đã được dịch từ component cha (UpgradeVipModal) nên sẽ đúng ngôn ngữ.
+                        const uniqueInvoiceId = `${packageId.toUpperCase()}-${Date.now()}`;
+                        const dynamicBrandName = `AI PHOTO: ${packageName}`.substring(0, 127); // Max 127 chars
+
                         return actions.order.create({
                             intent: "CAPTURE",
                             application_context: {
-                                brand_name: "AI PHOTO SUITE",
-                                shipping_preference: "NO_SHIPPING", // Hides shipping address, making Product Name more visible
+                                brand_name: dynamicBrandName, // Tên gói sẽ hiện ở tiêu đề
+                                shipping_preference: "NO_SHIPPING", // Ẩn địa chỉ ship để giao diện gọn hơn
                                 user_action: "PAY_NOW",
                                 landing_page: "NO_PREFERENCE"
                             },
                             purchase_units: [
                                 {
                                     reference_id: packageId,
-                                    // FIX: Put the Package Name DIRECTLY in the top description. 
-                                    // This is what shows up on the main PayPal screen usually.
-                                    description: `${packageName}`, 
+                                    description: packageName, // Mô tả phụ (có thể bị ẩn trên mobile, nhưng brand_name sẽ hiện)
                                     custom_id: customData,
-                                    soft_descriptor: "AI PHOTO VIP", // Max 22 chars
+                                    invoice_id: uniqueInvoiceId,
+                                    soft_descriptor: "AI PHOTO VIP", 
                                     amount: {
                                         currency_code: "USD",
                                         value: usdAmount,
@@ -84,8 +90,9 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
                                     },
                                     items: [
                                         {
-                                            name: packageName, // Specific Item Name (e.g., "VIP 1 Month")
-                                            description: "Full Access to AI Features", // Sub-description
+                                            name: packageName, 
+                                            description: "Premium Subscription", 
+                                            sku: packageId,
                                             unit_amount: {
                                                 currency_code: "USD",
                                                 value: usdAmount

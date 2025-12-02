@@ -57,7 +57,8 @@ interface SidebarProps {
   onMarketingStudioClick: () => void; 
   onArtStyleStudioClick: () => void;
   onVoiceStudioClick: () => void;
-  onMusicStudioClick: () => void; // New prop
+  onMusicStudioClick: () => void;
+  onMagicEraserClick: () => void; // New prop
   onAdminPanelClick: () => void;
   onPresetSelect: (settings: Partial<Settings>) => void;
   onUndo: () => void;
@@ -68,7 +69,7 @@ interface SidebarProps {
   onLogout: () => void;
   onChangePasswordClick: () => void;
   onSubscriptionExpired: () => void;
-  onTransactionHistoryClick?: () => void; // New prop
+  onTransactionHistoryClick?: () => void;
   isImageUploaded: boolean;
   isVip: boolean;
 }
@@ -89,6 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onArtStyleStudioClick,
     onVoiceStudioClick,
     onMusicStudioClick,
+    onMagicEraserClick,
     onAdminPanelClick,
     onPresetSelect, 
     onUndo, 
@@ -332,6 +334,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
               <nav className="space-y-1 pb-2">
+                <button onClick={onMagicEraserClick} className={getToolButtonClasses('magic_eraser')}>
+                    <div className="w-5 h-5"><i className="fas fa-eraser"></i></div>
+                    <span>{t('tools.magicEraser')}</span>
+                </button>
                 <button onClick={onMusicStudioClick} className={getToolButtonClasses('music_studio')}>
                     <div className="w-5 h-5"><i className="fas fa-music"></i></div>
                     <span>{t('tools.musicStudio')}</span>

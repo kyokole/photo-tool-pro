@@ -39,8 +39,9 @@ import FamilyStudio from './components/FamilyStudio';
 import MarketingStudio from './components/MarketingStudio';
 import ArtStyleStudio from './components/ArtStyleStudio'; 
 import VoiceStudio from './components/VoiceStudio'; 
-import MusicStudio from './components/MusicStudio'; // New import
-import TransactionHistoryModal from './components/TransactionHistoryModal'; // New import
+import MusicStudio from './components/MusicStudio'; 
+import TransactionHistoryModal from './components/TransactionHistoryModal'; 
+import MagicEraserStudio from './components/MagicEraserStudio'; // New import
 
 const loadSettingsFromSession = (): Settings => {
     try {
@@ -310,6 +311,11 @@ const App: React.FC = () => {
     console.log("Resetting Music Studio tool state.");
     handleAbort();
   }, []);
+  
+  const handleResetMagicEraserTool = useCallback(() => {
+    console.log("Resetting Magic Eraser tool state.");
+    handleAbort();
+  }, []);
 
 
   const resetAllTools = useCallback(() => {
@@ -327,8 +333,9 @@ const App: React.FC = () => {
     handleResetArtStyleStudioTool();
     handleResetVoiceStudioTool();
     handleResetMusicStudioTool();
+    handleResetMagicEraserTool();
     setIsFreeTierLocked(false);
-  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool, handleResetVoiceStudioTool, handleResetMusicStudioTool]);
+  }, [handleResetIdPhotoTool, handleResetHeadshotTool, handleResetRestorationTool, handleResetCreativeStudioTool, handleResetPromptAnalyzerTool, handleResetFootballStudioTool, handleResetFourSeasonsTool, handleResetBeautyStudioTool, handleResetFamilyStudioTool, handleResetMarketingStudioTool, handleResetArtStyleStudioTool, handleResetVoiceStudioTool, handleResetMusicStudioTool, handleResetMagicEraserTool]);
 
   const handleModeChange = useCallback((newMode: AppMode) => {
     handleAbort();
@@ -444,7 +451,7 @@ const App: React.FC = () => {
             setIsAuthModalVisible(false);
 
             if (postLoginRedirect) {
-                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio', 'voice_studio', 'music_studio'];
+                const vipModes: AppMode[] = ['restoration', 'fashion_studio', 'football_studio', 'creative_studio', 'prompt_analyzer', 'four_seasons_studio', 'family_studio', 'marketing_studio', 'art_style_studio', 'voice_studio', 'music_studio', 'magic_eraser'];
                 // Beauty Studio is now VIP/Admin only access
                 const restrictedModes: AppMode[] = ['beauty_studio'];
 
@@ -1236,6 +1243,20 @@ const App: React.FC = () => {
     }
   };
 
+  const handleMagicEraserSelect = () => {
+    if (currentUser) {
+        if (!isVip) {
+            setSubscriptionModalReason('vip_exclusive');
+            setIsSubscriptionModalVisible(true);
+            return;
+        }
+        if (appMode !== 'magic_eraser') handleModeChange('magic_eraser');
+    } else {
+        setPostLoginRedirect('magic_eraser');
+        setIsAuthModalVisible(true);
+    }
+  };
+
   const handleAdminPanelSelect = () => {
     if (currentUser?.isAdmin) {
         handleAbort();
@@ -1642,6 +1663,8 @@ const App: React.FC = () => {
                     onInsufficientCredits={handleInsufficientCredits}
                     checkCredits={checkCredits}
                  />;
+      case 'magic_eraser':
+          return <MagicEraserStudio theme={theme} setTheme={setTheme} isVip={isVip} />;
       case 'admin':
         if (currentUser?.isAdmin) {
             const usersToShow = [...allUsers].sort((a, b) => {
@@ -1741,6 +1764,7 @@ const App: React.FC = () => {
         onArtStyleStudioClick={handleArtStyleStudioSelect}
         onVoiceStudioClick={handleVoiceStudioSelect}
         onMusicStudioClick={handleMusicStudioSelect}
+        onMagicEraserClick={handleMagicEraserSelect}
         onAdminPanelClick={handleAdminPanelSelect}
         onPresetSelect={handlePresetSelect}
         onUndo={handleUndo}

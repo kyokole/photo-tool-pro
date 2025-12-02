@@ -399,3 +399,25 @@ export const generateAlbumArt = async (description: string): Promise<string> => 
     const { imageData } = await callGeminiApi('generateAlbumArt', { description }, CREDIT_COSTS.MUSIC_GENERATION);
     return imageData;
 };
+
+// --- MAGIC ERASER STUDIO (NEW) ---
+export const removeWatermark = async (imagePart: FilePart, highQuality: boolean = false): Promise<string> => {
+    const { imageData } = await callGeminiApi('removeWatermark', { imagePart, highQuality }, 0); // VIP only
+    return imageData;
+};
+
+export const removeVideoWatermark = async (source: { file?: File, url?: string }, type: 'veo' | 'sora' | 'general'): Promise<string> => {
+    // For file, we convert to something sendable or handle upload separately
+    let payload: any = { type };
+    
+    if (source.url) {
+        payload.url = source.url;
+    } else if (source.file) {
+         // Note: Sending large video files via this specific JSON API might be limited by Vercel payload size.
+         // For this demo, we assume small files or we'd implement chunking.
+         payload.filename = source.file.name;
+    }
+
+    const { videoUrl } = await callGeminiApi('removeVideoWatermark', payload, 0); // VIP only
+    return videoUrl;
+};

@@ -29,7 +29,8 @@ export default {
     "beautyStudio": "Studio Làm Đẹp",
     "familyStudio": "Ghép Ảnh Gia Đình",
     "voiceStudio": "Studio Giọng Nói AI",
-    "musicStudio": "Studio Âm Nhạc AI"
+    "musicStudio": "Studio Âm Nhạc AI",
+    "magicEraser": "Studio Tẩy Xóa Đa Năng"
   },
   "utilities": {
     "guide": "Hướng dẫn sử dụng",

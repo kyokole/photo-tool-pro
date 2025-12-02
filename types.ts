@@ -2,7 +2,7 @@
 // FIX: Import React to provide the 'React' namespace for React.ReactNode.
 import React from 'react';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio' | 'music_studio';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio' | 'music_studio' | 'magic_eraser';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';

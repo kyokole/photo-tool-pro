@@ -28,7 +28,8 @@ import viFamilyStudio from './locales/vi/familyStudio.js';
 import viMarketingStudio from './locales/vi/marketingStudio.js';
 import viArtStyleStudio from './locales/vi/artStyleStudio.js';
 import viVoiceStudio from './locales/vi/voiceStudio.js';
-import viMusicStudio from './locales/vi/musicStudio.js'; // Added
+import viMusicStudio from './locales/vi/musicStudio.js';
+import viMagicEraser from './locales/vi/magicEraser.js'; // Added
 
 // English imports
 import enActionBar from './locales/en/actionBar.js';
@@ -55,7 +56,8 @@ import enFamilyStudio from './locales/en/familyStudio.js';
 import enMarketingStudio from './locales/en/marketingStudio.js';
 import enArtStyleStudio from './locales/en/artStyleStudio.js';
 import enVoiceStudio from './locales/en/voiceStudio.js';
-import enMusicStudio from './locales/en/musicStudio.js'; // Added
+import enMusicStudio from './locales/en/musicStudio.js';
+import enMagicEraser from './locales/en/magicEraser.js'; // Added
 
 
 const resources = {
@@ -85,7 +87,8 @@ const resources = {
       ...enMarketingStudio,
       ...enArtStyleStudio,
       ...enVoiceStudio,
-      ...enMusicStudio // Added
+      ...enMusicStudio,
+      ...enMagicEraser // Added
     }
   },
   vi: {
@@ -114,7 +117,8 @@ const resources = {
       ...viMarketingStudio,
       ...viArtStyleStudio,
       ...viVoiceStudio,
-      ...viMusicStudio // Added
+      ...viMusicStudio,
+      ...viMagicEraser // Added
     }
   }
 };
