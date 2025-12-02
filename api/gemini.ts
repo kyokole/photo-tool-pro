@@ -627,31 +627,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  });
             }
             case 'removeVideoWatermark': {
-                const { url, file, type } = payload;
-                
-                // Processing Logic:
-                // Real-world logic needs: Link Parser (Sora/Veo) -> Video Downloader -> FFMPEG/Inpainting -> Cloud Storage
-                // Since this is a Vercel function, we simulate the robust backend processing.
-                
-                // Simulate complex processing time
-                await new Promise(resolve => setTimeout(resolve, 3000));
-
-                // Return high-quality AI video samples to match the user's expectation
-                // Pexels videos (Public Domain) to simulate "Cleaned" results
-                
+                const { url, type } = payload;
                 let resultVideoUrl = "";
-                
-                if (type === 'sora') {
-                    // Cinematic / Realistic AI Style
-                    resultVideoUrl = "https://cdn.pixabay.com/video/2024/02/09/199958-911694865_large.mp4"; 
-                } else if (type === 'veo') {
-                    // High Motion / Creative Style
-                    resultVideoUrl = "https://cdn.pixabay.com/video/2023/10/19/185726-876136803_large.mp4";
-                } else {
-                    // General / Standard Style
-                    resultVideoUrl = "https://cdn.pixabay.com/video/2023/09/24/182090-867774262_large.mp4";
-                }
 
+                // --- IMPROVED URL HANDLING ---
+                if (url) {
+                    // 1. Check for direct video links FIRST (Quick pass)
+                    if (url.match(/\.(mp4|mov)$/i)) {
+                        // Directly return the input URL as it is likely a direct file link
+                        // The frontend will handle downloading it as "Original Source"
+                        return res.json({ videoUrl: url });
+                    }
+
+                    try {
+                        // 2. For Platform links (Veo/Sora), we need to fetch the HTML
+                        const response = await fetch(url, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                            }
+                        });
+                        const html = await response.text();
+                        const unescapedHtml = html.replace(/\\\//g, '/');
+
+                        // Platform specific logic
+                        const soraMatch = unescapedHtml.match(/"(https?:\/\/cdn\.openai\.com\/sora\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
+                        const ogMatch = unescapedHtml.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
+                        const twMatch = unescapedHtml.match(/name="twitter:player:stream" content="([^"]+)"/i);
+                        const mp4Match = unescapedHtml.match(/"(https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
+                        
+                        if (soraMatch && soraMatch[1]) {
+                             resultVideoUrl = soraMatch[1];
+                        } else if (ogMatch && ogMatch[1]) {
+                            resultVideoUrl = ogMatch[1];
+                        } else if (twMatch && twMatch[1]) {
+                            resultVideoUrl = twMatch[1];
+                        } else if (mp4Match && mp4Match[1]) {
+                            resultVideoUrl = mp4Match[1];
+                        } else {
+                            // Fallback: just return the original URL and let frontend handle (or fail)
+                            resultVideoUrl = url;
+                        }
+                    } catch (err) {
+                        console.error("Extraction Error:", err);
+                        resultVideoUrl = url;
+                    }
+                } 
+                
                 return res.json({ videoUrl: resultVideoUrl }); 
             }
             case 'detectOutfit':
