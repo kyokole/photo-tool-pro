@@ -5,7 +5,7 @@ import { getPayPalClientId, verifyPayPalTransaction } from '../services/paypalSe
 import { useTranslation } from 'react-i18next';
 
 interface PayPalWrapperProps {
-    amount: number; // Amount in USD (approx) or we convert
+    amount: number; // Amount in VND
     packageId: string; // ID of the package
     packageName: string; // Name of the package to display on PayPal
     userId: string; // Current User ID
@@ -15,7 +15,7 @@ interface PayPalWrapperProps {
 }
 
 const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packageName, userId, onSuccess, onError }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [clientId, setClientId] = useState<string | null>(null);
     const [isPending, setIsPending] = useState(false);
 
@@ -39,7 +39,9 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
             )}
             <PayPalScriptProvider options={{ "clientId": clientId, currency: "USD" }}>
                 <PayPalButtons
-                    style={{ layout: "horizontal", height: 45, tagline: false }}
+                    style={{ layout: "horizontal", height: 45, tagline: false, label: "pay" }}
+                    // QUAN TRỌNG: forceReRender buộc nút PayPal vẽ lại khi các giá trị này thay đổi
+                    forceReRender={[usdAmount, packageId, packageName, i18n.language]}
                     createOrder={(_data, actions) => {
                         // IMPORTANT: Pass userId and packageId in 'custom_id' for Webhook
                         const customData = JSON.stringify({ uid: userId, packageId: packageId });
@@ -50,10 +52,16 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
 
                         return actions.order.create({
                             intent: "CAPTURE",
+                            // CẤU HÌNH QUAN TRỌNG ĐỂ HIỂN THỊ ĐÚNG
+                            application_context: {
+                                brand_name: "AI PHOTO SUITE",
+                                shipping_preference: "NO_SHIPPING", // Tắt địa chỉ giao hàng -> Hiện chi tiết gói
+                                user_action: "PAY_NOW"
+                            },
                             purchase_units: [
                                 {
                                     reference_id: packageId,
-                                    description: orderDescription,
+                                    description: orderDescription, // Mô tả chính
                                     custom_id: customData,
                                     amount: {
                                         currency_code: "USD",
@@ -67,8 +75,8 @@ const PayPalWrapper: React.FC<PayPalWrapperProps> = ({ amount, packageId, packag
                                     },
                                     items: [
                                         {
-                                            name: packageName,
-                                            description: itemDescription,
+                                            name: packageName, // Tên gói (VD: Gói Cơ Bản)
+                                            description: itemDescription, // Mô tả phụ
                                             unit_amount: {
                                                 currency_code: "USD",
                                                 value: usdAmount
