@@ -187,8 +187,7 @@ const decodeEntities = (str: string) => {
     return decoded;
 };
 
-// --- VEO & SORA EXTRACTOR ---
-// Logic specialized for finding clean source URLs
+// --- DEEP SOURCE EXTRACTION LOGIC ---
 const extractCleanVideoUrl = async (targetUrl: string): Promise<string> => {
     const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -204,52 +203,70 @@ const extractCleanVideoUrl = async (targetUrl: string): Promise<string> => {
         let html = await response.text();
         html = decodeEntities(html);
 
-        // 1. Search inside JSON structures first (Next.js data, hydration data)
-        // This is where the clean URLs usually hide in Sora/Veo pages
-        const scripts = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi);
-        if (scripts) {
-            for (const script of scripts) {
-                // Look for URLs inside scripts
-                const jsonContent = script.replace(/<script[^>]*>|<\/script>/gi, '');
-                const urls = jsonContent.match(/https?:\/\/[^"'\s]+\.(mp4|mov|webm)(?:\?[^"'\s]*)?/g);
+        // 1. STRATEGY: JSON Hydration Data (Next.js / React Props)
+        // This is crucial for Sora/Veo sites as they often hide clean links in props.
+        const scriptMatches = html.match(/<script[^>]*>([\s\S]*?)<\/script>/gi);
+        
+        if (scriptMatches) {
+            for (const scriptTag of scriptMatches) {
+                // Clean tag to get content
+                const content = scriptTag.replace(/<script[^>]*>|<\/script>/gi, '');
                 
-                if (urls) {
-                    // Filter and prioritization logic
-                    const candidates = urls
-                        .map(u => u.replace(/\\u0026/g, '&').replace(/\\/g, ''))
-                        .filter(u => !u.includes('preview') && !u.includes('thumbnail') && !u.includes('poster'));
-                    
-                    // Prioritize 'cdn.openai' for Sora or specific storage patterns
-                    const bestCandidate = candidates.find(u => u.includes('cdn.openai.com') || u.includes('storage.googleapis.com')) || candidates[0];
-                    
+                // Look for ANY http link ending in mp4/mov/webm inside JSON-like structures
+                // We filter out "preview", "poster", "thumbnail", "watermark" to get the clean source
+                const potentialUrls = content.match(/https?:\/\/[^"'\s\\]+\.(mp4|mov|webm)(?:\?[^"'\s\\]*)?/gi);
+
+                if (potentialUrls) {
+                    const cleanCandidates = potentialUrls
+                        .map(u => u.replace(/\\u0026/g, '&').replace(/\\/g, '')) // Fix JSON escaped slashes
+                        .filter(u => {
+                            const lower = u.toLowerCase();
+                            return !lower.includes('preview') && 
+                                   !lower.includes('thumbnail') && 
+                                   !lower.includes('poster') &&
+                                   !lower.includes('small') &&
+                                   !lower.includes('watermark');
+                        });
+
+                    // Prioritize specific high-quality CDNs
+                    const bestCandidate = cleanCandidates.find(u => u.includes('cdn.openai.com') || u.includes('storage.googleapis.com') || u.includes('video.twimg.com')) || cleanCandidates[0];
+
                     if (bestCandidate) return bestCandidate;
                 }
             }
         }
 
-        // 2. Fallback: Regex on the whole HTML body
-        // Look for "url": "..." patterns that point to mp4
-        const urlMatches = html.match(/"url":\s*"([^"]+\.mp4[^"]*)"/g);
-        if (urlMatches) {
-             const candidates = urlMatches
-                .map(m => m.match(/"([^"]+)"/)?.[1])
-                .filter(u => u && !u.includes('preview'));
-             
-             if (candidates.length > 0 && candidates[0]) return decodeEntities(candidates[0]);
+        // 2. STRATEGY: Raw Regex on HTML Body (Fallback)
+        // Look for patterns like "url": "..." or "src": "..."
+        const regex = /"(?:url|src|secure_url|video_url)"\s*:\s*"([^"]+\.(?:mp4|mov|webm)[^"]*)"/gi;
+        let match;
+        while ((match = regex.exec(html)) !== null) {
+             let candidate = match[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
+             if (!candidate.includes('preview') && !candidate.includes('watermark')) {
+                 return candidate;
+             }
         }
 
-        // 3. Last Resort: OpenGraph or Twitter Card
+        // 3. STRATEGY: OpenGraph / Meta Tags
         const ogVideo = html.match(/property="og:video(?::secure_url)?"\s+content="([^"]+)"/i);
-        if (ogVideo && ogVideo[1]) return decodeEntities(ogVideo[1]);
+        if (ogVideo && ogVideo[1]) {
+            return decodeEntities(ogVideo[1]);
+        }
 
         const twitterVideo = html.match(/name="twitter:player:stream"\s+content="([^"]+)"/i);
-        if (twitterVideo && twitterVideo[1]) return decodeEntities(twitterVideo[1]);
-        
-        throw new Error("No clean video source found in page metadata.");
+        if (twitterVideo && twitterVideo[1]) {
+            return decodeEntities(twitterVideo[1]);
+        }
+
+        // 4. STRATEGY: If input is already a direct link (checked in caller, but safe here)
+        if (targetUrl.match(/\.(mp4|mov)$/i)) return targetUrl;
+
+        throw new Error("Could not extract a clean video source from this page.");
 
     } catch (error) {
         console.error("Deep Extraction Failed:", error);
-        return targetUrl; // Return original if all else fails
+        // Return original if extraction fails, frontend will handle error display
+        return targetUrl; 
     }
 };
 
@@ -590,26 +607,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  });
             }
             
-            // --- UPDATED LOGIC FOR VIDEO REMOVAL ---
+            // --- UPDATED LOGIC FOR VIDEO REMOVAL (DEEP EXTRACTION) ---
             case 'removeVideoWatermark': {
                 const { url } = payload;
                 if (!url) return res.status(400).json({ error: 'Missing URL' });
 
+                // If it's already a clean direct link, return it immediately
                 if (url.match(/\.(mp4|mov)$/i)) {
                     return res.json({ videoUrl: url });
                 }
 
                 // Use the Deep Extraction logic
+                // This logic parses the page content to find the hidden source URL
                 const cleanUrl = await extractCleanVideoUrl(url);
                 
-                // If we still have the original URL, it means extraction failed or it was already clean
-                // But to be sure, we assume if it's not an MP4 link now, we failed to find the source.
-                if (cleanUrl === url && !url.match(/\.(mp4|mov|webm)$/i)) {
-                     // Fallback: Try one more scrape attempt using a different user agent or strategy if needed
-                     // For now, return error if we couldn't find a direct stream
-                     // Actually, let's return the input URL so frontend can try to display it or show specific error
-                }
-
+                // Return the extracted URL
                 return res.json({ videoUrl: cleanUrl });
             }
 
@@ -619,12 +631,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateMarketingAdCopy': 
             case 'generateMarketingVideoScript':
             case 'getHotTrends': {
-                 // Text generation logic remains same, simplified here for brevity
+                 // Text generation logic
                  const ai = getAi(false);
-                 // ... existing text logic ...
-                 // (For brevity in this response, assume text logic is preserved as is)
-                 // To ensure full file integrity, I will copy the existing text logic below:
-                 
                  const { base64Image, mimeType, userIdea, isFaceLockEnabled, language, product, tone, imagePart } = payload;
                  const parts: Part[] = [];
                  let prompt = "";
