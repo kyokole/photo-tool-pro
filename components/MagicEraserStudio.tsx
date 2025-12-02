@@ -113,19 +113,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setHistory(prev => [item, ...prev]);
     };
 
-    const handleHistorySelect = (item: EraserHistoryItem) => {
-        if (item.type === 'image') {
-            setActiveTab('image');
-            setProcessedImage(item.result);
-            setImageFile(null); 
-        } else {
-            setActiveTab('video');
-            setVideoFinished(true);
-            setProcessedVideoUrl(item.result);
-            setVideoLoadError(false);
-        }
-    };
-
     const handleImageUpload = (file: File) => {
         setImageFile(file);
         setProcessedImage(null);
@@ -220,7 +207,14 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             
             addLog("Finalizing extraction...");
             setVideoProgress(100);
-            setProcessedVideoUrl(responseUrl);
+            
+            // Fix URL encoding issues in the response if any remain
+            let finalUrl = responseUrl;
+            if (finalUrl.includes('&amp;')) {
+                finalUrl = finalUrl.replace(/&amp;/g, '&');
+            }
+            
+            setProcessedVideoUrl(finalUrl);
             setVideoFinished(true);
             addLog("COMPLETE. Ready for download.");
             
@@ -228,7 +222,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                 id: Date.now().toString(),
                 type: 'video',
                 original: videoUrl,
-                result: responseUrl,
+                result: finalUrl,
                 timestamp: Date.now(),
                 name: 'Video Source'
             });
@@ -495,16 +489,11 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                                 </div>
                              )}
                              {/* Overlay tip for black screen */}
-                             <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded text-[10px] text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 max-w-[80%]">
-                                 <i className="fas fa-lightbulb mr-1"></i> Màn hình đen? Hãy tải về và xem bằng VLC Player.
+                             <div className="absolute bottom-16 left-0 right-0 text-center pointer-events-none z-10">
+                                 <div className="inline-block bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded text-[10px] text-yellow-300">
+                                     <i className="fas fa-lightbulb mr-1"></i> Video gốc từ Sora/Veo thường dùng codec AV1/HEVC. Nếu trình duyệt không phát được hình, vui lòng tải về.
+                                 </div>
                              </div>
-                        </div>
-                        
-                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 w-full text-center">
-                            <p className="text-xs text-blue-300">
-                                <i className="fas fa-info-circle mr-1"></i>
-                                Video gốc từ Sora/Veo thường dùng codec AV1/HEVC. Nếu trình duyệt không phát được hình, vui lòng tải về.
-                            </p>
                         </div>
                         
                         <button 

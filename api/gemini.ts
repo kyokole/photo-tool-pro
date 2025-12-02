@@ -170,6 +170,25 @@ const getAi = (useBackup: boolean = false) => {
     return new GoogleGenAI({ apiKey });
 };
 
+// Helper to decode HTML entities deeply
+const decodeEntities = (str: string) => {
+    if (!str) return str;
+    let decoded = str;
+    // Decode multiple times to handle double encoding
+    for (let i = 0; i < 3; i++) {
+        decoded = decoded
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/\\u0026/g, '&')
+            .replace(/\\u002F/g, '/')
+            .replace(/\\\//g, '/');
+    }
+    return decoded;
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
     
@@ -631,44 +650,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let resultVideoUrl = "";
 
                 if (url) {
+                    // 1. Check if URL is direct
                     if (url.match(/\.(mp4|mov)$/i)) {
                         return res.json({ videoUrl: url });
                     }
 
                     try {
+                        // 2. Advanced Scraping with better Headers
                         const response = await fetch(url, {
                             headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                                'Referer': 'https://www.google.com/'
                             }
                         });
+                        
                         let html = await response.text();
                         
-                        html = html
-                            .replace(/&amp;/g, '&')
-                            .replace(/\\u0026/g, '&')
-                            .replace(/\\u002F/g, '/')
-                            .replace(/\\\//g, '/');
+                        // 3. Robust Decoding (Crucial for fixing broken URLs)
+                        html = decodeEntities(html);
 
-                        const twitterMatch = html.match(/name="twitter:player:stream" content="([^"]+)"/i);
-                        const videoSourceMatch = html.match(/<source\s+[^>]*src="([^"]+)"/i);
-                        const soraMatch = html.match(/"(https?:\/\/cdn\.openai\.com\/sora\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
-                        const ogMatch = html.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
-                        const mp4Match = html.match(/"(https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
-                        
-                        // Priority: Twitter (Stream) -> Source Tag (HTML5) -> Sora CDN -> OG Video -> Any MP4
-                        if (twitterMatch && twitterMatch[1]) {
-                            resultVideoUrl = twitterMatch[1];
-                        } else if (videoSourceMatch && videoSourceMatch[1]) {
-                            resultVideoUrl = videoSourceMatch[1];
-                        } else if (soraMatch && soraMatch[1]) {
-                             resultVideoUrl = soraMatch[1];
-                        } else if (ogMatch && ogMatch[1]) {
-                            resultVideoUrl = ogMatch[1];
-                        } else if (mp4Match && mp4Match[1]) {
-                            resultVideoUrl = mp4Match[1];
-                        } else {
-                            resultVideoUrl = url;
+                        // 4. Priority Search for Clean Source
+                        // A. Try finding JSON blobs (Next.js hydration, Remix data) which contain the raw API response
+                        const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
+                        if (jsonMatch && jsonMatch[1]) {
+                            try {
+                                const json = JSON.parse(jsonMatch[1]);
+                                // Deep search in JSON for any mp4 URL
+                                const jsonString = JSON.stringify(json);
+                                const urls = jsonString.match(/"https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?"/g);
+                                if (urls && urls.length > 0) {
+                                    // Prioritize URLs that look like "download" or "raw" or "clean"
+                                    const cleanCandidates = urls.map(u => u.replace(/"/g, '')).filter(u => !u.includes('preview') && !u.includes('thumbnail'));
+                                    if (cleanCandidates.length > 0) {
+                                         // Sort by length (longer usually means signed/high quality)
+                                         cleanCandidates.sort((a, b) => b.length - a.length);
+                                         resultVideoUrl = decodeEntities(cleanCandidates[0]);
+                                    }
+                                }
+                            } catch (e) { console.error("JSON Parse Error", e); }
                         }
+
+                        // B. Regex Fallbacks if JSON fails
+                        if (!resultVideoUrl) {
+                            const twitterMatch = html.match(/name="twitter:player:stream" content="([^"]+)"/i);
+                            const videoSourceMatch = html.match(/<source\s+[^>]*src="([^"]+)"/i);
+                            const ogMatch = html.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
+                            const mp4Match = html.match(/"(https?:\/\/[^"]+?\.mp4(?:\?[^"]*)?)"/);
+
+                            if (twitterMatch && twitterMatch[1]) resultVideoUrl = twitterMatch[1];
+                            else if (videoSourceMatch && videoSourceMatch[1]) resultVideoUrl = videoSourceMatch[1];
+                            else if (ogMatch && ogMatch[1]) resultVideoUrl = ogMatch[1];
+                            else if (mp4Match && mp4Match[1]) resultVideoUrl = mp4Match[1];
+                        }
+
+                        // 5. Final Cleanup
+                        if (resultVideoUrl) {
+                            resultVideoUrl = decodeEntities(resultVideoUrl);
+                        } else {
+                            resultVideoUrl = url; // Fallback to original if nothing found
+                        }
+                        
                     } catch (err) {
                         console.error("Extraction Error:", err);
                         resultVideoUrl = url;
