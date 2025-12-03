@@ -188,19 +188,30 @@ const decodeEntities = (str: string) => {
     return decoded;
 };
 
+// Helper function to check if a string looks like a video URL
+// FIX: Relaxed regex to accept URLs without extension (like Sora signed URLs)
+const isLikelyVideoUrl = (str: string) => {
+    if (!str || typeof str !== 'string') return false;
+    
+    // 1. Standard extension check
+    if (str.match(/\.(mp4|webm|mov|mkv)($|\?)/i)) return true;
+    
+    // 2. Known provider check
+    if (str.includes('videos.openai.com') || 
+        str.includes('googlevideo.com') || 
+        (str.includes('openai-assets') && str.includes('video'))) return true;
+
+    return false;
+};
+
 // NEW: Advanced Recursive Finder with Key Context
 // Returns an array of candidates: { key: string, url: string }
 const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
     if (!obj) return results;
     
     if (typeof obj === 'string') {
-        // Basic check if it looks like a video URL
-        if (obj.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || 
-            obj.includes('googlevideo.com') || 
-            obj.includes('videos.openai.com')) {
-            // Note: When recursion hits a string, we don't have the key context here.
-            // The key context is captured in the 'object' block below.
-        }
+        // Note: When recursion hits a string, we don't have the key context here.
+        // The key context is captured in the 'object' block below.
         return results;
     }
     
@@ -215,11 +226,7 @@ const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string
         for (const key in obj) {
             const val = obj[key];
             if (typeof val === 'string') {
-                 if (val.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || 
-                    val.includes('googlevideo.com') || 
-                    val.includes('videos.openai.com') ||
-                    (val.includes('openai-assets') && val.includes('video'))) {
-                    
+                 if (val.startsWith('http') && isLikelyVideoUrl(val)) {
                     results.push({ key: key, url: val });
                 }
             } else {
@@ -719,12 +726,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     if (k.includes('source')) score += 5;
                                     if (k.includes('file') && !k.includes('preview')) score += 3;
                                     
+                                    // NEW: Sora-specific boosting
+                                    if (v.includes('/raw')) score += 20; // VERY HIGH PRIORITY for /raw path
+                                    if (v.includes('/original')) score += 15;
+                                    if (v.includes('clean')) score += 15;
+
                                     if (k.includes('preview')) score -= 5;
                                     if (k.includes('thumbnail')) score -= 5;
                                     if (k.includes('poster')) score -= 5;
                                     
                                     if (v.includes('watermark')) score -= 10;
-                                    if (v.includes('preview')) score -= 2;
+                                    if (v.includes('preview')) score -= 5;
                                     
                                     return { ...c, score };
                                 });
@@ -755,7 +767,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                              }
                         }
                         
-                        if (!resultVideoUrl) resultVideoUrl = url; // Fallback to input
+                        // Only fallback if absolutely nothing found
+                        if (!resultVideoUrl) {
+                            // Don't fallback to input URL automatically if it was an HTML page
+                            // But do it if it's the only option to show an error downstream
+                            resultVideoUrl = url;
+                        }
 
                     } catch (err) {
                         console.error("Extraction Error:", err);
