@@ -167,10 +167,9 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             setVideoProgress(100);
             setVideoStage("Hoàn tất!");
 
-            if (!response.videoUrl) throw new Error("Không nhận được đường dẫn video.");
+            if (!response.videoUrl) throw new Error("Không tìm thấy video gốc.");
             
             let finalUrl = response.videoUrl;
-            // Fix double encoded ampersands if present
             if (finalUrl.includes('&amp;')) finalUrl = finalUrl.replace(/&amp;/g, '&');
             
             setProcessedVideoUrl(finalUrl);
@@ -192,6 +191,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             setVideoStage("Lỗi");
             const msg = e.message || t('magicEraser.errors.videoFailed');
             setVideoError(msg);
+            setVideoFinished(false);
         } finally {
             setIsVideoProcessing(false);
         }
