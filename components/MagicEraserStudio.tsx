@@ -357,13 +357,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                          <h3 className="text-xl font-bold mb-2">Hàng Chờ Tải Xuống Miễn Phí</h3>
                          <ProcessingBar progress={videoProgress} stage={videoStage} />
                          <p className="text-xs text-gray-400 mt-6 max-w-xs text-center leading-relaxed">
-                             Video của bạn đang được xử lý. AI Photo Suite giúp người dùng trên toàn thế giới xóa watermark Sora mỗi ngày.
+                             Đang phân tích liên kết và trích xuất video gốc. Vui lòng không tắt trình duyệt.
                          </p>
-                         <div className="mt-6">
-                              <button className="border border-blue-500 text-blue-400 px-4 py-2 rounded-full text-sm hover:bg-blue-500/10 transition-colors">
-                                  <i className="fas fa-rocket mr-2"></i> Truy Cập VIP Nhanh Chóng
-                              </button>
-                         </div>
                     </div>
                 ) : videoFinished && processedVideoUrl ? (
                     <div className="w-full h-full flex flex-col gap-4 animate-fade-in w-full">
@@ -399,14 +394,10 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             <div className="flex flex-col gap-3">
                                 <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-color)]">
                                     <h4 className="font-bold text-white mb-3 border-b border-white/10 pb-2">Tải xuống</h4>
-                                    <button onClick={handleVideoDownload} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-md mb-2 flex items-center justify-center gap-2 transition-colors text-sm">
-                                        <i className="fas fa-download"></i> Tải xuống - Máy chủ chính
-                                    </button>
-                                     <button onClick={handleVideoDownload} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-md mb-2 flex items-center justify-center gap-2 transition-colors text-xs">
-                                        <i className="fas fa-server"></i> Tải xuống - Máy chủ dự phòng 1
-                                    </button>
-                                     <button onClick={handleVideoDownload} className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-md flex items-center justify-center gap-2 transition-colors text-xs">
-                                        <i className="fas fa-server"></i> Tải xuống - Máy chủ dự phòng 2
+                                    
+                                    {/* SINGLE DOWNLOAD BUTTON - AS REQUESTED */}
+                                    <button onClick={handleVideoDownload} className="w-full btn-gradient text-white font-bold py-4 rounded-lg mb-2 flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition-transform text-sm">
+                                        <i className="fas fa-download"></i> {t('magicEraser.video.download')}
                                     </button>
                                 </div>
 
