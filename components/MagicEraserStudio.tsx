@@ -182,7 +182,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoLoadError(false);
         
         try {
-            addLog("Initializing Source Extractor v4.1 (Strict Mode)...");
+            addLog("Initializing Source Extractor v5.0 (Strict Mode)...");
             await new Promise(r => setTimeout(r, 500));
             
             addLog(`Target Platform: ${videoSource.toUpperCase()}`);
@@ -203,20 +203,20 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
             // Backend Call
             const payload = { url: videoUrl };
-            // The backend now performs Ranking based on Keys (download > original > preview)
             const responseUrl = await removeVideoWatermark(payload, videoSource);
             
             if (!responseUrl) throw new Error("No valid stream found.");
-            
-            if (responseUrl === videoUrl && !videoUrl.match(/\.(mp4|mov)$/i)) {
-                 addLog("Warning: Best effort fallback used.");
-            } else {
-                 addLog("Success: High-quality candidate found.");
-            }
 
-            // Sanitize logs for display
-            const displayUrl = responseUrl.length > 50 ? responseUrl.substring(0, 40) + '...' : responseUrl;
-            addLog(`Clean URL Candidate: ${displayUrl}`);
+            // Strict Check: If result matches input -> Fail
+            const cleanInput = videoUrl.replace(/https?:\/\/(www\.)?/, '').split('?')[0];
+            const cleanResponse = responseUrl.replace(/https?:\/\/(www\.)?/, '').split('?')[0];
+            
+            if (cleanResponse.includes(cleanInput) || cleanInput.includes(cleanResponse)) {
+                addLog("CRITICAL ERROR: Extraction returned the original watermarked link.");
+                throw new Error("Hệ thống không thể tìm thấy link sạch (No clean link found). Link tìm được trùng với link gốc có watermark.");
+            }
+            
+            addLog(`Clean URL Candidate Found: ${responseUrl.substring(0, 30)}...`);
             setVideoProgress(90);
             await new Promise(r => setTimeout(r, 600));
             
@@ -243,12 +243,13 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
         } catch (e: any) {
             setVideoProgress(0);
-            addLog(`ERROR: ${e.message}`);
             const msg = e.message || '';
+            addLog(`ERROR: ${msg}`);
+            
             if (msg.includes('overloaded') || msg.includes('503')) {
                  setVideoError(t('errors.generationOverloaded'));
             } else {
-                 setVideoError(t('magicEraser.errors.videoFailed') + (msg ? `: ${msg}` : ''));
+                 setVideoError(msg || t('magicEraser.errors.videoFailed'));
             }
         } finally {
             setIsVideoProcessing(false);

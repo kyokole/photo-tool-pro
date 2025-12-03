@@ -189,18 +189,16 @@ const decodeEntities = (str: string) => {
 };
 
 // Helper function to check if a string looks like a video URL
-// Accepts any http string that might be a video, we will filter later
 const isLikelyVideoUrl = (str: string) => {
     if (!str || typeof str !== 'string') return false;
     if (!str.startsWith('http')) return false;
     
     // Known providers that host video files or streams
     if (str.includes('openai') || str.includes('google') || str.includes('fbcdn') || str.includes('amazonaws')) {
-        // Loose check for video extensions or keywords in URL
-        if (str.match(/\.(mp4|webm|mov|mkv)($|\?)/i)) return true;
-        if (str.includes('/video/') || str.includes('videoplayback')) return true;
+        // Allow signed URLs (query params) which might not end directly in mp4
+        // Check for common signatures or path components
+        if (str.includes('/file') || str.includes('/video') || str.includes('sig=')) return true;
         if (str.includes('files') && str.includes('raw')) return true; // Sora generic
-        return true; // Be permissive for deep scanning
     }
     
     // Standard extension check for others
@@ -691,10 +689,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const { url, type } = payload;
                 let resultVideoUrl = "";
 
+                // SAFETY CHECK: Reject inputs directly if they are known preview patterns
+                if (url.includes('preview') || url.includes('watermark')) {
+                     return res.status(400).json({ error: "Input URL appears to be a preview link. Please provide the main page URL." });
+                }
+
                 if (url) {
-                    // 1. Direct file match (Early exit)
-                    if (url.match(/\.(mp4|mov)$/i) && !url.includes('preview')) {
-                        return res.json({ videoUrl: url });
+                    // 1. Direct file match (Early exit for simple cases - only if it's not the input itself)
+                    if (url.match(/\.(mp4|mov|webm)$/i) && !url.includes('preview')) {
+                         // Just return it, but frontend will block if it's same as input
+                         return res.json({ videoUrl: url });
                     }
 
                     try {
@@ -740,23 +744,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             }
                         }
 
-                        // C. Scoring & Ranking
+                        // C. Scoring & Ranking Algorithm (V5.0 - STRICT MODE)
                         const scoredCandidates = candidates.map(c => {
                             let score = 0;
                             const k = c.key.toLowerCase();
                             const v = c.url.toLowerCase();
+                            
+                            // *** CRITICAL: STRICT REJECTION OF INPUT URL ***
+                            // If the found URL is practically identical to the input URL, kill it.
+                            // We check if 'v' contains the input URL or vice versa (ignoring protocol/www)
+                            const cleanInput = url.replace(/https?:\/\/(www\.)?/, '').split('?')[0];
+                            const cleanCandidate = v.replace(/https?:\/\/(www\.)?/, '').split('?')[0];
+                            
+                            if (cleanInput.includes(cleanCandidate) || cleanCandidate.includes(cleanInput)) {
+                                score = -10000; // DEAD
+                            }
 
-                            // --- POSITIVE SIGNALS ---
-                            if (k.includes('download')) score += 50; // Highest priority
-                            if (k.includes('original')) score += 40;
-                            if (k.includes('source')) score += 30;
-                            if (k.includes('file') && !k.includes('preview')) score += 20;
-                            if (k.includes('canonical')) score += 20;
+                            // --- POSITIVE SIGNALS (KEYS) ---
+                            // Explicitly named keys are the strongest signal
+                            if (k.includes('download')) score += 100; 
+                            if (k.includes('original')) score += 80;
+                            if (k.includes('source')) score += 60;
+                            if (k.includes('file') && !k.includes('preview')) score += 40;
+                            if (k.includes('canonical')) score += 40;
 
-                            // Special Sora/Veo handlers
-                            if (v.includes('/raw')) score += 15; 
-                            if (v.includes('clean')) score += 20;
-                            if (v.includes('signed_url')) score += 25;
+                            // --- POSITIVE SIGNALS (URL PATTERNS) ---
+                            // Only boost specific URL patterns if they are NOT blocked
+                            if (v.includes('clean')) score += 30;
+                            if (v.includes('signed_url')) score += 50;
+                            // Specific boost for Sora/OpenAI CDN signed links (often long and ugly)
+                            if (v.includes('files') && v.includes('openai')) score += 20;
 
                             // --- NEGATIVE SIGNALS ---
                             if (k.includes('preview')) score -= 50;
@@ -764,12 +781,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             if (k.includes('poster')) score -= 50;
                             if (k.includes('cover')) score -= 50;
                             
-                            if (v.includes('watermark')) score -= 100; // Kill watermarked
-                            if (v.includes('preview')) score -= 30;
-                            if (v.includes('blob:') && !v.includes('http')) score -= 20;
+                            // STRONG NEGATIVE: Explicit Watermark clues
+                            if (v.includes('watermark')) score -= 10000; // Kill it
+                            if (v.includes('preview')) score -= 100;
 
-                            // Input URL check: If candidate is same as input, it's not an "extraction"
-                            if (v === url.toLowerCase()) score -= 10;
+                            // --- THE "RAW" TRAP FIX ---
+                            // Many sites call the watermarked preview "/raw". 
+                            // Only trust "/raw" if the KEY says "download" or "original".
+                            if (v.includes('/raw')) {
+                                if (k.includes('download') || k.includes('original')) {
+                                    score += 20; // Valid raw file
+                                } else {
+                                    score -= 20; // Suspicious raw preview
+                                }
+                            }
+                            
+                            if (v.includes('blob:') && !v.includes('http')) score -= 20;
 
                             return { ...c, score };
                         });
@@ -778,7 +805,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         scoredCandidates.sort((a, b) => b.score - a.score);
                         
                         // Log top candidates for debugging (server-side)
-                        // console.log("Top candidates:", scoredCandidates.slice(0, 3));
+                        console.log("Top candidates:", scoredCandidates.slice(0, 3));
 
                         // Pick best
                         if (scoredCandidates.length > 0 && scoredCandidates[0].score > 0) {
@@ -790,10 +817,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 } 
                 
-                // Fallback: If extraction failed, return original URL to avoid breaking the flow,
-                // but frontend will show it might be watermarked.
+                // Fallback: If extraction failed (no clean candidate found), return null/empty to trigger error on UI
+                // DO NOT return the input URL as fallback in Strict Mode.
                 if (!resultVideoUrl) {
-                    resultVideoUrl = url;
+                    return res.status(404).json({ error: "Could not find a clean video source. The link might be private or strictly protected." });
                 }
                 
                 return res.json({ videoUrl: resultVideoUrl }); 
