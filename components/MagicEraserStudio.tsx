@@ -170,6 +170,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (!response.videoUrl) throw new Error("Không nhận được đường dẫn video.");
             
             let finalUrl = response.videoUrl;
+            // Fix double encoded ampersands if present
             if (finalUrl.includes('&amp;')) finalUrl = finalUrl.replace(/&amp;/g, '&');
             
             setProcessedVideoUrl(finalUrl);
