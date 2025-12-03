@@ -123,8 +123,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     const simulateProgress = async () => {
         const stages = [
             { p: 10, t: "Kết nối máy chủ..." },
-            { p: 30, t: "Giải mã Entities & Unicode..." },
-            { p: 60, t: "Quét dữ liệu sâu (Forensic Scan)..." },
+            { p: 30, t: "Giả lập Social Bot (Facebook/Twitter)..." },
+            { p: 60, t: "Trích xuất Social Graph Metadata..." },
             { p: 80, t: "Xác thực luồng video..." },
             { p: 95, t: "Hoàn tất..." }
         ];
@@ -314,7 +314,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                         </div>
                          <div className="flex items-center gap-2 bg-black/30 p-2 rounded text-xs text-gray-400">
                              <i className="fas fa-info-circle"></i>
-                             <span>Phương pháp mới: Forensic Deep Scan (Quét sâu) để tìm file gốc sạch nhất.</span>
+                             <span>Phương pháp mới: Social Graph Extraction (Mô phỏng Bot Mạng Xã Hội) để tìm file gốc sạch nhất.</span>
                          </div>
                     </div>
                 </div>
