@@ -189,31 +189,29 @@ const decodeEntities = (str: string) => {
 };
 
 // Helper function to check if a string looks like a video URL
-// FIX: Relaxed regex to accept URLs without extension (like Sora signed URLs)
+// Accepts any http string that might be a video, we will filter later
 const isLikelyVideoUrl = (str: string) => {
     if (!str || typeof str !== 'string') return false;
+    if (!str.startsWith('http')) return false;
     
-    // 1. Standard extension check
+    // Known providers that host video files or streams
+    if (str.includes('openai') || str.includes('google') || str.includes('fbcdn') || str.includes('amazonaws')) {
+        // Loose check for video extensions or keywords in URL
+        if (str.match(/\.(mp4|webm|mov|mkv)($|\?)/i)) return true;
+        if (str.includes('/video/') || str.includes('videoplayback')) return true;
+        if (str.includes('files') && str.includes('raw')) return true; // Sora generic
+        return true; // Be permissive for deep scanning
+    }
+    
+    // Standard extension check for others
     if (str.match(/\.(mp4|webm|mov|mkv)($|\?)/i)) return true;
-    
-    // 2. Known provider check
-    if (str.includes('videos.openai.com') || 
-        str.includes('googlevideo.com') || 
-        (str.includes('openai-assets') && str.includes('video'))) return true;
 
     return false;
 };
 
-// NEW: Advanced Recursive Finder with Key Context
-// Returns an array of candidates: { key: string, url: string }
+// Advanced Recursive Finder with Key Context
 const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
     if (!obj) return results;
-    
-    if (typeof obj === 'string') {
-        // Note: When recursion hits a string, we don't have the key context here.
-        // The key context is captured in the 'object' block below.
-        return results;
-    }
     
     if (Array.isArray(obj)) {
         for (const item of obj) {
@@ -668,11 +666,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  return await runWithFallback(async (ai) => {
                      const { imagePart, highQuality } = payload;
                      const modelToUse = highQuality ? MODEL_PRO : MODEL_FLASH;
+                     
+                     // Fix for conflict: gemini-3-pro-image-preview + imageSize causes InvalidArgument in some regions for editing.
+                     // We just remove 'imageSize' from config for MODEL_PRO when editing.
                      const imgConfig = (modelToUse === MODEL_PRO) ? {} : getImageConfig(modelToUse, '1K');
 
                      const prompt = "TASK: Magic Eraser / Inpainting. Remove all watermarks, text overlays, logos, and unwanted objects. Restore the background naturally. Return a clean, high-quality image. Do not alter the main subject.";
                      
                      return await generateWithModelFallback(modelToUse, MODEL_FLASH, async (model) => {
+                         // Double check fallback model config
                          const effectiveConfig = (model === MODEL_PRO) ? {} : getImageConfig(model, '1K');
 
                         const geminiRes = await ai.models.generateContent({
@@ -690,95 +692,109 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let resultVideoUrl = "";
 
                 if (url) {
-                    // 1. Check direct file match
-                    if (url.match(/\.(mp4|mov)$/i)) {
+                    // 1. Direct file match (Early exit)
+                    if (url.match(/\.(mp4|mov)$/i) && !url.includes('preview')) {
                         return res.json({ videoUrl: url });
                     }
 
                     try {
                         // 2. Deep Source Extraction
+                        // Use a generic desktop user-agent to get full desktop site version
                         const response = await fetch(url, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                             }
                         });
                         let html = await response.text();
                         html = decodeEntities(html);
 
-                        // A. Attempt JSON Hydration Parsing
-                        const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
-                        if (jsonMatch && jsonMatch[1]) {
-                            try {
-                                const json = JSON.parse(jsonMatch[1]);
-                                
-                                // Use new recursive finder that captures keys
-                                const candidates = findVideoCandidatesInJson(json);
-                                
-                                // Filter and Score candidates
-                                const scoredCandidates = candidates.map(c => {
-                                    let score = 0;
-                                    const k = c.key.toLowerCase();
-                                    const v = c.url.toLowerCase();
+                        // A. Strategy: JSON Hydration Parsing (Next.js / React Apps)
+                        const jsonMatches = html.matchAll(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/g);
+                        let candidates: { key: string, url: string, score: number }[] = [];
 
-                                    if (k.includes('download')) score += 10;
-                                    if (k.includes('original')) score += 8;
-                                    if (k.includes('source')) score += 5;
-                                    if (k.includes('file') && !k.includes('preview')) score += 3;
-                                    
-                                    // NEW: Sora-specific boosting
-                                    if (v.includes('/raw')) score += 20; // VERY HIGH PRIORITY for /raw path
-                                    if (v.includes('/original')) score += 15;
-                                    if (v.includes('clean')) score += 15;
+                        for (const match of jsonMatches) {
+                            if (match && match[1]) {
+                                try {
+                                    const json = JSON.parse(match[1]);
+                                    const found = findVideoCandidatesInJson(json);
+                                    candidates = [...candidates, ...found.map(c => ({...c, score: 0}))];
+                                } catch (e) { console.error("JSON Parse Error", e); }
+                            }
+                        }
 
-                                    if (k.includes('preview')) score -= 5;
-                                    if (k.includes('thumbnail')) score -= 5;
-                                    if (k.includes('poster')) score -= 5;
-                                    
-                                    if (v.includes('watermark')) score -= 10;
-                                    if (v.includes('preview')) score -= 5;
-                                    
-                                    return { ...c, score };
-                                });
-
-                                // Sort by score desc
-                                scoredCandidates.sort((a, b) => b.score - a.score);
-                                
-                                // Pick best
-                                if (scoredCandidates.length > 0 && scoredCandidates[0].score > -5) {
-                                    resultVideoUrl = decodeEntities(scoredCandidates[0].url);
+                        // B. Strategy: Fallback Regex (Raw HTML Scan)
+                        // Look for "download_url":"..." pattern directly if JSON parsing failed
+                        if (candidates.length === 0) {
+                            const rawRegexes = [
+                                /"(?:download_url|original_url|source_url|file_url)":"([^"]+)"/gi,
+                                /url":"([^"]+)"/gi
+                            ];
+                            for (const regex of rawRegexes) {
+                                const matches = html.matchAll(regex);
+                                for (const m of matches) {
+                                    if (m[1] && isLikelyVideoUrl(m[1])) {
+                                        candidates.push({ key: 'raw_regex_match', url: decodeEntities(m[1]), score: 0 });
+                                    }
                                 }
-                            } catch (e) { console.error("JSON Parse Error", e); }
+                            }
                         }
 
-                        // B. Fallback Regex (Legacy)
-                        if (!resultVideoUrl) {
-                             const regexes = [
-                                /"download_url"\s*:\s*"([^"]+)"/i,
-                                /"original_video_url"\s*:\s*"([^"]+)"/i,
-                                /<meta property="og:video:secure_url" content="([^"]+)"/i,
-                             ];
-                             for (const regex of regexes) {
-                                 const match = html.match(regex);
-                                 if (match && match[1]) {
-                                     resultVideoUrl = decodeEntities(match[1]);
-                                     break;
-                                 }
-                             }
-                        }
+                        // C. Scoring & Ranking
+                        const scoredCandidates = candidates.map(c => {
+                            let score = 0;
+                            const k = c.key.toLowerCase();
+                            const v = c.url.toLowerCase();
+
+                            // --- POSITIVE SIGNALS ---
+                            if (k.includes('download')) score += 50; // Highest priority
+                            if (k.includes('original')) score += 40;
+                            if (k.includes('source')) score += 30;
+                            if (k.includes('file') && !k.includes('preview')) score += 20;
+                            if (k.includes('canonical')) score += 20;
+
+                            // Special Sora/Veo handlers
+                            if (v.includes('/raw')) score += 15; 
+                            if (v.includes('clean')) score += 20;
+                            if (v.includes('signed_url')) score += 25;
+
+                            // --- NEGATIVE SIGNALS ---
+                            if (k.includes('preview')) score -= 50;
+                            if (k.includes('thumbnail')) score -= 50;
+                            if (k.includes('poster')) score -= 50;
+                            if (k.includes('cover')) score -= 50;
+                            
+                            if (v.includes('watermark')) score -= 100; // Kill watermarked
+                            if (v.includes('preview')) score -= 30;
+                            if (v.includes('blob:') && !v.includes('http')) score -= 20;
+
+                            // Input URL check: If candidate is same as input, it's not an "extraction"
+                            if (v === url.toLowerCase()) score -= 10;
+
+                            return { ...c, score };
+                        });
+
+                        // Sort by score desc
+                        scoredCandidates.sort((a, b) => b.score - a.score);
                         
-                        // Only fallback if absolutely nothing found
-                        if (!resultVideoUrl) {
-                            // Don't fallback to input URL automatically if it was an HTML page
-                            // But do it if it's the only option to show an error downstream
-                            resultVideoUrl = url;
+                        // Log top candidates for debugging (server-side)
+                        // console.log("Top candidates:", scoredCandidates.slice(0, 3));
+
+                        // Pick best
+                        if (scoredCandidates.length > 0 && scoredCandidates[0].score > 0) {
+                            resultVideoUrl = decodeEntities(scoredCandidates[0].url);
                         }
 
                     } catch (err) {
                         console.error("Extraction Error:", err);
-                        resultVideoUrl = url;
                     }
                 } 
+                
+                // Fallback: If extraction failed, return original URL to avoid breaking the flow,
+                // but frontend will show it might be watermarked.
+                if (!resultVideoUrl) {
+                    resultVideoUrl = url;
+                }
                 
                 return res.json({ videoUrl: resultVideoUrl }); 
             }

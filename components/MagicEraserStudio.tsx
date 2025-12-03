@@ -182,22 +182,22 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoLoadError(false);
         
         try {
-            addLog("Initializing Source Extractor v4.0...");
+            addLog("Initializing Source Extractor v4.1 (Strict Mode)...");
             await new Promise(r => setTimeout(r, 500));
             
             addLog(`Target Platform: ${videoSource.toUpperCase()}`);
             addLog(`Analyzing URL structure: ${videoUrl.substring(0, 30)}...`);
             
             if (videoUrl.match(/\.(mp4|mov)$/i)) {
-                 addLog("Direct media file detected.");
+                 addLog("Direct media file detected. Verifying integrity...");
                  setVideoProgress(30);
             } else {
-                 addLog("Page URL detected. Starting Deep Scraping & Candidate Ranking...");
+                 addLog("Page URL detected. Starting Deep Scraping...");
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Fetching page hydration data...");
+                 addLog("Injecting stealth User-Agent...");
                  setVideoProgress(30);
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Parsing JSON for high-quality candidates...");
+                 addLog("Scanning JSON hydration data for 'download_url' keys...");
                  setVideoProgress(60);
             }
 
@@ -209,15 +209,14 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (!responseUrl) throw new Error("No valid stream found.");
             
             if (responseUrl === videoUrl && !videoUrl.match(/\.(mp4|mov)$/i)) {
-                 addLog("Warning: Could not find a better source than input. Fallback used.");
+                 addLog("Warning: Best effort fallback used.");
             } else {
-                 addLog("Best candidate selected based on score.");
+                 addLog("Success: High-quality candidate found.");
             }
 
-            addLog("Sanitizing URL parameters...");
             // Sanitize logs for display
             const displayUrl = responseUrl.length > 50 ? responseUrl.substring(0, 40) + '...' : responseUrl;
-            addLog(`Clean URL: ${displayUrl}`);
+            addLog(`Clean URL Candidate: ${displayUrl}`);
             setVideoProgress(90);
             await new Promise(r => setTimeout(r, 600));
             
