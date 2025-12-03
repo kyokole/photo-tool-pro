@@ -47,7 +47,7 @@ const ProcessingBar: React.FC<{ progress: number; stage: string }> = ({ progress
                 style={{ width: `${progress}%` }}
             ></div>
         </div>
-        <p className="text-center text-gray-500 text-xs mt-2 italic">Thời gian ước tính: 1-2 phút</p>
+        <p className="text-center text-gray-500 text-xs mt-2 italic">Deep Scan Engine Active</p>
     </div>
 );
 
@@ -122,11 +122,12 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     // Video Logic
     const simulateProgress = async () => {
         const stages = [
-            { p: 10, t: "Kết nối máy chủ..." },
-            { p: 30, t: "Giả lập Social Bot (Facebook/Twitter)..." },
-            { p: 60, t: "Trích xuất Social Graph Metadata..." },
-            { p: 80, t: "Xác thực luồng video..." },
-            { p: 95, t: "Hoàn tất..." }
+            { p: 15, t: "Khởi tạo Browser Engine..." },
+            { p: 35, t: "Bypass bảo mật nền tảng..." },
+            { p: 55, t: "Phân tích JSON-LD & DOM..." },
+            { p: 75, t: "Giải mã biến môi trường (Hydration)..." },
+            { p: 90, t: "Xác thực link video sạch..." },
+            { p: 98, t: "Đang hoàn tất..." }
         ];
 
         for (const stage of stages) {
@@ -135,7 +136,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             const startP = videoProgress;
             const endP = stage.p;
             const stepCount = 20;
-            const duration = 1000; 
+            const duration = 1200; 
             
             for (let i = 0; i <= stepCount; i++) {
                 if (videoFinished || videoError) return;
@@ -150,7 +151,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
         setIsVideoProcessing(true);
         setVideoProgress(0);
-        setVideoStage("Khởi tạo...");
+        setVideoStage("Kết nối Server...");
         setVideoFinished(false);
         setProcessedVideoUrl(null);
         setExtractedPrompt('');
@@ -165,9 +166,9 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             const response = await removeVideoWatermark(payload, videoSource) as unknown as { videoUrl: string, prompt?: string };
             
             setVideoProgress(100);
-            setVideoStage("Hoàn tất!");
+            setVideoStage("Thành công!");
 
-            if (!response.videoUrl) throw new Error("Không tìm thấy video gốc.");
+            if (!response.videoUrl) throw new Error("Không tìm thấy video gốc. Có thể link yêu cầu đăng nhập.");
             
             let finalUrl = response.videoUrl;
             if (finalUrl.includes('&amp;')) finalUrl = finalUrl.replace(/&amp;/g, '&');
@@ -182,13 +183,13 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                 original: videoUrl,
                 result: finalUrl,
                 timestamp: Date.now(),
-                name: 'Extracted Video',
+                name: 'Clean Video',
                 prompt: response.prompt
             });
 
         } catch (e: any) {
             setVideoProgress(0);
-            setVideoStage("Lỗi");
+            setVideoStage("Thất bại");
             const msg = e.message || t('magicEraser.errors.videoFailed');
             setVideoError(msg);
             setVideoFinished(false);
@@ -199,7 +200,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     
     const handleVideoDownload = () => {
         if(processedVideoUrl) {
-            const filename = `AIPhotoSuite_video_${Date.now()}.mp4`;
+            const filename = `Clean_Video_${Date.now()}.mp4`;
             smartDownload(processedVideoUrl, filename);
         }
     };
@@ -313,8 +314,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             />
                         </div>
                          <div className="flex items-center gap-2 bg-black/30 p-2 rounded text-xs text-gray-400">
-                             <i className="fas fa-info-circle"></i>
-                             <span>Phương pháp mới: Social Graph Extraction (Mô phỏng Bot Mạng Xã Hội) để tìm file gốc sạch nhất.</span>
+                             <i className="fas fa-microchip"></i>
+                             <span>Engine Mới: Deep DOM Mining & JSON-LD Extraction (Tối ưu cho các link bị ẩn)</span>
                          </div>
                     </div>
                 </div>
@@ -340,9 +341,9 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                 {isVideoProcessing ? (
                     <div className="w-full h-full flex flex-col items-center justify-center">
                          <div className="mb-6">
-                             <i className="fas fa-cloud-download-alt text-5xl text-[var(--accent-cyan)] animate-bounce"></i>
+                             <i className="fas fa-radar text-5xl text-[var(--accent-cyan)] animate-pulse"></i>
                          </div>
-                         <h3 className="text-xl font-bold mb-2">Đang xử lý chuyên sâu...</h3>
+                         <h3 className="text-xl font-bold mb-2 text-white">Đang truy tìm file gốc...</h3>
                          <ProcessingBar progress={videoProgress} stage={videoStage} />
                     </div>
                 ) : videoFinished && processedVideoUrl ? (
@@ -353,7 +354,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-green-400">{t('magicEraser.status.success')}</h3>
-                                <p className="text-xs text-gray-400">Đã tìm thấy file gốc chất lượng cao!</p>
+                                <p className="text-xs text-gray-400">Đã trích xuất thành công file chất lượng cao!</p>
                             </div>
                         </div>
                         
@@ -403,37 +404,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                     </div>
                 )}
             </div>
-        </div>
-    );
-
-    return (
-        <div className="flex-1 flex flex-col p-4 sm:p-6 md:p-8 font-sans animate-fade-in h-auto lg:h-full overflow-y-auto lg:overflow-hidden">
-            <header className="w-full max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-6 flex-shrink-0">
-                <div />
-                <div className="text-center">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold uppercase tracking-wider animated-gradient-text" style={{ fontFamily: "'Exo 2', sans-serif" }}>
-                        {t('magicEraser.title')}
-                    </h1>
-                    <p className="text-[var(--text-secondary)] mt-2 text-lg tracking-wide">{t('magicEraser.subtitle')}</p>
-                </div>
-                <div className="flex justify-end"><ThemeSelector currentTheme={theme} onChangeTheme={setTheme} /></div>
-            </header>
-
-            <main className="w-full max-w-7xl mx-auto flex-1 min-h-0 lg:overflow-hidden flex flex-col">
-                <div className="flex justify-center mb-6">
-                    <div className="flex bg-[var(--bg-tertiary)] p-1 rounded-xl border border-[var(--border-color)]">
-                        <button onClick={() => setActiveTab('image')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'image' ? 'bg-[var(--bg-interactive)] text-[var(--accent-cyan)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'}`}>
-                            <i className="fas fa-image"></i> {t('magicEraser.tabs.image')}
-                        </button>
-                        <button onClick={() => setActiveTab('video')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'video' ? 'bg-[var(--bg-interactive)] text-[var(--accent-cyan)] shadow-sm' : 'text-[var(--text-secondary)] hover:text-white'}`}>
-                            <i className="fas fa-video"></i> {t('magicEraser.tabs.video')}
-                        </button>
-                    </div>
-                </div>
-                <div className="flex-1 overflow-visible lg:overflow-y-auto scrollbar-thin pb-10">
-                    {activeTab === 'image' ? renderImageTab() : renderVideoTab()}
-                </div>
-            </main>
         </div>
     );
 };

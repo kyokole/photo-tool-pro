@@ -34,149 +34,197 @@ try {
 
 // --- HELPER FUNCTIONS ---
 
-// 1. Decode HTML Entities & Unicode Escapes
+// 1. Advanced Decode HTML Entities
 const decodeEntities = (str: string) => {
     if (!str) return str;
     try {
-        let decoded = str.replace(/\\u([\d\w]{4})/gi, (match, grp) => String.fromCharCode(parseInt(grp, 16)));
-        decoded = decoded.replace(/\\+\//g, '/');
-        decoded = decoded
+        // Decode standard HTML entities
+        let decoded = str
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&quot;/g, '"')
             .replace(/&#39;/g, "'");
+            
+        // Decode Unicode escapes often found in JSON (\u002F -> /)
+        decoded = decoded.replace(/\\u([\d\w]{4})/gi, (match, grp) => String.fromCharCode(parseInt(grp, 16)));
+        
+        // Clean escaped slashes commonly found in JSON strings (http:\/\/ -> http://)
+        decoded = decoded.replace(/\\+\//g, '/');
+        
         return decoded;
     } catch (e) {
         return str;
     }
 };
 
-const getUserStatus = async (idToken?: string, clientVipStatus?: boolean) => {
-    if (!idToken) return { isVip: false, isAdmin: false, uid: null, credits: 0 };
-    if (isFirebaseInitialized) {
-        try {
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-            const uid = decodedToken.uid;
-            const db = admin.firestore();
-            const userRef = db.collection('users').doc(uid);
-            const userDoc = await userRef.get();
-            if (!userDoc.exists) return { isVip: !!clientVipStatus, isAdmin: false, uid, credits: 0 };
-            const userData = userDoc.data();
-            const isAdmin = userData?.isAdmin === true;
-            let isVip = isAdmin;
-            if (!isVip && userData?.subscriptionEndDate) {
-                const expiryDate = new Date(userData.subscriptionEndDate);
-                if (expiryDate > new Date()) isVip = true;
-            }
-            return { isVip, isAdmin, uid, credits: userData?.credits || 0 };
-        } catch (error) { console.error("Server Auth Error:", error); }
-    }
-    return { isVip: !!clientVipStatus, isAdmin: false, uid: 'fallback', credits: 0 };
-};
-
-const getAi = (useBackup: boolean = false) => {
-    const apiKey = useBackup ? (process.env.VEO_API_KEY || process.env.GEMINI_API_KEY) : process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("Server API Key missing.");
-    return new GoogleGenAI({ apiKey });
-};
-
-// --- VIDEO EXTRACTION LOGIC (SOCIAL GRAPH EXTRACTION) ---
+// 2. Strict URL Validation & Cleaning
 const isValidVideoUrl = (url: string) => {
     if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
     const lower = url.toLowerCase();
-    // Check common video extensions or signed url patterns
-    const hasExtension = lower.includes('.mp4') || lower.includes('.webm') || lower.includes('.mov') || lower.includes('.m3u8');
-    // If no extension, check if it looks like a signed CDN link (often has huge tokens)
-    const isSignedCdn = lower.includes('token') || lower.includes('signature') || lower.includes('expires');
     
-    const isNotImage = !lower.includes('.jpg') && !lower.includes('.png') && !lower.includes('poster') && !lower.includes('preview') && !lower.includes('thumbnail');
-    return (hasExtension || isSignedCdn) && isNotImage;
+    // Must look like a video file or a signed content link
+    const isVideoFile = lower.match(/\.(mp4|webm|mov|m3u8)(\?|$)/);
+    const isSignedLink = lower.includes('signature') || lower.includes('token') || lower.includes('expires') || lower.includes('video');
+    
+    // Must NOT be an image
+    const isImage = lower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/) || lower.includes('thumbnail') || lower.includes('poster') || lower.includes('preview_image');
+
+    return (isVideoFile || isSignedLink) && !isImage;
 };
 
-const extractVideoFromMeta = (html: string): string | null => {
-    // Priority 1: OpenGraph Video (The Gold Standard for Social Sharing)
-    const ogVideoMatch = html.match(/<meta\s+property="og:video(?::secure_url)?"\s+content="([^"]+)"/i) || 
-                         html.match(/<meta\s+content="([^"]+)"\s+property="og:video(?::secure_url)?"/i);
-    if (ogVideoMatch && isValidVideoUrl(ogVideoMatch[1])) return decodeEntities(ogVideoMatch[1]);
+// --- DEEP EXTRACTION ENGINE ---
 
-    // Priority 2: Twitter Player Stream
-    const twitterMatch = html.match(/<meta\s+name="twitter:player:stream"\s+content="([^"]+)"/i) ||
-                         html.match(/<meta\s+content="([^"]+)"\s+name="twitter:player:stream"/i);
-    if (twitterMatch && isValidVideoUrl(twitterMatch[1])) return decodeEntities(twitterMatch[1]);
+// Strategy A: JSON-LD Structured Data (The most reliable "Pro" method)
+const extractFromJsonLd = (html: string): string | null => {
+    try {
+        const matches = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/gs);
+        if (!matches) return null;
 
-    // Priority 3: JSON-LD or Script Variables (Common in React Apps)
-    // Look for any string inside JSON that looks like a video URL
-    const jsonUrlMatch = html.match(/"(https?:\\?\/\\?\/[^"]+?\.(?:mp4|webm|mov)(?:\\?[^"]*)?)"/i);
-    if (jsonUrlMatch) {
-        // Unescape JSON slashes
-        const rawUrl = jsonUrlMatch[1].replace(/\\/g, '');
-        if (isValidVideoUrl(rawUrl)) return decodeEntities(rawUrl);
-    }
-    
+        for (const match of matches) {
+            const jsonStr = match.replace(/<script type="application\/ld\+json">|<\/script>/g, '');
+            try {
+                const data = JSON.parse(jsonStr);
+                // Check for VideoObject
+                if (data['@type'] === 'VideoObject' || data['@type'] === 'SocialMediaPosting') {
+                    if (data.contentUrl && isValidVideoUrl(data.contentUrl)) return data.contentUrl;
+                    if (data.embedUrl && isValidVideoUrl(data.embedUrl)) return data.embedUrl;
+                }
+                // Check nested structures
+                if (Array.isArray(data)) {
+                    const video = data.find(item => item['@type'] === 'VideoObject');
+                    if (video && video.contentUrl) return video.contentUrl;
+                }
+            } catch (e) { continue; }
+        }
+    } catch (e) { console.error("JSON-LD parsing error", e); }
     return null;
 };
+
+// Strategy B: Hydration Data Mining (Searching inside __NEXT_DATA__ or React props)
+const extractFromScriptVariables = (html: string): string | null => {
+    // Pattern to find URLs ending in video extensions inside JSON-like structures
+    // Looks for: "key": "https://...mp4"
+    const regex = /"(?:url|src|contentUrl|playbackUrl|downloadUrl|video_url)":"(https?:[^"]+?\.(?:mp4|webm|mov)[^"]*)"/gi;
+    
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+        const rawUrl = match[1];
+        const cleanUrl = decodeEntities(rawUrl);
+        if (isValidVideoUrl(cleanUrl)) {
+            return cleanUrl;
+        }
+    }
+    
+    // Fallback: Search for any string that looks like a high-quality MP4 URL inside scripts
+    // This is a "brute force" scanner for obfuscated code
+    const looseRegex = /"(https?:[^"]+?\.mp4[^"]*)"/g;
+    while ((match = looseRegex.exec(html)) !== null) {
+        const rawUrl = match[1];
+        // Filtering out small/preview keywords
+        if (!rawUrl.includes('preview') && !rawUrl.includes('thumb') && isValidVideoUrl(rawUrl)) {
+             return decodeEntities(rawUrl);
+        }
+    }
+
+    return null;
+};
+
+// Strategy C: OpenGraph/Twitter Meta (Legacy Fallback)
+const extractFromMetaTags = (html: string): string | null => {
+    const patterns = [
+        /<meta\s+property="og:video:secure_url"\s+content="([^"]+)"/i,
+        /<meta\s+property="og:video"\s+content="([^"]+)"/i,
+        /<meta\s+name="twitter:player:stream"\s+content="([^"]+)"/i,
+        /<meta\s+name="twitter:player"\s+content="([^"]+)"/i
+    ];
+
+    for (const p of patterns) {
+        const m = html.match(p);
+        if (m && isValidVideoUrl(m[1])) return decodeEntities(m[1]);
+    }
+    return null;
+};
+
+// --- MAIN EXTRACTOR ---
+const extractVideo = async (url: string): Promise<{ videoUrl: string | null, prompt: string }> => {
+    try {
+        // 1. Mimic a Real Desktop Browser (Crucial for bypassing bot protection)
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+                'Referer': 'https://www.google.com/'
+            }
+        });
+
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        const html = await response.text();
+
+        // 2. Execute Strategies in order of reliability
+        let bestUrl = extractFromJsonLd(html); // Highest priority (Official structured data)
+        
+        if (!bestUrl) {
+            bestUrl = extractFromScriptVariables(html); // Second priority (Hydration data)
+        }
+        
+        if (!bestUrl) {
+            bestUrl = extractFromMetaTags(html); // Lowest priority (Social sharing tags)
+        }
+
+        // 3. Extract Prompt/Description
+        let prompt = "";
+        const descMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i) ||
+                          html.match(/<meta\s+name="description"\s+content="([^"]+)"/i) ||
+                          html.match(/"description":"([^"]+)"/);
+        
+        if (descMatch) {
+            prompt = decodeEntities(descMatch[1]);
+            // Clean up common platform suffixes
+            prompt = prompt.replace(/ \| Sora/g, '').replace(/ - OpenAI/g, '').trim();
+        }
+
+        return { videoUrl: bestUrl, prompt };
+
+    } catch (error) {
+        console.error("Deep Extraction Error:", error);
+        return { videoUrl: null, prompt: "" };
+    }
+};
+
 
 // --- MAIN HANDLER ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
     
-    const { action, payload, idToken, clientVipStatus } = req.body || {};
+    const { action, payload } = req.body || {};
     
     try {
         if (action === 'removeVideoWatermark') {
             const { url } = payload;
             if (!url) return res.status(400).json({ error: "Missing URL" });
 
-            // 1. Fetch Source using Social Bot User-Agent
-            // This forces sites like Sora/Veo to render server-side meta tags for preview
-            const response = await fetch(url, {
-                headers: {
-                    'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                }
-            });
-            
-            if (!response.ok) throw new Error(`Failed to fetch source: ${response.status}`);
-            const html = await response.text();
-            
-            // 2. Extract Best Video URL
-            const bestUrl = extractVideoFromMeta(html);
-            
-            // 3. Extract Prompt (Best Effort)
-            let extractedPrompt = "";
-            const decodedHtml = decodeEntities(html);
-            const promptPatterns = [
-                /<meta\s+property="og:description"\s+content="([^"]+)"/i,
-                /<meta\s+name="description"\s+content="([^"]+)"/i,
-                /"description":\s*"([^"]+)"/i,
-                /"prompt":\s*"([^"]+)"/i,
-                /<title>([^<]+)<\/title>/i
-            ];
-            
-            for (const p of promptPatterns) {
-                const m = decodedHtml.match(p);
-                if (m) {
-                    extractedPrompt = m[1].replace(' | Sora', '').replace(' - OpenAI', '').trim();
-                    break;
-                }
+            console.log(`[Video Extract] Starting Deep Mining for: ${url}`);
+            const result = await extractVideo(url);
+
+            if (!result.videoUrl) {
+                return res.status(404).json({ 
+                    error: "Không thể trích xuất video gốc. Link có thể yêu cầu đăng nhập hoặc công nghệ bảo vệ DRM." 
+                });
             }
 
-            if (!bestUrl) {
-                return res.status(404).json({ error: "Không tìm thấy video gốc. Link có thể là riêng tư hoặc bị giới hạn địa lý." });
-            }
-
-            return res.json({ videoUrl: bestUrl, prompt: extractedPrompt });
+            console.log(`[Video Extract] Success: ${result.videoUrl.substring(0, 50)}...`);
+            return res.json({ videoUrl: result.videoUrl, prompt: result.prompt });
         }
 
-        // ... (Other handlers) ...
-        if (action === 'generateIdPhoto') return res.json({ imageData: 'stub' }); 
-
+        // ... (Other legacy handlers if any)
         return res.status(400).json({ error: "Unknown action" });
 
     } catch (e: any) {
-        console.error("API Error:", e);
+        console.error("API Critical Error:", e);
         return res.status(500).json({ error: e.message });
     }
 }
