@@ -161,7 +161,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
              if (msg.includes('429') || msg.includes('quota') || msg.includes('overloaded')) {
                 setImageError(t('errors.generationOverloaded'));
             } else {
-                // CORRECTLY USE IMAGE FAILED KEY
                 setImageError(t('magicEraser.errors.imageFailed') + (msg ? `: ${msg}` : ''));
             }
         } finally {
@@ -183,7 +182,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoLoadError(false);
         
         try {
-            addLog("Initializing Source Extractor v3.1...");
+            addLog("Initializing Source Extractor v4.0...");
             await new Promise(r => setTimeout(r, 500));
             
             addLog(`Target Platform: ${videoSource.toUpperCase()}`);
@@ -193,23 +192,28 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                  addLog("Direct media file detected.");
                  setVideoProgress(30);
             } else {
-                 addLog("Page URL detected. Starting Deep Scraping...");
+                 addLog("Page URL detected. Starting Deep Scraping & Candidate Ranking...");
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Accessing page metadata & hydration data...");
+                 addLog("Fetching page hydration data...");
                  setVideoProgress(30);
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Parsing JSON blob for 'original' quality...");
+                 addLog("Parsing JSON for high-quality candidates...");
                  setVideoProgress(60);
             }
 
             // Backend Call
             const payload = { url: videoUrl };
-            // The backend will now use the new JSON extraction logic
+            // The backend now performs Ranking based on Keys (download > original > preview)
             const responseUrl = await removeVideoWatermark(payload, videoSource);
             
-            if (!responseUrl) throw new Error("Source Extraction Failed. No valid stream found.");
+            if (!responseUrl) throw new Error("No valid stream found.");
             
-            addLog("Source stream located successfully.");
+            if (responseUrl === videoUrl && !videoUrl.match(/\.(mp4|mov)$/i)) {
+                 addLog("Warning: Could not find a better source than input. Fallback used.");
+            } else {
+                 addLog("Best candidate selected based on score.");
+            }
+
             addLog("Sanitizing URL parameters...");
             // Sanitize logs for display
             const displayUrl = responseUrl.length > 50 ? responseUrl.substring(0, 40) + '...' : responseUrl;
@@ -220,7 +224,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             addLog("Finalizing extraction...");
             setVideoProgress(100);
             
-            // Fix URL encoding issues in the response if any remain
             let finalUrl = responseUrl;
             if (finalUrl.includes('&amp;')) {
                 finalUrl = finalUrl.replace(/&amp;/g, '&');
@@ -246,7 +249,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (msg.includes('overloaded') || msg.includes('503')) {
                  setVideoError(t('errors.generationOverloaded'));
             } else {
-                 // CORRECTLY USE VIDEO FAILED KEY
                  setVideoError(t('magicEraser.errors.videoFailed') + (msg ? `: ${msg}` : ''));
             }
         } finally {

@@ -154,9 +154,6 @@ const selectModel = (imageSize: string): string => {
 const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, count: number = 1) => {
     const config: any = {};
     if (aspectRatio) config.aspectRatio = aspectRatio;
-    // IMPORTANT: For Edit tasks (input image + prompt), MODEL_PRO throws 400 if imageSize/aspectRatio is sent.
-    // We should only send these for Generation tasks.
-    // Since this function is generic, we leave it but will be careful in caller.
     if (model === MODEL_PRO) config.imageSize = imageSize;
     if (model === MODEL_FLASH && count > 1) config.numberOfImages = count;
     return config;
@@ -174,7 +171,6 @@ const getAi = (useBackup: boolean = false) => {
     return new GoogleGenAI({ apiKey });
 };
 
-// Helper to decode HTML entities deeply
 const decodeEntities = (str: string) => {
     if (!str) return str;
     let decoded = str;
@@ -192,26 +188,43 @@ const decodeEntities = (str: string) => {
     return decoded;
 };
 
-// NEW: Recursive JSON walker to find video URLs
-const findVideoUrlsInJson = (obj: any, results: string[] = []) => {
+// NEW: Advanced Recursive Finder with Key Context
+// Returns an array of candidates: { key: string, url: string }
+const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
     if (!obj) return results;
+    
     if (typeof obj === 'string') {
-        // Basic heuristic for video URLs
-        if (obj.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || obj.includes('googlevideo.com') || obj.includes('videos.openai.com')) {
-            results.push(obj);
+        // Basic check if it looks like a video URL
+        if (obj.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || 
+            obj.includes('googlevideo.com') || 
+            obj.includes('videos.openai.com')) {
+            // Note: When recursion hits a string, we don't have the key context here.
+            // The key context is captured in the 'object' block below.
         }
         return results;
     }
+    
     if (Array.isArray(obj)) {
         for (const item of obj) {
-            findVideoUrlsInJson(item, results);
+            findVideoCandidatesInJson(item, results);
         }
         return results;
     }
+    
     if (typeof obj === 'object') {
         for (const key in obj) {
-            // Prioritize specific keys if found, but still traverse everything
-            findVideoUrlsInJson(obj[key], results);
+            const val = obj[key];
+            if (typeof val === 'string') {
+                 if (val.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || 
+                    val.includes('googlevideo.com') || 
+                    val.includes('videos.openai.com') ||
+                    (val.includes('openai-assets') && val.includes('video'))) {
+                    
+                    results.push({ key: key, url: val });
+                }
+            } else {
+                findVideoCandidatesInJson(val, results);
+            }
         }
     }
     return results;
@@ -250,15 +263,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (error: any) {
             const msg = (error.message || String(error)).toLowerCase();
             if (msg.includes('429') || msg.includes('quota') || msg.includes('resource_exhausted') || msg.includes('overloaded') || msg.includes('503')) {
-                console.warn(`[Smart Retry] Switching to Backup Key/Model due to error: ${msg}`);
                 try {
-                    if (msg.includes('overloaded') || msg.includes('503')) {
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-                    }
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                     const aiBackup = getAi(true); 
                     return await logicFn(aiBackup);
                 } catch (backupError: any) {
-                    console.error("[Backup Failed]", backupError);
                     throw backupError; 
                 }
             }
@@ -276,7 +285,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (error: any) {
             const msg = (error.message || String(error)).toLowerCase();
             if ((msg.includes('overloaded') || msg.includes('503')) && primaryModel !== fallbackModel) {
-                console.warn(`[Model Fallback] ${primaryModel} overloaded. Switching to ${fallbackModel}.`);
                 return await generateFn(fallbackModel);
             }
             throw error;
@@ -284,7 +292,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     try {
-        // ... (Existing handlers for speech, Veo, etc.)
         if (action === 'generateSpeech') {
              const ai = getAi(true);
              const { text, voiceId, baseVoice, speed } = payload;
@@ -351,7 +358,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedModel = selectModel(imageSize);
 
         switch (action) {
-             // ... (Existing cases: generateIdPhoto, generateHeadshot, etc.)
              case 'generateIdPhoto': {
                 return await runWithFallback(async (ai) => {
                     const { originalImage, settings } = payload;
@@ -613,7 +619,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const { settings } = payload;
                     const prompt = `Family Photo Composite. Scene: ${settings.scene}. Members: ${settings.members.length}. Face Consistency: ${settings.faceConsistency}.`;
                     
-                    // Family photo usually needs High Quality, try to stick to Pro if possible or fallback to Flash
                     return await generateWithModelFallback(MODEL_PRO, MODEL_FLASH, async (model) => {
                         const geminiRes = await ai.models.generateContent({
                            model: model,
@@ -655,15 +660,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'removeWatermark': {
                  return await runWithFallback(async (ai) => {
                      const { imagePart, highQuality } = payload;
-                     // If using Model Pro for Editing (image input), DO NOT pass imageSize or aspectRatio.
                      const modelToUse = highQuality ? MODEL_PRO : MODEL_FLASH;
-                     // IMPORTANT FIX: Empty config for Pro model when doing editing to avoid 400 InvalidArgument.
                      const imgConfig = (modelToUse === MODEL_PRO) ? {} : getImageConfig(modelToUse, '1K');
 
                      const prompt = "TASK: Magic Eraser / Inpainting. Remove all watermarks, text overlays, logos, and unwanted objects. Restore the background naturally. Return a clean, high-quality image. Do not alter the main subject.";
                      
                      return await generateWithModelFallback(modelToUse, MODEL_FLASH, async (model) => {
-                         // Re-calculate config inside fallback to ensure correctness
                          const effectiveConfig = (model === MODEL_PRO) ? {} : getImageConfig(model, '1K');
 
                         const geminiRes = await ai.models.generateContent({
@@ -687,8 +689,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
 
                     try {
-                        // 2. Deep Source Extraction (New Logic)
-                        // Fetch full HTML
+                        // 2. Deep Source Extraction
                         const response = await fetch(url, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -698,49 +699,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         let html = await response.text();
                         html = decodeEntities(html);
 
-                        // A. Attempt JSON Hydration Parsing (Next.js / React apps)
+                        // A. Attempt JSON Hydration Parsing
                         const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
                         if (jsonMatch && jsonMatch[1]) {
                             try {
                                 const json = JSON.parse(jsonMatch[1]);
-                                // Deep traverse to find *all* video URLs
-                                const candidates = findVideoUrlsInJson(json);
                                 
-                                // Filter for the "best" candidate
-                                // Exclude obviously bad ones
-                                const cleanCandidates = candidates.filter(u => 
-                                    !u.includes('preview') && 
-                                    !u.includes('thumbnail') && 
-                                    !u.includes('low_res') &&
-                                    !u.includes('watermark') &&
-                                    (u.endsWith('.mp4') || u.includes('.mp4?'))
-                                );
+                                // Use new recursive finder that captures keys
+                                const candidates = findVideoCandidatesInJson(json);
                                 
-                                if (cleanCandidates.length > 0) {
-                                    // Heuristic: Prioritize links with 'download', 'original', or no parameters
-                                    // Sort by length desc (often signed/original links are longer, or check for specific keywords)
-                                    cleanCandidates.sort((a, b) => {
-                                        const scoreA = (a.includes('download') ? 3 : 0) + (a.includes('original') ? 2 : 0);
-                                        const scoreB = (b.includes('download') ? 3 : 0) + (b.includes('original') ? 2 : 0);
-                                        return scoreB - scoreA;
-                                    });
+                                // Filter and Score candidates
+                                const scoredCandidates = candidates.map(c => {
+                                    let score = 0;
+                                    const k = c.key.toLowerCase();
+                                    const v = c.url.toLowerCase();
+
+                                    if (k.includes('download')) score += 10;
+                                    if (k.includes('original')) score += 8;
+                                    if (k.includes('source')) score += 5;
+                                    if (k.includes('file') && !k.includes('preview')) score += 3;
                                     
-                                    resultVideoUrl = decodeEntities(cleanCandidates[0]);
+                                    if (k.includes('preview')) score -= 5;
+                                    if (k.includes('thumbnail')) score -= 5;
+                                    if (k.includes('poster')) score -= 5;
+                                    
+                                    if (v.includes('watermark')) score -= 10;
+                                    if (v.includes('preview')) score -= 2;
+                                    
+                                    return { ...c, score };
+                                });
+
+                                // Sort by score desc
+                                scoredCandidates.sort((a, b) => b.score - a.score);
+                                
+                                // Pick best
+                                if (scoredCandidates.length > 0 && scoredCandidates[0].score > -5) {
+                                    resultVideoUrl = decodeEntities(scoredCandidates[0].url);
                                 }
-                            } catch (e) { console.error("JSON Parse Error during video extraction", e); }
+                            } catch (e) { console.error("JSON Parse Error", e); }
                         }
 
-                        // B. Regex Fallback if JSON failed
+                        // B. Fallback Regex (Legacy)
                         if (!resultVideoUrl) {
                              const regexes = [
                                 /"download_url"\s*:\s*"([^"]+)"/i,
                                 /"original_video_url"\s*:\s*"([^"]+)"/i,
                                 /<meta property="og:video:secure_url" content="([^"]+)"/i,
-                                /<meta property="og:video" content="([^"]+)"/i,
-                                /<source\s+src="([^"]+)"/i,
-                                /"contentUrl"\s*:\s*"([^"]+)"/i
                              ];
-                             
                              for (const regex of regexes) {
                                  const match = html.match(regex);
                                  if (match && match[1]) {
@@ -749,9 +754,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                  }
                              }
                         }
-
-                        // Fallback: Just return input if nothing better found (let client handle error)
-                        if (!resultVideoUrl) resultVideoUrl = url;
+                        
+                        if (!resultVideoUrl) resultVideoUrl = url; // Fallback to input
 
                     } catch (err) {
                         console.error("Extraction Error:", err);
@@ -761,7 +765,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 
                 return res.json({ videoUrl: resultVideoUrl }); 
             }
-            // ... (Other text generation cases)
             case 'detectOutfit':
             case 'generateVideoPrompt':
             case 'generatePromptFromImage': {
