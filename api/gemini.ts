@@ -11,6 +11,7 @@ const MODEL_PRO = 'gemini-3-pro-image-preview';
 const MODEL_FLASH = 'gemini-2.5-flash-image';
 const TEXT_MODEL = 'gemini-2.5-flash';
 const VEO_MODEL = 'veo-3.1-fast-generate-preview';
+const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 // --- INIT FIREBASE ADMIN ---
 let isFirebaseInitialized = false;
@@ -32,199 +33,799 @@ try {
     console.error("Firebase Init Error:", error.message);
 }
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER: ERROR PARSING ---
+const processGoogleError = (error: any): string => {
+    const rawMessage = error.message || String(error);
+    console.error("Raw Google Error:", rawMessage);
 
-// 1. Advanced Decode HTML Entities
+    if (rawMessage.includes('overloaded') || rawMessage.includes('503')) {
+        return "Máy chủ AI đang quá tải (High Traffic). Đang thử lại với mô hình dự phòng...";
+    }
+
+    try {
+        const jsonMatch = rawMessage.match(/\{.*\}/s);
+        if (jsonMatch) {
+            const errorObj = JSON.parse(jsonMatch[0]);
+            if (errorObj.error?.message) {
+                const msg = errorObj.error.message;
+                if (msg.includes('inline_data')) return "Dữ liệu ảnh không hợp lệ hoặc bị lỗi định dạng.";
+                if (msg.includes('safety')) return "Ảnh bị chặn bởi bộ lọc an toàn của Google.";
+                if (msg.includes('quota') || msg.includes('429')) return "Hệ thống đang bận (Quota Exceeded).";
+                if (msg.includes('InvalidArgument') || msg.includes('400')) return "Tham số không hợp lệ với mô hình này.";
+                return `Lỗi từ AI: ${msg}`;
+            }
+        }
+    } catch (e) { }
+
+    if (rawMessage.includes('400')) return "Yêu cầu không hợp lệ (Lỗi 400). Có thể do xung đột cấu hình ảnh.";
+    if (rawMessage.includes('500')) return "Máy chủ AI gặp sự cố (Lỗi 500). Vui lòng thử lại sau.";
+    if (rawMessage.includes('timeout') || rawMessage.includes('504')) return "Quá thời gian xử lý. Vui lòng thử lại.";
+
+    return "Đã xảy ra lỗi không xác định khi tạo ảnh.";
+};
+
+// --- HELPER: USER STATUS CHECK ---
+interface UserStatus {
+    isVip: boolean;
+    isAdmin: boolean;
+    uid: string | null;
+    credits: number;
+}
+
+const getUserStatus = async (idToken?: string, clientVipStatus?: boolean): Promise<UserStatus> => {
+    if (!idToken) {
+        return { isVip: false, isAdmin: false, uid: null, credits: 0 };
+    }
+
+    if (isFirebaseInitialized) {
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(idToken);
+            const uid = decodedToken.uid;
+            const db = admin.firestore();
+            const userRef = db.collection('users').doc(uid);
+            const userDoc = await userRef.get();
+
+            if (!userDoc.exists) {
+                return { isVip: !!clientVipStatus, isAdmin: false, uid, credits: 0 };
+            }
+
+            const userData = userDoc.data();
+            const isAdmin = userData?.isAdmin === true || userData?.isAdmin === 'true';
+            
+            let isVip = isAdmin;
+            if (!isVip && userData?.subscriptionEndDate) {
+                const expiryDate = new Date(userData.subscriptionEndDate);
+                if (expiryDate > new Date()) {
+                    isVip = true;
+                }
+            }
+
+            return { isVip, isAdmin, uid, credits: userData?.credits || 0 };
+        } catch (error) {
+            console.error("Server Auth Verification Failed:", error);
+        }
+    }
+
+    if (idToken) {
+        return { isVip: !!clientVipStatus, isAdmin: false, uid: 'fallback-user', credits: 0 };
+    }
+
+    return { isVip: false, isAdmin: false, uid: null, credits: 0 };
+};
+
+// --- HELPER: WATERMARK ---
+const addWatermark = async (imageBuffer: Buffer): Promise<Buffer> => {
+    try {
+        const image = sharp(imageBuffer);
+        const metadata = await image.metadata();
+        const width = metadata.width || 1024;
+        const height = metadata.height || 1024;
+
+        const svgText = `
+        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="watermark" patternUnits="userSpaceOnUse" width="400" height="400" patternTransform="rotate(-45)">
+                    <text x="200" y="200" font-family="Arial, sans-serif" font-weight="bold" font-size="28" fill="rgba(255,255,255,0.2)" text-anchor="middle" alignment-baseline="middle">AI PHOTO SUITE • PREVIEW</text>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#watermark)" />
+            <text x="50%" y="95%" font-family="Arial, sans-serif" font-size="${Math.floor(width * 0.03)}" fill="rgba(255,255,255,0.6)" text-anchor="middle" font-weight="bold">AI PHOTO SUITE</text>
+        </svg>`;
+
+        return await image.composite([{ input: Buffer.from(svgText), blend: 'over' }]).toBuffer();
+    } catch (error) {
+        return imageBuffer; 
+    }
+};
+
+const resolveImageSize = (payload: any, isVip: boolean): string => {
+    const checkHQ = (obj: any) => obj?.highQuality === true || obj?.quality === 'high' || obj?.quality === 'ultra' || obj?.quality === '4K';
+    if (checkHQ(payload) || checkHQ(payload.settings) || checkHQ(payload.options) || checkHQ(payload.formData) || checkHQ(payload.style) || checkHQ(payload.tool)) {
+        return '4K';
+    }
+    return '1K';
+};
+
+const selectModel = (imageSize: string): string => {
+    if (imageSize === '4K') return MODEL_PRO;
+    return MODEL_FLASH;
+};
+
+const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, count: number = 1) => {
+    const config: any = {};
+    if (aspectRatio) config.aspectRatio = aspectRatio;
+    if (model === MODEL_PRO) config.imageSize = imageSize;
+    if (model === MODEL_FLASH && count > 1) config.numberOfImages = count;
+    return config;
+};
+
+const getAi = (useBackup: boolean = false) => {
+    let apiKey;
+    if (useBackup) {
+        apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY;
+    } else {
+        apiKey = process.env.GEMINI_API_KEY;
+    }
+    if (!apiKey) apiKey = process.env.API_KEY;
+    if (!apiKey) throw new Error("Server API Key missing.");
+    return new GoogleGenAI({ apiKey });
+};
+
 const decodeEntities = (str: string) => {
     if (!str) return str;
-    try {
-        // Decode standard HTML entities
-        let decoded = str
+    let decoded = str;
+    for (let i = 0; i < 3; i++) {
+        decoded = decoded
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'");
-            
-        // Decode Unicode escapes often found in JSON (\u002F -> /)
-        decoded = decoded.replace(/\\u([\d\w]{4})/gi, (match, grp) => String.fromCharCode(parseInt(grp, 16)));
-        
-        // Clean escaped slashes commonly found in JSON strings (http:\/\/ -> http://)
-        decoded = decoded.replace(/\\+\//g, '/');
-        
-        return decoded;
-    } catch (e) {
-        return str;
+            .replace(/&#39;/g, "'")
+            .replace(/\\u0026/g, '&')
+            .replace(/\\u002F/g, '/')
+            .replace(/\\\//g, '/');
     }
+    return decoded;
 };
 
-// 2. Strict URL Validation & Cleaning
-const isValidVideoUrl = (url: string) => {
-    if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
-    const lower = url.toLowerCase();
+// NEW: Advanced Recursive Finder with Key Context & Scoring
+// This is the new intelligent core for video extraction.
+const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
+    if (!obj) return results;
     
-    // Must look like a video file or a signed content link
-    const isVideoFile = lower.match(/\.(mp4|webm|mov|m3u8)(\?|$)/);
-    const isSignedLink = lower.includes('signature') || lower.includes('token') || lower.includes('expires') || lower.includes('video');
+    if (typeof obj === 'string') {
+        // Direct string check if array traversal hits a string
+        return results;
+    }
     
-    // Must NOT be an image
-    const isImage = lower.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/) || lower.includes('thumbnail') || lower.includes('poster') || lower.includes('preview_image');
-
-    return (isVideoFile || isSignedLink) && !isImage;
-};
-
-// --- DEEP EXTRACTION ENGINE ---
-
-// Strategy A: JSON-LD Structured Data (The most reliable "Pro" method)
-const extractFromJsonLd = (html: string): string | null => {
-    try {
-        const matches = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/gs);
-        if (!matches) return null;
-
-        for (const match of matches) {
-            const jsonStr = match.replace(/<script type="application\/ld\+json">|<\/script>/g, '');
-            try {
-                const data = JSON.parse(jsonStr);
-                // Check for VideoObject
-                if (data['@type'] === 'VideoObject' || data['@type'] === 'SocialMediaPosting') {
-                    if (data.contentUrl && isValidVideoUrl(data.contentUrl)) return data.contentUrl;
-                    if (data.embedUrl && isValidVideoUrl(data.embedUrl)) return data.embedUrl;
+    if (Array.isArray(obj)) {
+        for (const item of obj) {
+            findVideoCandidatesInJson(item, results);
+        }
+        return results;
+    }
+    
+    if (typeof obj === 'object') {
+        for (const key in obj) {
+            const val = obj[key];
+            if (typeof val === 'string') {
+                 if (val.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || 
+                    val.includes('googlevideo.com') || 
+                    val.includes('videos.openai.com') ||
+                    (val.includes('openai-assets') && val.includes('video')) ||
+                    val.includes('.mp4')) {
+                    
+                    // Add if it looks like a URL
+                    if (val.startsWith('http')) {
+                        results.push({ key: key, url: val });
+                    }
                 }
-                // Check nested structures
-                if (Array.isArray(data)) {
-                    const video = data.find(item => item['@type'] === 'VideoObject');
-                    if (video && video.contentUrl) return video.contentUrl;
-                }
-            } catch (e) { continue; }
-        }
-    } catch (e) { console.error("JSON-LD parsing error", e); }
-    return null;
-};
-
-// Strategy B: Hydration Data Mining (Searching inside __NEXT_DATA__ or React props)
-const extractFromScriptVariables = (html: string): string | null => {
-    // Pattern to find URLs ending in video extensions inside JSON-like structures
-    // Looks for: "key": "https://...mp4"
-    const regex = /"(?:url|src|contentUrl|playbackUrl|downloadUrl|video_url)":"(https?:[^"]+?\.(?:mp4|webm|mov)[^"]*)"/gi;
-    
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-        const rawUrl = match[1];
-        const cleanUrl = decodeEntities(rawUrl);
-        if (isValidVideoUrl(cleanUrl)) {
-            return cleanUrl;
-        }
-    }
-    
-    // Fallback: Search for any string that looks like a high-quality MP4 URL inside scripts
-    // This is a "brute force" scanner for obfuscated code
-    const looseRegex = /"(https?:[^"]+?\.mp4[^"]*)"/g;
-    while ((match = looseRegex.exec(html)) !== null) {
-        const rawUrl = match[1];
-        // Filtering out small/preview keywords
-        if (!rawUrl.includes('preview') && !rawUrl.includes('thumb') && isValidVideoUrl(rawUrl)) {
-             return decodeEntities(rawUrl);
-        }
-    }
-
-    return null;
-};
-
-// Strategy C: OpenGraph/Twitter Meta (Legacy Fallback)
-const extractFromMetaTags = (html: string): string | null => {
-    const patterns = [
-        /<meta\s+property="og:video:secure_url"\s+content="([^"]+)"/i,
-        /<meta\s+property="og:video"\s+content="([^"]+)"/i,
-        /<meta\s+name="twitter:player:stream"\s+content="([^"]+)"/i,
-        /<meta\s+name="twitter:player"\s+content="([^"]+)"/i
-    ];
-
-    for (const p of patterns) {
-        const m = html.match(p);
-        if (m && isValidVideoUrl(m[1])) return decodeEntities(m[1]);
-    }
-    return null;
-};
-
-// --- MAIN EXTRACTOR ---
-const extractVideo = async (url: string): Promise<{ videoUrl: string | null, prompt: string }> => {
-    try {
-        // 1. Mimic a Real Desktop Browser (Crucial for bypassing bot protection)
-        const response = await fetch(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache',
-                'Referer': 'https://www.google.com/'
+            } else {
+                findVideoCandidatesInJson(val, results);
             }
-        });
-
-        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-        const html = await response.text();
-
-        // 2. Execute Strategies in order of reliability
-        let bestUrl = extractFromJsonLd(html); // Highest priority (Official structured data)
-        
-        if (!bestUrl) {
-            bestUrl = extractFromScriptVariables(html); // Second priority (Hydration data)
         }
-        
-        if (!bestUrl) {
-            bestUrl = extractFromMetaTags(html); // Lowest priority (Social sharing tags)
-        }
-
-        // 3. Extract Prompt/Description
-        let prompt = "";
-        const descMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i) ||
-                          html.match(/<meta\s+name="description"\s+content="([^"]+)"/i) ||
-                          html.match(/"description":"([^"]+)"/);
-        
-        if (descMatch) {
-            prompt = decodeEntities(descMatch[1]);
-            // Clean up common platform suffixes
-            prompt = prompt.replace(/ \| Sora/g, '').replace(/ - OpenAI/g, '').trim();
-        }
-
-        return { videoUrl: bestUrl, prompt };
-
-    } catch (error) {
-        console.error("Deep Extraction Error:", error);
-        return { videoUrl: null, prompt: "" };
     }
-};
+    return results;
+}
 
-
-// --- MAIN HANDLER ---
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
     
-    const { action, payload } = req.body || {};
-    
+    const { action, payload, idToken, clientVipStatus } = req.body || {};
+    if (!action) return res.status(400).json({ error: 'Missing action' });
+
+    const clientPaid = payload?.isPaid === true;
+    const { isVip, uid } = await getUserStatus(idToken, clientVipStatus);
+
+    let shouldAddWatermark = true;
+    if (isVip || clientPaid) {
+        shouldAddWatermark = false;
+    } else if (uid && !isVip && !clientPaid) {
+        shouldAddWatermark = true;
+    }
+
+    const processOutputImage = async (base64Data: string | undefined): Promise<string> => {
+        if (!base64Data) throw new Error("Không có dữ liệu ảnh được tạo.");
+        if (shouldAddWatermark) {
+            const inputBuffer = Buffer.from(base64Data, 'base64');
+            const watermarkedBuffer = await addWatermark(inputBuffer);
+            return `data:image/png;base64,${watermarkedBuffer.toString('base64')}`;
+        }
+        return `data:image/png;base64,${base64Data}`;
+    };
+
+    const runWithFallback = async (logicFn: (ai: GoogleGenAI) => Promise<any>) => {
+        try {
+            const ai = getAi(false);
+            return await logicFn(ai);
+        } catch (error: any) {
+            const msg = (error.message || String(error)).toLowerCase();
+            if (msg.includes('429') || msg.includes('quota') || msg.includes('resource_exhausted') || msg.includes('overloaded') || msg.includes('503')) {
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    const aiBackup = getAi(true); 
+                    return await logicFn(aiBackup);
+                } catch (backupError: any) {
+                    throw backupError; 
+                }
+            }
+            throw error;
+        }
+    };
+
+    const generateWithModelFallback = async (
+        primaryModel: string,
+        fallbackModel: string,
+        generateFn: (model: string) => Promise<any>
+    ) => {
+        try {
+            return await generateFn(primaryModel);
+        } catch (error: any) {
+            const msg = (error.message || String(error)).toLowerCase();
+            if ((msg.includes('overloaded') || msg.includes('503')) && primaryModel !== fallbackModel) {
+                return await generateFn(fallbackModel);
+            }
+            throw error;
+        }
+    };
+
     try {
-        if (action === 'removeVideoWatermark') {
-            const { url } = payload;
-            if (!url) return res.status(400).json({ error: "Missing URL" });
+        if (action === 'generateSpeech') {
+             const ai = getAi(true);
+             const { text, voiceId, baseVoice, speed } = payload;
+             const geminiBaseVoice = baseVoice || (voiceId.includes('male') && !voiceId.includes('female') ? 'Fenrir' : 'Aoede');
+ 
+             let speedInstruction = "";
+             if (speed) {
+                 if (speed < 0.8) speedInstruction = "Speaking pace: Very Slow, deliberate.";
+                 else if (speed < 1.0) speedInstruction = "Speaking pace: Slow, relaxed.";
+                 else if (speed > 1.2) speedInstruction = "Speaking pace: Fast, energetic.";
+                 else if (speed > 1.5) speedInstruction = "Speaking pace: Very Fast, hurried.";
+                 else speedInstruction = "Speaking pace: Normal, natural.";
+             }
+             const promptWithSpeed = `${text}\n\n[INSTRUCTION]\n${speedInstruction}`;
+ 
+             const response = await ai.models.generateContent({
+                 model: TTS_MODEL,
+                 contents: { parts: [{ text: promptWithSpeed }] }, 
+                 config: {
+                     responseModalities: [Modality.AUDIO],
+                     speechConfig: {
+                         voiceConfig: {
+                             prebuiltVoiceConfig: { voiceName: geminiBaseVoice },
+                         },
+                     },
+                 },
+             });
+ 
+             const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+             if (!audioData) throw new Error("Không tạo được âm thanh.");
+             return res.json({ audioData });
+         }
+ 
+         if (action === 'generateVeoVideo') {
+             const ai = getAi(true);
+             const { base64Image, prompt } = payload;
+             let operation = await ai.models.generateVideos({
+                 model: VEO_MODEL,
+                 prompt: prompt, 
+                 image: { imageBytes: base64Image.split(',')[1], mimeType: 'image/png' },
+                 config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' }
+             });
+             
+             let retries = 0;
+             while (!operation.done && retries < 60) {
+                 await new Promise(resolve => setTimeout(resolve, 10000));
+                 operation = await ai.operations.getVideosOperation({operation: operation});
+                 retries++;
+             }
+             
+             if (!operation.done) throw new Error("Video generation timed out.");
+             const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+             if (!downloadLink) throw new Error("No video URI returned.");
+             
+             const usedKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
+             const vidRes = await fetch(`${downloadLink}&key=${usedKey}`);
+             const vidArrayBuffer = await vidRes.arrayBuffer();
+             const vidBase64 = Buffer.from(vidArrayBuffer).toString('base64');
+             
+             return res.json({ videoUrl: `data:video/mp4;base64,${vidBase64}` });
+         }
 
-            console.log(`[Video Extract] Starting Deep Mining for: ${url}`);
-            const result = await extractVideo(url);
+        const imageSize = resolveImageSize(payload, isVip);
+        const selectedModel = selectModel(imageSize);
 
-            if (!result.videoUrl) {
-                return res.status(404).json({ 
-                    error: "Không thể trích xuất video gốc. Link có thể yêu cầu đăng nhập hoặc công nghệ bảo vệ DRM." 
+        switch (action) {
+             case 'generateIdPhoto': {
+                return await runWithFallback(async (ai) => {
+                    const { originalImage, settings } = payload;
+                    const buildIdPhotoPrompt = (s: any) => {
+                        let p = `**NHIỆM VỤ:** Tạo ảnh thẻ chuyên nghiệp (ID Photo). Cắt lấy phần đầu và vai chuẩn thẻ. `;
+                        if (s.background.mode === 'ai' && s.background.customPrompt) {
+                            p += `**1. NỀN:** AI Background: "${s.background.customPrompt}". Bokeh nhẹ. `;
+                        } else {
+                            const c = s.background.mode === 'custom' ? s.background.customColor : (s.background.mode === 'white' ? '#FFFFFF' : '#E0E8F0');
+                            p += `**1. NỀN:** Màu đơn sắc ${c}. Tách nền sạch sẽ, không lem tóc. `;
+                        }
+                        if (s.outfit.mode === 'upload') {
+                            p += `**2. TRANG PHỤC:** Thay bằng bộ đồ ở ảnh tham chiếu thứ 2. Giữ cấu trúc cơ thể tự nhiên. `;
+                        } else if (!s.outfit.keepOriginal) {
+                            const outfitName = s.outfit.mode === 'preset' ? s.outfit.preset : s.outfit.customPrompt;
+                            p += `**2. TRANG PHỤC:** Thay thế toàn bộ trang phục gốc thành "${outfitName}". Đảm bảo cổ áo và vai cân đối, chuyên nghiệp. `;
+                        }
+                        p += `**3. GƯƠNG MẶT & TÓC:** Giữ nguyên 100% đặc điểm nhận dạng khuôn mặt. `;
+                        if (s.face.hairStyle !== 'keep_original') {
+                            let hairDesc = "";
+                            if (s.face.hairStyle === 'auto') hairDesc = "Tóc buộc gọn gàng ra sau, lộ rõ hai tai và trán.";
+                            else if (s.face.hairStyle === 'slicked_back') hairDesc = "Vuốt ngược gọn gàng (slicked back).";
+                            else if (s.face.hairStyle === 'down') hairDesc = "Tóc thả tự nhiên, suôn mượt.";
+                            p += `Thay đổi tóc thành: "${hairDesc}". `;
+                        } else {
+                            p += `Giữ nguyên kiểu tóc gốc. `;
+                        }
+                        if (s.face.smoothSkin) p += `Làm mịn da nhẹ nhàng. `;
+                        if (s.face.slightSmile) p += `Cười mỉm nhẹ. `;
+                        return p;
+                    };
+                    const prompt = buildIdPhotoPrompt(settings);
+                    const parts = [{ inlineData: { data: originalImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
+                    if (payload.outfitImagePart) parts.splice(1, 0, payload.outfitImagePart);
+                    let modelRatio = settings.aspectRatio === '5x5' ? '1:1' : '3:4';
+                    
+                    return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                        const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, modelRatio) }
+                        });
+                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                        return res.json({ imageData });
+                    });
+                });
+           }
+           case 'generateHeadshot': {
+                return await runWithFallback(async (ai) => {
+                    const { imagePart, prompt: p } = payload;
+                    const prompt = `[TASK] Headshot. ${p}. [QUALITY] ${imageSize}, Photorealistic.`;
+                    
+                    return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [imagePart, { text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, undefined, 4) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                    });
+                });
+           }
+           case 'performRestoration':
+           case 'performDocumentRestoration': {
+               return await runWithFallback(async (ai) => {
+                   const { imagePart, options } = payload;
+                   const prompt = `Restoration Task. Level: ${options.mode}. Details: Remove scratches, colorize, sharpen. Context: ${options.context || ''}.`;
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [imagePart, { text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                   });
+               });
+           }
+           case 'generateFashionPhoto': {
+               return await runWithFallback(async (ai) => {
+                   const { imagePart, settings } = payload;
+                   const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}. [QUALITY] Photorealistic. ${imageSize} Output.`;
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [imagePart, { text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                   });
+               });
+           }
+            case 'generateFootballPhoto': {
+               return await runWithFallback(async (ai) => {
+                   const { settings } = payload;
+                   const prompt = `[TASK] Football Photo. Player: ${settings.player}. Team: ${settings.team}. Scene: ${settings.scene}. Style: ${settings.style}.`;
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                   });
+               });
+           }
+           case 'generateBeautyPhoto': {
+               return await runWithFallback(async (ai) => {
+                   const { baseImage, tool, subFeature, style } = payload;
+                   const prompt = `Beauty Retouch. Tool: ${tool.englishLabel}. Feature: ${subFeature?.englishLabel}. Style: ${style?.englishLabel}. Maintain identity.`;
+                   const parts = [{ inlineData: { data: baseImage.split(',')[1], mimeType: 'image/png' } }, { text: prompt }];
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                   });
+               });
+           }
+           case 'generateFourSeasonsPhoto': {
+               return await runWithFallback(async (ai) => {
+                   const { imagePart, scene, season, aspectRatio, customDescription } = payload;
+                   const prompt = `[TASK] Four Seasons Photo. Season: ${season}. Scene: ${scene.title}. ${scene.desc}. ${customDescription}. [ASPECT] ${aspectRatio}.`;
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [imagePart, { text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, aspectRatio) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                   });
+               });
+           }
+           case 'generateMarketingImage': {
+               return await runWithFallback(async (ai) => {
+                   const { productImagePart, referenceImagePart, productDetails, settings } = payload;
+                   const parts: Part[] = [];
+                   if (productImagePart) parts.push(productImagePart);
+                   if (referenceImagePart) parts.push(referenceImagePart);
+                   const prompt = `[TASK] Marketing Image. Product: ${productDetails.brand} ${productDetails.name}. Template: ${settings.templateId}. Tone: ${settings.tone}. Features: ${productDetails.features}. [QUALITY] 8K, Advertising.`;
+                   parts.push({ text: prompt });
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, settings.aspectRatio) }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData, prompt });
+                   });
+               });
+           }
+           case 'generateArtStyleImages': {
+               return await runWithFallback(async (ai) => {
+                   const { modelFile, otherFiles, styles, quality, aspect, count, userPrompt } = payload;
+                   const parts: Part[] = [];
+                   if (!modelFile?.base64) return res.status(400).json({ error: "Dữ liệu ảnh Model không hợp lệ." });
+                   parts.push({ inlineData: { data: modelFile.base64, mimeType: modelFile.mimeType } });
+                   if (otherFiles.clothing?.base64) parts.push({ inlineData: { data: otherFiles.clothing.base64, mimeType: otherFiles.clothing.mimeType } });
+                   if (otherFiles.accessories?.base64) parts.push({ inlineData: { data: otherFiles.accessories.base64, mimeType: otherFiles.accessories.mimeType } });
+                   if (otherFiles.product?.base64) parts.push({ inlineData: { data: otherFiles.product.base64, mimeType: otherFiles.product.mimeType } });
+                   const prompt = `[TASK] Commercial Composite. Inputs: Main Model + optional Clothing/Product. Styles: ${styles.join(', ')}. Description: ${userPrompt}. [INSTRUCTION] Blend inputs naturally. High fashion. Ratio: ${aspect}. Quality: ${quality}.`;
+                   parts.push({ text: prompt });
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const generationPromises = [];
+                       for(let i=0; i<count; i++) {
+                           generationPromises.push(ai.models.generateContent({
+                               model: model,
+                               contents: { parts },
+                               config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, aspect) }
+                           }));
+                       }
+                       const results = await Promise.all(generationPromises);
+                       const images = [];
+                       for(const r of results) {
+                           const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                           if(data) images.push(await processOutputImage(data));
+                       }
+                       return res.json({ images });
+                   });
+               });
+           }
+           case 'generateBatchImages': {
+               return await runWithFallback(async (ai) => {
+                   const { prompt, aspectRatio, numOutputs } = payload;
+                   const parts = [{ text: `[TASK] Generate Image. Prompt: ${prompt}. Aspect: ${aspectRatio}.` }];
+                   
+                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const generationPromises = [];
+                       for(let i=0; i < numOutputs; i++) {
+                            generationPromises.push(ai.models.generateContent({
+                               model: model,
+                               contents: { parts },
+                               config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, aspectRatio) }
+                           }));
+                       }
+                       const results = await Promise.all(generationPromises);
+                       const images = [];
+                       for(const r of results) {
+                           const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                           if(data) images.push(await processOutputImage(data));
+                       }
+                       return res.json({ images });
+                   });
+               });
+           }
+           case 'generateImagesFromFeature': {
+                return await runWithFallback(async (ai) => {
+                    const { featureAction, formData } = payload;
+                    let parts: Part[] = [];
+                    let prompt = "";
+                    if (featureAction === 'couple_compose') {
+                        if (formData.person_left_image?.base64) parts.push({ inlineData: { data: formData.person_left_image.base64, mimeType: formData.person_left_image.mimeType } });
+                        if (formData.person_right_image?.base64) parts.push({ inlineData: { data: formData.person_right_image.base64, mimeType: formData.person_right_image.mimeType } });
+                        if (formData.custom_background?.base64) parts.push({ inlineData: { data: formData.custom_background.base64, mimeType: formData.custom_background.mimeType } });
+                        prompt = `[TASK] Generate couple photo. Face Consistency: ${formData.face_consistency}. Action: ${formData.affection_action}. Background: ${formData.couple_background || "Custom"}. Style: ${formData.aesthetic_style}.`;
+                    } else {
+                        prompt = `Execute Feature: ${featureAction}. Data: ${JSON.stringify(formData)}`;
+                    }
+                    parts.push({ text: prompt });
+                    const numImages = payload.numImages || 1;
+                    
+                    return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                        const generationPromises = [];
+                        for(let i=0; i<numImages; i++) {
+                            generationPromises.push(ai.models.generateContent({
+                               model: model,
+                               contents: { parts },
+                               config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                            }));
+                        }
+                        const results = await Promise.all(generationPromises);
+                        const images = [];
+                        for(const r of results) {
+                           const data = r.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                           if(data) images.push((await processOutputImage(data)).split(',')[1]);
+                        }
+                        return res.json({ images: images, successCount: images.length });
+                    });
+                });
+           }
+            case 'generateFamilyPhoto':
+            case 'generateFamilyPhoto_3_Pass': {
+                return await runWithFallback(async (ai) => {
+                    const { settings } = payload;
+                    const prompt = `Family Photo Composite. Scene: ${settings.scene}. Members: ${settings.members.length}. Face Consistency: ${settings.faceConsistency}.`;
+                    
+                    return await generateWithModelFallback(MODEL_PRO, MODEL_FLASH, async (model) => {
+                        const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [{ text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, '4K', settings.aspectRatio) }
+                        });
+                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                        return res.json({ imageData, similarityScores: [], debug: null });
+                    });
                 });
             }
+            case 'generateSongContent': {
+                const ai = getAi(false);
+                const { topic, genre, mood, language } = payload;
+                const prompt = `ACT AS A PROFESSIONAL SONGWRITER. Topic: ${topic} Genre: ${genre} Mood: ${mood} Language: ${language} OUTPUT JSON: title, lyrics, chords, description, stylePrompt.`;
+                const geminiRes = await ai.models.generateContent({
+                   model: TEXT_MODEL,
+                   contents: { parts: [{ text: prompt }] },
+                   config: { responseMimeType: "application/json" }
+                });
+                return res.json(JSON.parse(geminiRes.text || '{}'));
+            }
+            case 'generateAlbumArt': {
+                return await runWithFallback(async (ai) => {
+                    const { description } = payload;
+                    const prompt = `[TASK] Album Cover Art. ${description}. [QUALITY] High resolution, artistic, vinyl style.`;
+                    
+                    return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                       const geminiRes = await ai.models.generateContent({
+                           model: model,
+                           contents: { parts: [{ text: prompt }] },
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, '2K', '1:1') }
+                       });
+                       const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                       return res.json({ imageData });
+                    });
+                });
+            }
+            case 'removeWatermark': {
+                 return await runWithFallback(async (ai) => {
+                     const { imagePart, highQuality } = payload;
+                     const modelToUse = highQuality ? MODEL_PRO : MODEL_FLASH;
+                     const imgConfig = (modelToUse === MODEL_PRO) ? {} : getImageConfig(modelToUse, '1K');
 
-            console.log(`[Video Extract] Success: ${result.videoUrl.substring(0, 50)}...`);
-            return res.json({ videoUrl: result.videoUrl, prompt: result.prompt });
+                     const prompt = "TASK: Magic Eraser / Inpainting. Remove all watermarks, text overlays, logos, and unwanted objects. Restore the background naturally. Return a clean, high-quality image. Do not alter the main subject.";
+                     
+                     return await generateWithModelFallback(modelToUse, MODEL_FLASH, async (model) => {
+                         const effectiveConfig = (model === MODEL_PRO) ? {} : getImageConfig(model, '1K');
+
+                        const geminiRes = await ai.models.generateContent({
+                            model: model,
+                            contents: { parts: [imagePart, { text: prompt }] },
+                            config: { responseModalities: [Modality.IMAGE], imageConfig: effectiveConfig }
+                        });
+                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                        return res.json({ imageData });
+                     });
+                 });
+            }
+            case 'removeVideoWatermark': {
+                const { url } = payload;
+                let resultVideoUrl = "";
+
+                if (url) {
+                    // 1. Direct File Match
+                    if (url.match(/\.(mp4|mov)$/i)) {
+                        return res.json({ videoUrl: url });
+                    }
+
+                    try {
+                        // 2. Deep Source Extraction
+                        const response = await fetch(url, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            }
+                        });
+                        let html = await response.text();
+                        html = decodeEntities(html);
+
+                        // A. Attempt JSON Hydration Parsing
+                        const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
+                        if (jsonMatch && jsonMatch[1]) {
+                            try {
+                                const json = JSON.parse(jsonMatch[1]);
+                                
+                                // Use new recursive finder that captures keys
+                                const candidates = findVideoCandidatesInJson(json);
+                                
+                                // INTELLIGENT SCORING
+                                const scoredCandidates = candidates.map(c => {
+                                    let score = 0;
+                                    const k = c.key.toLowerCase();
+                                    const v = c.url.toLowerCase();
+
+                                    // Positive Keywords
+                                    if (k.includes('download')) score += 20;
+                                    if (k.includes('original')) score += 15;
+                                    if (k.includes('source')) score += 10;
+                                    if (k.includes('file') && !k.includes('preview')) score += 5;
+                                    if (v.includes('1080p')) score += 5;
+                                    
+                                    // Negative Keywords (Watermark, Preview)
+                                    if (k.includes('preview')) score -= 10;
+                                    if (k.includes('thumbnail')) score -= 10;
+                                    if (k.includes('poster')) score -= 10;
+                                    if (k.includes('watermark')) score -= 20;
+                                    if (v.includes('watermark')) score -= 20;
+                                    if (v.includes('preview')) score -= 5;
+                                    
+                                    return { ...c, score };
+                                });
+
+                                // Sort by score descending
+                                scoredCandidates.sort((a, b) => b.score - a.score);
+                                
+                                // Pick best candidate with decent score
+                                if (scoredCandidates.length > 0 && scoredCandidates[0].score > -15) {
+                                    resultVideoUrl = decodeEntities(scoredCandidates[0].url);
+                                }
+                            } catch (e) { console.error("JSON Parse Error", e); }
+                        }
+
+                        // B. Fallback Regex (Legacy)
+                        if (!resultVideoUrl) {
+                             const regexes = [
+                                /"download_url"\s*:\s*"([^"]+)"/i,
+                                /"original_video_url"\s*:\s*"([^"]+)"/i,
+                                /<meta property="og:video:secure_url" content="([^"]+)"/i,
+                             ];
+                             for (const regex of regexes) {
+                                 const match = html.match(regex);
+                                 if (match && match[1]) {
+                                     resultVideoUrl = decodeEntities(match[1]);
+                                     break;
+                                 }
+                             }
+                        }
+                        
+                        if (!resultVideoUrl) resultVideoUrl = url; // Ultimate Fallback
+
+                    } catch (err) {
+                        console.error("Extraction Error:", err);
+                        resultVideoUrl = url;
+                    }
+                } 
+                
+                return res.json({ videoUrl: resultVideoUrl }); 
+            }
+            case 'detectOutfit':
+            case 'generateVideoPrompt':
+            case 'generatePromptFromImage': {
+                 return await runWithFallback(async (ai) => {
+                     const { base64Image, mimeType, userIdea, isFaceLockEnabled, language } = payload;
+                     let prompt = "";
+                     const parts: Part[] = [];
+                     if (action === 'detectOutfit') {
+                         prompt = "Describe outfit.";
+                         parts.push({ inlineData: { data: base64Image, mimeType } });
+                     } else if (action === 'generateVideoPrompt') {
+                         prompt = `Video prompt from idea: ${userIdea}. JSON.`;
+                         if(base64Image) parts.push({ inlineData: { data: base64Image.split(',')[1], mimeType: 'image/png' } });
+                     } else if (action === 'generatePromptFromImage') {
+                         prompt = `Describe image. ${isFaceLockEnabled ? 'Focus face.' : ''} Language: ${language}.`;
+                         parts.push({ inlineData: { data: base64Image, mimeType } });
+                     }
+                     parts.push({ text: prompt });
+                     const geminiRes = await ai.models.generateContent({
+                        model: TEXT_MODEL,
+                        contents: { parts },
+                        config: { responseMimeType: action.includes('JSON') || action === 'generateVideoPrompt' ? "application/json" : undefined }
+                     });
+                     if (action === 'detectOutfit') return res.json({ outfit: geminiRes.text });
+                     if (action === 'generateVideoPrompt') return res.json({ prompts: JSON.parse(geminiRes.text || '{}') });
+                     if (action === 'generatePromptFromImage') return res.json({ prompt: geminiRes.text });
+                     return res.json({ text: geminiRes.text });
+                 });
+            }
+            case 'generateMarketingAdCopy': 
+            case 'generateMarketingVideoScript':
+            case 'getHotTrends': {
+                 const ai = getAi(false);
+                 const { product, tone, imagePart, language } = payload;
+                 let prompt = "";
+                 const parts: Part[] = [];
+                 if (action === 'generateMarketingAdCopy') {
+                     prompt = `Write ad copy for ${product.name}. Language: ${language}.`;
+                     if(imagePart) parts.push(imagePart);
+                 } else if (action === 'generateMarketingVideoScript') {
+                     prompt = `Write video script for ${product.name}. Tone: ${tone}. Language: ${language}.`;
+                     if(imagePart) parts.push(imagePart);
+                 } else if (action === 'getHotTrends') {
+                     prompt = "List 5 fashion trends JSON.";
+                 }
+                 parts.push({ text: prompt });
+                 const geminiRes = await ai.models.generateContent({
+                    model: TEXT_MODEL,
+                    contents: { parts },
+                    config: { responseMimeType: action === 'getHotTrends' ? "application/json" : undefined }
+                 });
+                 if (action === 'getHotTrends') return res.json({ trends: JSON.parse(geminiRes.text || '[]') });
+                 return res.json({ text: geminiRes.text });
+            }
+            default:
+                return res.status(400).json({ error: "Unknown action" });
         }
-
-        // ... (Other legacy handlers if any)
-        return res.status(400).json({ error: "Unknown action" });
-
     } catch (e: any) {
-        console.error("API Critical Error:", e);
-        return res.status(500).json({ error: e.message });
+        console.error(e);
+        const friendlyError = processGoogleError(e);
+        return res.status(500).json({ error: friendlyError });
     }
 }
