@@ -126,26 +126,25 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
     // Video Handlers
     const simulateProgress = async () => {
-        // Stages: 0-20: Downloading/Analyzing, 20-50: AI Processing/Removing Watermark, 50-80: Re-encoding, 80-100: Finalizing
+        // Updated stages for "Deep Extraction" method
         const stages = [
-            { p: 10, t: "Đang tải xuống dữ liệu nguồn..." },
-            { p: 25, t: "Phân tích Watermark AI..." },
-            { p: 40, t: "Đang xóa lớp phủ mờ (Inpainting)..." },
-            { p: 60, t: "Tái tạo khung hình bị che khuất..." },
-            { p: 80, t: "Khôi phục độ nét (Upscaling)..." },
-            { p: 95, t: "Đang hoàn thiện video..." }
+            { p: 10, t: "Kết nối máy chủ..." },
+            { p: 30, t: "Quét dữ liệu Hydration (JSON)..." },
+            { p: 50, t: "Tìm kiếm nguồn Video sạch..." },
+            { p: 70, t: "Xác thực đường dẫn..." },
+            { p: 90, t: "Đang tải về máy chủ trung gian..." }
         ];
 
         for (const stage of stages) {
-            if (videoFinished || videoError) break; // Stop if done early or error
+            if (videoFinished || videoError) break; 
             setVideoStage(stage.t);
-            // Smooth increment to target
             const startP = videoProgress;
             const endP = stage.p;
             const stepCount = 20;
-            const duration = 2000 + Math.random() * 3000; // Random duration 2-5s per stage
+            const duration = 1500 + Math.random() * 2000; // Slightly faster feedback
             
             for (let i = 0; i <= stepCount; i++) {
+                if (videoFinished || videoError) return; // Break inner loop
                 setVideoProgress(startP + (endP - startP) * (i / stepCount));
                 await new Promise(r => setTimeout(r, duration / stepCount));
             }
@@ -157,26 +156,22 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
         setIsVideoProcessing(true);
         setVideoProgress(0);
-        setVideoStage("Khởi tạo phiên làm việc...");
+        setVideoStage("Khởi tạo...");
         setVideoFinished(false);
         setProcessedVideoUrl(null);
         setExtractedPrompt('');
         setVideoError(null);
         setVideoLoadError(false);
 
-        // Start the fake progress bar in parallel
-        const progressPromise = simulateProgress();
+        // Start progress simulation
+        simulateProgress();
 
         try {
-            // Actual API Call
-            const payload = { url: videoUrl };
+            const payload = { url: videoUrl, type: videoSource };
             const response = await removeVideoWatermark(payload, videoSource) as any; // Type cast for prompt
             
-            // Wait for progress bar to reach at least 90% to feel "heavy"
-            // Or just interrupt it if it was too fast (unlikely for network requests)
-            setVideoProgress(98);
-            setVideoStage("Xử lý xong!");
-            await new Promise(r => setTimeout(r, 500)); // Short pause at 98%
+            setVideoProgress(100);
+            setVideoStage("Hoàn tất!");
 
             if (!response.videoUrl) throw new Error("Không nhận được đường dẫn video.");
             
@@ -186,7 +181,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             setProcessedVideoUrl(finalUrl);
             setExtractedPrompt(response.prompt || '');
             setVideoFinished(true);
-            setVideoProgress(100);
 
             addToHistory({
                 id: Date.now().toString(),
@@ -194,7 +188,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                 original: videoUrl,
                 result: finalUrl,
                 timestamp: Date.now(),
-                name: 'Sora Video',
+                name: 'Extracted Video',
                 prompt: response.prompt
             });
 
@@ -326,7 +320,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                          {/* Logo AIPhotoSuite style visual hint */}
                          <div className="flex items-center gap-2 bg-black/30 p-2 rounded text-xs text-gray-400">
                              <i className="fas fa-info-circle"></i>
-                             <span>Truy tìm file gốc trong mã nguồn {videoSource === 'sora' ? 'Sora' : 'Server'}.</span>
+                             <span>Phương pháp mới: Quét dữ liệu ẩn (Hydration Data) để tìm file gốc sạch nhất.</span>
                          </div>
                     </div>
                 </div>
@@ -354,10 +348,10 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                          <div className="mb-6">
                              <i className="fas fa-cloud-download-alt text-5xl text-[var(--accent-cyan)] animate-bounce"></i>
                          </div>
-                         <h3 className="text-xl font-bold mb-2">Hàng Chờ Tải Xuống Miễn Phí</h3>
+                         <h3 className="text-xl font-bold mb-2">Đang xử lý chuyên sâu...</h3>
                          <ProcessingBar progress={videoProgress} stage={videoStage} />
                          <p className="text-xs text-gray-400 mt-6 max-w-xs text-center leading-relaxed">
-                             Đang phân tích liên kết và trích xuất video gốc. Vui lòng không tắt trình duyệt.
+                             Đang truy tìm các đoạn video ẩn trong mã nguồn trang web. Vui lòng chờ...
                          </p>
                     </div>
                 ) : videoFinished && processedVideoUrl ? (
@@ -368,7 +362,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold text-green-400">{t('magicEraser.status.success')}</h3>
-                                <p className="text-xs text-gray-400">Đã trích xuất thành công video gốc sạch từ nguồn.</p>
+                                <p className="text-xs text-gray-400">Đã tìm thấy file gốc chất lượng cao!</p>
                             </div>
                         </div>
                         

@@ -184,49 +184,77 @@ const decodeEntities = (str: string) => {
         .replace(/\\\//g, '/');
 };
 
-// --- VIDEO EXTRACTOR HELPERS ---
+// --- DEEP LINK EXTRACTION ---
 
-// Helper to check if a string is a valid video URL
-const isLikelyVideoUrl = (str: string) => {
-    if (!str || typeof str !== 'string') return false;
-    if (!str.startsWith('http')) return false;
-    
-    // Ignore known preview/thumbnail patterns if possible, but be careful
-    // OpenAI/Sora often use obscure signed URLs.
-    
-    // Standard extension check
-    if (str.match(/\.(mp4|webm|mov|mkv)($|\?)/i)) return true;
-
-    // Cloud providers signed URLs
-    if ((str.includes('openai') || str.includes('sora') || str.includes('fbcdn') || str.includes('amazonaws') || str.includes('googlevideo')) 
-        && (str.includes('/file') || str.includes('/video') || str.includes('sig=') || str.includes('token='))) {
-        return true;
-    }
-    
-    return false;
+const isValidVideoUrl = (url: string) => {
+    if (!url || typeof url !== 'string' || !url.startsWith('http')) return false;
+    const lower = url.toLowerCase();
+    // Must contain mp4 or webm
+    // Must NOT be a thumbnail, preview, or small icon
+    return (lower.includes('.mp4') || lower.includes('.webm') || lower.includes('.mov')) && 
+           !lower.includes('.jpg') && 
+           !lower.includes('.png') && 
+           !lower.includes('poster') &&
+           !lower.includes('thumbnail') &&
+           !lower.includes('preview');
 };
 
-// Advanced JSON Finder
-const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
-    if (!obj) return results;
-    if (Array.isArray(obj)) {
-        for (const item of obj) findVideoCandidatesInJson(item, results);
-        return results;
-    }
-    if (typeof obj === 'object') {
-        for (const key in obj) {
-            const val = obj[key];
-            if (typeof val === 'string') {
-                 if (val.startsWith('http') && isLikelyVideoUrl(val)) {
-                    results.push({ key: key, url: val });
-                }
-            } else {
-                findVideoCandidatesInJson(val, results);
+const extractDeepLinks = (html: string): string[] => {
+    const matches = new Set<string>();
+    
+    // 1. Regular HTML Tags
+    const srcMatch = html.matchAll(/src="(https?:\/\/[^"]+\.(?:mp4|webm)[^"]*)"/g);
+    for (const m of srcMatch) matches.add(decodeEntities(m[1]));
+
+    const contentMatch = html.matchAll(/content="(https?:\/\/[^"]+\.(?:mp4|webm)[^"]*)"/g);
+    for (const m of contentMatch) matches.add(decodeEntities(m[1]));
+
+    // 2. Deep JSON Extraction (The "SaveSora" Method)
+    // Finds any string inside JSON that looks like a video URL
+    // Regex explanation: Look for http(s), followed by chars, ending with .mp4, potentially with query params
+    const jsonUrlRegex = /"https?:\/\/[^"]*?\.(?:mp4|webm)[^"]*?"/g;
+    const jsonMatches = html.match(jsonUrlRegex);
+    
+    if (jsonMatches) {
+        jsonMatches.forEach(match => {
+            // Remove quotes
+            const cleanUrl = decodeEntities(match.slice(1, -1));
+            // Filter out small previews/thumbnails often labelled as "preview"
+            if (!cleanUrl.includes('preview_') && !cleanUrl.includes('_thumb')) {
+                 matches.add(cleanUrl);
             }
-        }
+        });
     }
-    return results;
-}
+
+    // 3. Specific Twitter/OG Metadata (Reliable sources)
+    const twitterStream = html.match(/twitter:player:stream"\s+content="([^"]+)"/);
+    if (twitterStream) matches.add(decodeEntities(twitterStream[1]));
+
+    const ogVideo = html.match(/og:video:secure_url"\s+content="([^"]+)"/);
+    if (ogVideo) matches.add(decodeEntities(ogVideo[1]));
+
+    return Array.from(matches).filter(isValidVideoUrl);
+};
+
+// Function to score URLs to find the "best" one (likely the original)
+const scoreVideoUrl = (url: string): number => {
+    let score = 0;
+    const lower = url.toLowerCase();
+    
+    if (lower.includes('original')) score += 10;
+    if (lower.includes('master')) score += 10;
+    if (lower.includes('hd')) score += 5;
+    if (lower.includes('1080p')) score += 5;
+    // Penalize heavily
+    if (lower.includes('preview')) score -= 20;
+    if (lower.includes('tiny')) score -= 10;
+    if (lower.includes('watermark')) score -= 50; // We want CLEAN videos
+    
+    // Prefer direct MP4
+    if (lower.includes('.mp4?')) score += 2; // Signed URLs often have query params
+    
+    return score;
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -389,102 +417,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
            }
            
-           // === MAGIC ERASER VIDEO EXTRACTOR v3.0 ===
+           // === DEEP EXTRACTION & CLEANING (Updated Method) ===
            case 'removeVideoWatermark': {
                 const { url, type } = payload;
                 let resultVideoUrl = "";
                 let extractedPrompt = "";
 
-                if (url) {
+                if (!url) return res.status(400).json({ error: "Missing URL" });
+
+                try {
+                    // 1. Check if it's already a direct video
                     if (url.match(/\.(mp4|mov|webm)$/i) && !url.includes('preview')) {
-                         return res.json({ videoUrl: url, prompt: "" });
+                         return res.json({ videoUrl: url, prompt: "Direct Link Source" });
                     }
 
-                    try {
-                        const response = await fetch(url, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                                'Accept-Language': 'en-US,en;q=0.9',
-                            }
-                        });
-                        let html = await response.text();
-                        html = decodeEntities(html);
+                    // 2. Enhanced Fetch
+                    const response = await fetch(url, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Referer': url, // Pretend we are on the site
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error(`Failed to fetch URL: ${response.status}`);
+                    
+                    let html = await response.text();
+                    html = decodeEntities(html);
 
-                        // 1. Extract Prompt (This is key for SaveSora simulation)
-                        // Often in <meta name="description"> or <title> or specific JSON
-                        const metaDescription = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
-                        const ogDescription = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i);
-                        
-                        if (ogDescription && ogDescription[1]) {
-                            extractedPrompt = decodeEntities(ogDescription[1]);
-                        } else if (metaDescription && metaDescription[1]) {
-                            extractedPrompt = decodeEntities(metaDescription[1]);
-                        }
-                        
-                        // Fallback: Look for prompt text in typical JSON structures
-                        if (!extractedPrompt) {
-                            const promptMatch = html.match(/"prompt"\s*:\s*"([^"]+)"/i);
-                            if (promptMatch && promptMatch[1]) {
-                                extractedPrompt = decodeEntities(promptMatch[1]);
-                            }
-                        }
-                        // Cleanup prompt if it contains generic text
+                    // 3. Deep Extraction
+                    const candidates = extractDeepLinks(html);
+                    
+                    if (candidates.length > 0) {
+                        // Sort candidates by score
+                        candidates.sort((a, b) => scoreVideoUrl(b) - scoreVideoUrl(a));
+                        resultVideoUrl = candidates[0];
+                    }
+                    
+                    // 4. Extract Prompt (Metadata)
+                    const metaDescription = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
+                    const ogDescription = html.match(/<meta\s+property="og:description"\s+content="([^"]+)"/i);
+                    if (ogDescription && ogDescription[1]) extractedPrompt = ogDescription[1];
+                    else if (metaDescription && metaDescription[1]) extractedPrompt = metaDescription[1];
+                    
+                    // Cleanup prompt
+                    if (extractedPrompt) {
                         extractedPrompt = extractedPrompt.replace(/Create video from text: |Video generated by Sora: /gi, '');
-
-
-                        // 2. Extract Clean Video
-                        const metaOgVideo = html.match(/<meta\s+(?:property|name)="og:video(?::secure_url)?"\s+content="([^"]+)"/i);
-                        if (metaOgVideo && metaOgVideo[1]) {
-                            resultVideoUrl = decodeEntities(metaOgVideo[1]);
-                        }
-
-                        if (!resultVideoUrl) {
-                            const metaTwitter = html.match(/<meta\s+(?:name|property)="twitter:player:stream"\s+content="([^"]+)"/i);
-                            if (metaTwitter && metaTwitter[1]) {
-                                resultVideoUrl = decodeEntities(metaTwitter[1]);
-                            }
-                        }
-                        
-                        if (!resultVideoUrl) {
-                            const directMp4Match = html.match(/https:\/\/[^"]*?\.mp4[^"]*?/g);
-                             if (directMp4Match) {
-                                // Prioritize URLs that look like source files
-                                const bestMatch = directMp4Match.find(u => !u.includes('preview') && !u.includes('watermark') && u.length > 50);
-                                if (bestMatch) {
-                                    resultVideoUrl = decodeEntities(bestMatch);
-                                }
-                            }
-                        }
-
-                        if (!resultVideoUrl) {
-                            const jsonMatches = html.matchAll(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/g);
-                            let candidates: { key: string, url: string }[] = [];
-                            for (const match of jsonMatches) {
-                                if (match && match[1]) {
-                                    try {
-                                        const json = JSON.parse(match[1]);
-                                        findVideoCandidatesInJson(json, candidates);
-                                    } catch (e) { }
-                                }
-                            }
-                            const bestCandidate = candidates.find(c => {
-                                const k = c.key.toLowerCase();
-                                return (k.includes('download') || k.includes('original') || k.includes('source')) && !k.includes('preview');
-                            });
-                            if (bestCandidate) resultVideoUrl = bestCandidate.url;
-                        }
-
-                    } catch (err) {
-                        console.error("Extraction Error:", err);
                     }
-                } 
-                
-                if (!resultVideoUrl) {
-                    return res.status(404).json({ error: "Could not find a clean video source. The link might be private or expired." });
+
+                } catch (err: any) {
+                    console.error("Extraction Error:", err);
+                    return res.status(500).json({ error: "Không thể phân tích trang web này. " + err.message });
                 }
                 
-                // Return prompt and URL
+                if (!resultVideoUrl) {
+                    return res.status(404).json({ error: "Không tìm thấy video gốc trong mã nguồn trang web. Link có thể là riêng tư." });
+                }
+                
                 return res.json({ videoUrl: resultVideoUrl, prompt: extractedPrompt }); 
             }
 
