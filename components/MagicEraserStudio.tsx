@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import { ImageUploader } from './ImageUploader';
@@ -67,7 +67,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     // Video State
     const [videoUrl, setVideoUrl] = useState<string>('');
     const [isVideoProcessing, setIsVideoProcessing] = useState(false);
-    const [videoSource, setVideoSource] = useState<'general' | 'veo' | 'sora'>('sora'); // Default to Sora
+    const [videoSource, setVideoSource] = useState<'general' | 'veo' | 'sora'>('sora');
     const [videoProgress, setVideoProgress] = useState(0);
     const [videoStage, setVideoStage] = useState('');
     const [videoFinished, setVideoFinished] = useState(false);
@@ -76,16 +76,11 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     const [videoError, setVideoError] = useState<string | null>(null);
     const [videoLoadError, setVideoLoadError] = useState(false);
 
-
-    useEffect(() => {
-        if (!activeTab) setActiveTab('image');
-    }, []);
-
     const addToHistory = (item: EraserHistoryItem) => {
         setHistory(prev => [item, ...prev]);
     };
 
-    // Image Handlers
+    // Image Logic
     const handleImageUpload = (file: File) => {
         setImageFile(file);
         setProcessedImage(null);
@@ -124,15 +119,14 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         }
     };
 
-    // Video Handlers
+    // Video Logic
     const simulateProgress = async () => {
-        // Updated stages for "Deep Extraction" method
         const stages = [
             { p: 10, t: "Kết nối máy chủ..." },
-            { p: 30, t: "Quét dữ liệu Hydration (JSON)..." },
-            { p: 50, t: "Tìm kiếm nguồn Video sạch..." },
-            { p: 70, t: "Xác thực đường dẫn..." },
-            { p: 90, t: "Đang tải về máy chủ trung gian..." }
+            { p: 30, t: "Giải mã Entities & Unicode..." },
+            { p: 60, t: "Quét dữ liệu sâu (Forensic Scan)..." },
+            { p: 80, t: "Xác thực luồng video..." },
+            { p: 95, t: "Hoàn tất..." }
         ];
 
         for (const stage of stages) {
@@ -141,10 +135,10 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             const startP = videoProgress;
             const endP = stage.p;
             const stepCount = 20;
-            const duration = 1500 + Math.random() * 2000; // Slightly faster feedback
+            const duration = 1000; 
             
             for (let i = 0; i <= stepCount; i++) {
-                if (videoFinished || videoError) return; // Break inner loop
+                if (videoFinished || videoError) return;
                 setVideoProgress(startP + (endP - startP) * (i / stepCount));
                 await new Promise(r => setTimeout(r, duration / stepCount));
             }
@@ -163,12 +157,12 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoError(null);
         setVideoLoadError(false);
 
-        // Start progress simulation
         simulateProgress();
 
         try {
             const payload = { url: videoUrl, type: videoSource };
-            const response = await removeVideoWatermark(payload, videoSource) as any; // Type cast for prompt
+            // Explicitly cast response to expected type
+            const response = await removeVideoWatermark(payload, videoSource) as unknown as { videoUrl: string, prompt?: string };
             
             setVideoProgress(100);
             setVideoStage("Hoàn tất!");
@@ -204,7 +198,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     
     const handleVideoDownload = () => {
         if(processedVideoUrl) {
-            // Format: AIPhotoSuite_video_[timestamp].mp4
             const filename = `AIPhotoSuite_video_${Date.now()}.mp4`;
             smartDownload(processedVideoUrl, filename);
         }
@@ -217,7 +210,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         }
     }
 
-    // UI Renders
+    // --- Render Methods ---
+
     const renderImageTab = () => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
             {!isVip && <VipLockOverlay t={t} />}
@@ -317,10 +311,9 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                                 className="w-full pl-10 pr-4 py-3.5 bg-[var(--bg-deep-space)] border border-[var(--border-color)] rounded-xl focus:ring-2 focus:ring-[var(--accent-cyan)] focus:border-transparent transition-all text-sm shadow-inner"
                             />
                         </div>
-                         {/* Logo AIPhotoSuite style visual hint */}
                          <div className="flex items-center gap-2 bg-black/30 p-2 rounded text-xs text-gray-400">
                              <i className="fas fa-info-circle"></i>
-                             <span>Phương pháp mới: Quét dữ liệu ẩn (Hydration Data) để tìm file gốc sạch nhất.</span>
+                             <span>Phương pháp mới: Forensic Deep Scan (Quét sâu) để tìm file gốc sạch nhất.</span>
                          </div>
                     </div>
                 </div>
@@ -350,9 +343,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                          </div>
                          <h3 className="text-xl font-bold mb-2">Đang xử lý chuyên sâu...</h3>
                          <ProcessingBar progress={videoProgress} stage={videoStage} />
-                         <p className="text-xs text-gray-400 mt-6 max-w-xs text-center leading-relaxed">
-                             Đang truy tìm các đoạn video ẩn trong mã nguồn trang web. Vui lòng chờ...
-                         </p>
                     </div>
                 ) : videoFinished && processedVideoUrl ? (
                     <div className="w-full h-full flex flex-col gap-4 animate-fade-in w-full">
@@ -367,7 +357,6 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-4 w-full h-full">
-                            {/* Video Player */}
                             <div className="bg-black rounded-lg overflow-hidden border border-[var(--border-color)] shadow-2xl relative group aspect-video flex items-center justify-center">
                                  <video 
                                     src={processedVideoUrl} 
@@ -379,17 +368,14 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                                  />
                                  {videoLoadError && (
                                      <div className="absolute inset-0 flex items-center justify-center bg-black/90 text-red-400 text-center p-6 z-20">
-                                         <p className="text-xs"><i className="fas fa-lightbulb text-yellow-400 mr-1"></i> Video gốc từ Sora/Veo thường dùng codec AV1/HEVC. Nếu trình duyệt không phát được hình, vui lòng tải về.</p>
+                                         <p className="text-xs"><i className="fas fa-lightbulb text-yellow-400 mr-1"></i> Trình duyệt không hỗ trợ phát định dạng này. Vui lòng tải về để xem.</p>
                                      </div>
                                  )}
                             </div>
 
-                            {/* Info Panel (Right Side like Screenshot) */}
                             <div className="flex flex-col gap-3">
                                 <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-color)]">
                                     <h4 className="font-bold text-white mb-3 border-b border-white/10 pb-2">Tải xuống</h4>
-                                    
-                                    {/* SINGLE DOWNLOAD BUTTON - AS REQUESTED */}
                                     <button onClick={handleVideoDownload} className="w-full btn-gradient text-white font-bold py-4 rounded-lg mb-2 flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] transition-transform text-sm">
                                         <i className="fas fa-download"></i> {t('magicEraser.video.download')}
                                     </button>
@@ -397,12 +383,12 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
                                 {extractedPrompt && (
                                     <div className="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-color)] flex-1 overflow-hidden flex flex-col">
-                                        <h4 className="font-bold text-white mb-2">ai prompt</h4>
+                                        <h4 className="font-bold text-white mb-2">Prompt</h4>
                                         <div className="bg-black/40 p-2 rounded text-xs text-gray-300 overflow-y-auto custom-scrollbar flex-1 mb-2">
                                             {extractedPrompt}
                                         </div>
                                         <button onClick={copyPrompt} className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded flex items-center justify-center gap-2 transition-colors">
-                                            <i className="fas fa-copy"></i> Sao chép ai prompt
+                                            <i className="fas fa-copy"></i> Sao chép Prompt
                                         </button>
                                     </div>
                                 )}
