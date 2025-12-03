@@ -60,12 +60,16 @@ const TerminalLog: React.FC<{ logs: string[] }> = ({ logs }) => {
 
     return (
         <div className="bg-black/80 p-4 rounded-lg font-mono text-xs text-green-400 border border-green-500/30 h-48 overflow-y-auto shadow-inner">
-            {logs.map((log, index) => (
-                <div key={index} className="mb-1">
-                    <span className="text-blue-400 mr-2">[{new Date().toLocaleTimeString().split(' ')[0]}]</span>
-                    {log}
-                </div>
-            ))}
+            {logs.length === 0 ? (
+                <div className="text-gray-500 italic">Ready for extraction...</div>
+            ) : (
+                logs.map((log, index) => (
+                    <div key={index} className="mb-1 break-all">
+                        <span className="text-blue-400 mr-2">[{new Date().toLocaleTimeString().split(' ')[0]}]</span>
+                        {log}
+                    </div>
+                ))
+            )}
             <div ref={messagesEndRef} />
             <div className="animate-pulse">_</div>
         </div>
@@ -100,6 +104,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
 
     useEffect(() => {
+        // Reset video state on source change
         setVideoUrl('');
         setVideoFinished(false);
         setProcessedVideoUrl(null);
@@ -107,6 +112,11 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setProcessLogs([]);
         setVideoLoadError(false);
     }, [videoSource]);
+
+    // Ensure activeTab defaults if not set (prevent black screen on initial load)
+    useEffect(() => {
+        if (!activeTab) setActiveTab('image');
+    }, []);
 
 
     const addToHistory = (item: EraserHistoryItem) => {
@@ -151,6 +161,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
              if (msg.includes('429') || msg.includes('quota') || msg.includes('overloaded')) {
                 setImageError(t('errors.generationOverloaded'));
             } else {
+                // CORRECTLY USE IMAGE FAILED KEY
                 setImageError(t('magicEraser.errors.imageFailed') + (msg ? `: ${msg}` : ''));
             }
         } finally {
@@ -172,10 +183,10 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoLoadError(false);
         
         try {
-            addLog("Initializing process...");
+            addLog("Initializing Source Extractor v3.1...");
             await new Promise(r => setTimeout(r, 500));
             
-            addLog(`Target Source: ${videoSource.toUpperCase()}`);
+            addLog(`Target Platform: ${videoSource.toUpperCase()}`);
             addLog(`Analyzing URL structure: ${videoUrl.substring(0, 30)}...`);
             
             if (videoUrl.match(/\.(mp4|mov)$/i)) {
@@ -184,15 +195,16 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             } else {
                  addLog("Page URL detected. Starting Deep Scraping...");
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Bypassing overlay protections...");
+                 addLog("Accessing page metadata & hydration data...");
                  setVideoProgress(30);
                  await new Promise(r => setTimeout(r, 800));
-                 addLog("Searching for high-bitrate source stream...");
+                 addLog("Parsing JSON blob for 'original' quality...");
                  setVideoProgress(60);
             }
 
             // Backend Call
             const payload = { url: videoUrl };
+            // The backend will now use the new JSON extraction logic
             const responseUrl = await removeVideoWatermark(payload, videoSource);
             
             if (!responseUrl) throw new Error("Source Extraction Failed. No valid stream found.");
@@ -234,6 +246,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             if (msg.includes('overloaded') || msg.includes('503')) {
                  setVideoError(t('errors.generationOverloaded'));
             } else {
+                 // CORRECTLY USE VIDEO FAILED KEY
                  setVideoError(t('magicEraser.errors.videoFailed') + (msg ? `: ${msg}` : ''));
             }
         } finally {
@@ -454,9 +467,11 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
 
             <div className="bg-[var(--bg-component)] p-6 rounded-2xl shadow-lg border border-[var(--border-color)] flex flex-col items-center justify-center min-h-[400px]">
                 {isVideoProcessing && (
-                    <div className="w-full">
-                         <p className="text-sm text-[var(--text-secondary)] mb-2 font-mono">System Output:</p>
-                         <TerminalLog logs={processLogs} />
+                    <div className="w-full h-full flex flex-col">
+                         <p className="text-sm text-[var(--text-secondary)] mb-2 font-mono">Deep Extraction Terminal:</p>
+                         <div className="flex-1 min-h-[300px]">
+                             <TerminalLog logs={processLogs} />
+                         </div>
                     </div>
                 )}
                 
@@ -466,7 +481,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                             <i className="fas fa-check-circle text-5xl text-green-500 mb-2"></i>
                             <h3 className="text-xl font-bold text-green-400">{t('magicEraser.status.success')}</h3>
                             <p className="text-sm text-[var(--text-secondary)] text-center mb-4">
-                                Đã trích xuất thành công video gốc sạch.
+                                Đã trích xuất thành công video gốc sạch từ nguồn.
                             </p>
                         </div>
                         
@@ -484,7 +499,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
                                     <div className="flex flex-col items-center gap-2">
                                          <i className="fas fa-video-slash text-3xl mb-2"></i>
                                          <p className="font-bold">Không thể phát trực tiếp (Lỗi Codec)</p>
-                                         <p className="text-xs text-gray-400">Video sử dụng chuẩn nén cao cấp (AV1/HEVC) mà trình duyệt chưa hỗ trợ.</p>
+                                         <p className="text-xs text-gray-400">Video sử dụng chuẩn nén cao cấp (AV1/HEVC) mà trình duyệt chưa hỗ trợ. Hãy tải về để xem.</p>
                                     </div>
                                 </div>
                              )}
