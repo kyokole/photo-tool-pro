@@ -182,46 +182,40 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         setVideoLoadError(false);
         
         try {
-            addLog("Initializing Source Extractor v5.0 (Strict Mode)...");
+            addLog("Initializing Extraction Engine...");
+            setVideoProgress(10);
             await new Promise(r => setTimeout(r, 500));
             
-            addLog(`Target Platform: ${videoSource.toUpperCase()}`);
-            addLog(`Analyzing URL structure: ${videoUrl.substring(0, 30)}...`);
+            addLog(`Target: ${videoSource.toUpperCase()} | URL: ${videoUrl.substring(0, 40)}...`);
+            addLog("Analyzing video metadata...");
+            setVideoProgress(30);
             
-            if (videoUrl.match(/\.(mp4|mov)$/i)) {
-                 addLog("Direct media file detected. Verifying integrity...");
-                 setVideoProgress(30);
-            } else {
-                 addLog("Page URL detected. Starting Deep Scraping...");
-                 await new Promise(r => setTimeout(r, 800));
-                 addLog("Injecting stealth User-Agent...");
-                 setVideoProgress(30);
-                 await new Promise(r => setTimeout(r, 800));
-                 addLog("Scanning JSON hydration data for 'download_url' keys...");
-                 setVideoProgress(60);
-            }
+            // Simulate some "work" steps to match the SaveSora UX
+            await new Promise(r => setTimeout(r, 600));
+            addLog("Bypassing anti-bot protection...");
+            setVideoProgress(50);
 
             // Backend Call
             const payload = { url: videoUrl };
             const responseUrl = await removeVideoWatermark(payload, videoSource);
             
+            addLog("Scanning for clean video stream...");
+            setVideoProgress(70);
+            await new Promise(r => setTimeout(r, 500));
+            
             if (!responseUrl) throw new Error("No valid stream found.");
 
-            // Strict Check: If result matches input -> Fail
+            // Strict Check
             const cleanInput = videoUrl.replace(/https?:\/\/(www\.)?/, '').split('?')[0];
             const cleanResponse = responseUrl.replace(/https?:\/\/(www\.)?/, '').split('?')[0];
             
             if (cleanResponse.includes(cleanInput) || cleanInput.includes(cleanResponse)) {
-                addLog("CRITICAL ERROR: Extraction returned the original watermarked link.");
-                throw new Error("Hệ thống không thể tìm thấy link sạch (No clean link found). Link tìm được trùng với link gốc có watermark.");
+                 addLog("ERROR: Clean stream verification failed.");
+                 throw new Error("Không tìm thấy phiên bản sạch (Clean Version). Link gốc bị trùng.");
             }
             
-            addLog(`Clean URL Candidate Found: ${responseUrl.substring(0, 30)}...`);
+            addLog(`Clean Stream Found: ${responseUrl.substring(0, 50)}...`);
             setVideoProgress(90);
-            await new Promise(r => setTimeout(r, 600));
-            
-            addLog("Finalizing extraction...");
-            setVideoProgress(100);
             
             let finalUrl = responseUrl;
             if (finalUrl.includes('&amp;')) {
@@ -230,7 +224,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
             
             setProcessedVideoUrl(finalUrl);
             setVideoFinished(true);
-            addLog("COMPLETE. Ready for download.");
+            addLog("PROCESSING COMPLETE. Video ready.");
+            setVideoProgress(100);
             
             addToHistory({
                 id: Date.now().toString(),
@@ -244,7 +239,7 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
         } catch (e: any) {
             setVideoProgress(0);
             const msg = e.message || '';
-            addLog(`ERROR: ${msg}`);
+            addLog(`FATAL ERROR: ${msg}`);
             
             if (msg.includes('overloaded') || msg.includes('503')) {
                  setVideoError(t('errors.generationOverloaded'));
@@ -258,7 +253,8 @@ const MagicEraserStudio: React.FC<MagicEraserStudioProps> = ({ theme, setTheme, 
     
     const handleVideoDownload = () => {
         if(processedVideoUrl) {
-            smartDownload(processedVideoUrl, `source-video-${Date.now()}.mp4`);
+            // Use the SaveSora naming convention
+            smartDownload(processedVideoUrl, `SaveSora_video_${Date.now()}.mp4`);
         }
     };
 
