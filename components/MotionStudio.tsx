@@ -904,12 +904,11 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
     };
 
     const handleUseAnalyzedShot = async (prompt: string, imageBase64: string) => {
-        // Convert base64 back to File object for consistency
+        // Force switch to 'image' tab immediately so user sees the shot list
+        setActiveTab('image');
+
         try {
-            // FIX: Directly use base64 string, don't try to create File object here because
-            // it can cause mime type confusion in downstream logic.
-            // However, to fit the MotionShot type which expects `image: File | null`,
-            // we must create a File. We ensure it is treated correctly later.
+            // Convert base64 to Blob/File for consistency with MotionShot type
             const res = await fetch(imageBase64);
             const blob = await res.blob();
             const file = new File([blob], `analyzed_shot_${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -917,18 +916,22 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
             const newShot: MotionShot = {
                 id: `shot_${Date.now()}`,
                 prompt: prompt,
-                image: file,
+                image: file, // Assign file so it's treated as Image-to-Video
                 imagePreview: imageBase64,
                 status: 'pending'
             };
             setShots(prev => [...prev, newShot]);
-            
-            // Switch to a view where the shot list is visible.
-            // 'image' tab shows the bulk uploader but also the shot list in split view.
-            // 'text' tab also shows shot list. 'image' is semantically closer since we have an image.
-            setActiveTab('image'); 
         } catch (e) {
             console.error("Failed to convert analyzed image", e);
+            // Fallback: Add as text shot if image conversion fails, but keep preview for reference
+             const newShot: MotionShot = {
+                id: `shot_${Date.now()}`,
+                prompt: prompt,
+                image: null, 
+                imagePreview: imageBase64,
+                status: 'pending'
+            };
+            setShots(prev => [...prev, newShot]);
         }
     };
     

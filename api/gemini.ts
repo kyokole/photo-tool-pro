@@ -513,10 +513,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  requestPayload.config.referenceImages = referenceImagesPayload;
              } else if (base64Image) {
                  // BUGFIX: Detect mime type from Data URI or default to jpeg if raw base64 provided.
-                 // Frontend typically sends full data URI now, or if it sends raw base64, we should verify.
-                 // Assuming frontend sends "data:image/jpeg;base64,..."
                  const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z+]+);base64,/);
-                 const mimeType = mimeMatch ? mimeMatch[1] : 'image/png'; // Default to png if regex fails, but check payload
+                 const mimeType = mimeMatch ? mimeMatch[1] : 'image/png'; // Default to png if regex fails or unknown
                  const rawBase64 = base64Image.includes('base64,') ? base64Image.split('base64,')[1] : base64Image;
                  
                  requestPayload.image = { imageBytes: rawBase64, mimeType: mimeType };
