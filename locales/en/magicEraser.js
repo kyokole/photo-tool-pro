@@ -1,10 +1,18 @@
 
+
+
+
+
 export default {
     "magicEraser": {
         "title": "Magic Eraser Studio",
         "subtitle": "Remove objects & watermarks from Images & Videos with AI",
         "history": "Recent Edits",
         "vipNote": "Advanced video watermark removal is exclusive to VIP members.",
+        "videoInfo": "Video Information",
+        "format": "Video Format",
+        "downloadMain": "Download Video",
+        "aiPrompt": "AI Prompt",
         "tabs": {
             "image": "Image Remover",
             "video": "Video Remover"

@@ -15,6 +15,8 @@ export default {
     "edit": "Sửa",
     "delete": "Xóa",
     "save": "Lưu",
+    "free": "Miễn phí",
+    "freeWatermark": "Miễn phí - Watermark",
     "uploadPrompt": "Kéo & thả hoặc nhấp để chọn tệp",
     "highQualityLabel": "Chất lượng cao (4K)",
     "highQualityDesc": "Bật để tạo ảnh 4K sắc nét nhất (xử lý lâu hơn). Tắt để tạo nhanh."

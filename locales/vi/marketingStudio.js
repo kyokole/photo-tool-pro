@@ -53,6 +53,7 @@ export default {
       "clear": "Xoá"
     },
     "actions": {
+      "autoAnalyze": "✨ Phân tích & Điền tự động",
       "generateAd": "Viết Quảng Cáo",
       "generateImage": "Tạo Ảnh",
       "generateVideoScript": "Viết Kịch Bản",
@@ -92,6 +93,9 @@ export default {
       "luxury": "Sang trọng",
       "witty": "Hài hước",
       "emotional": "Cảm xúc"
+    },
+    "errors": {
+        "analysisFailed": "Không thể phân tích ảnh sản phẩm. Vui lòng thử ảnh khác."
     }
   }
 }

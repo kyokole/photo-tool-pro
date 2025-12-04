@@ -1563,7 +1563,7 @@ const App: React.FC = () => {
                                 <>
                                     <i className="fas fa-magic mr-3"></i> 
                                     {t('sidebar.generateButton')} 
-                                    {isVip ? ' (Miễn phí)' : (currentUser ? ` (${settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE} Credits)` : ' (Miễn phí - Watermark)')}
+                                    {isVip ? ` (${t('common.free')})` : (currentUser ? ` (${settings.highQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE} Credits)` : ` (${t('common.freeWatermark')})`)}
                                 </>
                             )}
                         </button>

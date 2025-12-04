@@ -161,7 +161,7 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, 
     const config: any = {};
     if (aspectRatio) config.aspectRatio = aspectRatio;
     if (model === MODEL_PRO) {
-        config.imageSize = imageSize;
+        config.imageSize = imageSize; // '1K', '2K', '4K'
     }
     if (model === MODEL_FLASH && count > 1) {
         config.numberOfImages = count;
@@ -187,58 +187,73 @@ const getAi = (useBackup: boolean = false, modelType: 'image' | 'video' = 'image
     return new GoogleGenAI({ apiKey });
 };
 
-const decodeEntities = (str: string) => {
-    if (!str) return str;
-    let decoded = str;
-    for (let i = 0; i < 3; i++) {
-        decoded = decoded
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/\\u0026/g, '&')
-            .replace(/\\u002F/g, '/')
-            .replace(/\\\//g, '/');
-    }
-    return decoded;
-};
+// --- HELPER: SCRAPE VIDEO LINK ---
+const extractVideoData = async (url: string, type: string): Promise<{ videoUrl: string, prompt?: string }> => {
+    try {
+        // Fake a browser User-Agent to prevent 403 Forbidden on some sites
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+        };
+        
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+             // If direct fetch fails, just return original (might be playable directly)
+             return { videoUrl: url };
+        }
 
-const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
-    if (!obj) return results;
-    
-    if (typeof obj === 'string') {
-        return results;
-    }
-    
-    if (Array.isArray(obj)) {
-        for (const item of obj) {
-            findVideoCandidatesInJson(item, results);
+        const html = await response.text();
+        
+        let videoUrl = '';
+        let prompt = '';
+
+        // 1. Try OpenGraph tags (Common for most sites including Veo/Sora showcases)
+        const ogVideo = html.match(/<meta property="og:video:secure_url" content="(.*?)"/);
+        const ogVideo2 = html.match(/<meta property="og:video" content="(.*?)"/);
+        const ogDesc = html.match(/<meta property="og:description" content="(.*?)"/);
+        const twitterDesc = html.match(/<meta name="twitter:description" content="(.*?)"/);
+        const twitterVideo = html.match(/<meta name="twitter:player:stream" content="(.*?)"/);
+
+        if (ogVideo && ogVideo[1]) videoUrl = ogVideo[1];
+        else if (ogVideo2 && ogVideo2[1]) videoUrl = ogVideo2[1];
+        else if (twitterVideo && twitterVideo[1]) videoUrl = twitterVideo[1];
+
+        if (ogDesc && ogDesc[1]) prompt = ogDesc[1];
+        else if (twitterDesc && twitterDesc[1]) prompt = twitterDesc[1];
+
+        // 2. Try specific JSON data patterns (Next.js, React hydration data)
+        if (!videoUrl) {
+             // Look for .mp4 links in the raw source code
+             // Regex for http...mp4
+             const mp4Matches = html.match(/"(https?:\/\/[^"]+?\.mp4[^"]*)"/g);
+             if (mp4Matches && mp4Matches.length > 0) {
+                 // Pick the longest url as it's likely the highest quality one
+                 const cleanMatches = mp4Matches.map(m => m.replace(/"/g, '').replace(/\\u0026/g, '&'));
+                 videoUrl = cleanMatches.sort((a, b) => b.length - a.length)[0];
+             }
         }
-        return results;
-    }
-    
-    if (typeof obj === 'object') {
-        for (const key in obj) {
-            const val = obj[key];
-            if (typeof val === 'string') {
-                 if (val.match(/^https?:\/\/.*\.mp4(\?.*)?$/i) || 
-                    val.includes('googlevideo.com') || 
-                    val.includes('videos.openai.com') ||
-                    (val.includes('openai-assets') && val.includes('video')) ||
-                    val.includes('.mp4')) {
-                    
-                    if (val.startsWith('http')) {
-                        results.push({ key: key, url: val });
-                    }
-                }
-            } else {
-                findVideoCandidatesInJson(val, results);
-            }
+        
+        // Decode HTML entities in prompt
+        if (prompt) {
+            prompt = prompt
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">");
         }
+        
+        // Fallback: If no extraction worked, assume it's a direct link or un-scrapable, return original
+        return {
+            videoUrl: videoUrl || url, 
+            prompt: prompt
+        };
+        
+    } catch (error) {
+        console.error("Scraping failed:", error);
+        // Return original as fallback
+        return { videoUrl: url };
     }
-    return results;
-}
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -336,9 +351,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          }
          
          if (action === 'enhanceVideoPrompt') {
-            const ai = getAi(false); // Use standard key
-            const { prompt } = payload;
+            const ai = getAi(false); 
+            const { prompt, language } = payload;
             
+            const langInstruction = language === 'vi' 
+                ? "Output the result in Vietnamese language. Viết lại bằng tiếng Việt mô tả điện ảnh." 
+                : "Output the result in English language.";
+
             const systemInstruction = `You are a professional film director and cinematographer.
             Rewrite the user's video prompt into a highly detailed, cinematic description suitable for AI video generation (like Veo or Sora).
             
@@ -348,6 +367,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             3. Movement (Slow motion, Hyperlapse, Smooth).
             4. Details (Textures, atmosphere, weather).
             
+            ${langInstruction}
             Keep it concise but descriptive. Do not add introductory text like "Here is the prompt". Just return the refined prompt.
             
             User Prompt: "${prompt}"`;
@@ -359,46 +379,107 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             
             return res.json({ enhancedPrompt: response.text });
          }
+
+         if (action === 'analyzeVideoFrames') {
+             const ai = getAi(false);
+             const { frames, language } = payload; // frames is Array of Base64 strings
+
+             if (!frames || !Array.isArray(frames) || frames.length === 0) {
+                 return res.status(400).json({ error: "No frames provided for analysis." });
+             }
+
+             const parts: any[] = [];
+             
+             // Add instructions first
+             const langInstruction = language === 'vi' ? "Tiếng Việt" : "English";
+             const instruction = `You are an expert Cinematographer and Prompt Engineer.
+             You will be provided with sequential frames from a video.
+             
+             TASK:
+             Analyze each frame and write a detailed, high-quality AI video generation prompt that describes the scene.
+             Focus on: Subject, Action, Environment, Lighting, Camera Angle, and Style.
+             
+             OUTPUT FORMAT:
+             Return a JSON Array of strings. Each string is the prompt for the corresponding image index.
+             Example: ["Prompt for image 1", "Prompt for image 2", ...]
+             
+             Language: ${langInstruction}.
+             Output ONLY JSON. No markdown.`;
+
+             parts.push({ text: instruction });
+
+             // Add images
+             frames.forEach(frame => {
+                 // Ensure we strip header if present, though client should send raw base64 usually
+                 const base64 = frame.includes('base64,') ? frame.split('base64,')[1] : frame;
+                 parts.push({ inlineData: { data: base64, mimeType: 'image/jpeg' } });
+             });
+
+             const response = await ai.models.generateContent({
+                 model: TEXT_MODEL, // Using Flash for analysis is cost-effective and fast enough
+                 contents: { parts },
+                 config: { responseMimeType: 'application/json' }
+             });
+             
+             return res.json({ prompts: JSON.parse(response.text || '[]') });
+         }
+
+         if (action === 'analyzeProductImage') {
+            const ai = getAi(false);
+            const { base64Image, mimeType, language } = payload;
+            
+            const prompt = `You are a professional Marketing Copywriter and Product Analyst.
+            Analyze the provided product image and extract the following information.
+            Return a valid JSON object (NO markdown, NO backticks) with these keys:
+            
+            - name: Product name (guess if not visible).
+            - brand: Brand name (guess if not visible).
+            - category: Product category.
+            - price: Estimated price in ${language === 'vi' ? 'VND (e.g. 500.000đ)' : 'USD (e.g. $20)'}.
+            - merchant: Suggested marketplace (e.g. Shopee, Amazon).
+            - rating: A realistic rating (e.g. 4.8).
+            - features: Key features observed (comma separated).
+            - pros: 3 potential selling points/advantages.
+            - cons: 2 potential limitations (be realistic).
+            
+            Output Language: ${language === 'vi' ? 'Vietnamese' : 'English'}.
+            Do NOT include markdown formatting like \`\`\`json. Just the raw JSON string.`;
+
+            const response = await ai.models.generateContent({
+                model: TEXT_MODEL,
+                contents: { parts: [
+                    { inlineData: { data: base64Image, mimeType: mimeType || 'image/jpeg' } },
+                    { text: prompt }
+                ]},
+                config: { responseMimeType: 'application/json' }
+            });
+
+            return res.json(JSON.parse(response.text || '{}'));
+         }
  
          if (action === 'generateVeoVideo') {
              const ai = getAi(false, 'video');
              const { base64Image, prompt, characterImages, settings } = payload;
              
-             // --- INTELLIGENT MODEL SELECTION ---
              let selectedModel = VEO_MODEL_FAST;
-             let resolution = settings?.resolution || '1080p';
+             let resolution = settings?.resolution || '720p';
              let aspectRatio = settings?.aspectRatio || '16:9';
-             let isAudioEnabled = settings?.audio === true; // Capture audio flag
+             let isAudioEnabled = settings?.audio === true;
 
-             // Logic: 
-             // 1. 720p -> Fast Model (Veo 3.1 Flash)
-             // 2. 1080p -> Standard Model (Veo 3.1)
-             // 3. Character Sync -> Standard Model (Reference Images only supported on Standard)
-             
              if (resolution === '720p') {
                  selectedModel = VEO_MODEL_FAST;
              } else if (resolution === '1080p') {
                  selectedModel = VEO_MODEL_REF;
              }
              
-             // --- FIX TS ERROR: Explicitly initialize ---
              let referenceImagesPayload: any[] | undefined = undefined;
              
-             // --- FEATURE: CHARACTER CONSISTENCY ---
              if (characterImages && Array.isArray(characterImages) && characterImages.length > 0) {
-                 console.log("Character images detected. Switching to Veo 3.1 Reference Mode.");
-                 selectedModel = VEO_MODEL_REF; // Must switch to generate-preview for references
-                 
-                 // Enforce strict constraints for reference mode (SDK limitation)
+                 selectedModel = VEO_MODEL_REF; 
                  resolution = '720p';
-                 
-                 // Limit to 3 reference images as per SDK limitation
                  referenceImagesPayload = characterImages.slice(0, 3).map((b64: string) => ({
-                     image: {
-                         imageBytes: b64,
-                         mimeType: 'image/png',
-                     },
-                     referenceType: 'ASSET', // VideoGenerationReferenceType.ASSET
+                     image: { imageBytes: b64, mimeType: 'image/png' },
+                     referenceType: 'ASSET',
                  }));
              }
              
@@ -408,12 +489,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  aspectRatio: aspectRatio
              };
 
-             // --- SMART AUDIO PROMPTING ---
              let finalPrompt = prompt;
              if (isAudioEnabled) {
-                 finalPrompt += ", high quality realistic sound effects, immersive audio atmosphere";
+                 finalPrompt += ", cinematic sound effects, high quality audio, immersive atmosphere";
              } else {
-                 finalPrompt += ", silent video, no audio";
+                 finalPrompt += ", silent video";
              }
 
              const requestPayload: any = {
@@ -425,15 +505,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              if (referenceImagesPayload) {
                  requestPayload.config.referenceImages = referenceImagesPayload;
              } else if (base64Image) {
-                 // Standard Image-to-Video (Start Frame)
-                 // Do not use if using Reference Images to avoid conflict, unless specifically supported
                  requestPayload.image = { imageBytes: base64Image.split(',')[1], mimeType: 'image/png' };
              }
-
-             console.log(`Calling Veo API. Model: ${selectedModel}, Resolution: ${resolution}, Audio: ${isAudioEnabled}`);
              
              let operation = await ai.models.generateVideos(requestPayload);
-             
              let retries = 0;
              while (!operation.done && retries < 60) {
                  await new Promise(resolve => setTimeout(resolve, 10000));
@@ -457,6 +532,64 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedModel = selectModel(imageSize);
 
         switch (action) {
+            case 'generateSongContent': {
+                const ai = getAi(false);
+                const { topic, genre, mood, language } = payload;
+                const prompt = `ACT AS A PROFESSIONAL SONGWRITER. 
+                Input: Topic: "${topic}", Genre: "${genre}", Mood: "${mood}", Language: "${language}".
+                
+                TASK:
+                1. Write a song title.
+                2. Write full lyrics with structure (Verse 1, Chorus, Verse 2, Chorus, Bridge, Outro).
+                3. Write chords for guitar/piano.
+                4. Write a short visual description for Album Art.
+                5. CRITICAL: Generate a "Music Style Prompt" optimized for Suno AI. 
+                   Format: comma-separated tags describing genre, mood, instruments, tempo, and vocals.
+                   Example: "Upbeat Pop, Female Vocals, 120bpm, Catchy Hook, Piano and Synth".
+                   Ensure the style matches the requested "${genre}" and "${mood}".
+                
+                OUTPUT JSON ONLY:
+                {
+                  "title": "string",
+                  "lyrics": "string",
+                  "chords": "string",
+                  "description": "string",
+                  "stylePrompt": "string"
+                }`;
+                
+                const geminiRes = await ai.models.generateContent({
+                   model: TEXT_MODEL,
+                   contents: { parts: [{ text: prompt }] },
+                   config: { responseMimeType: "application/json" }
+                });
+                return res.json(JSON.parse(geminiRes.text || '{}'));
+            }
+            case 'analyzeMusicAudio': {
+                // Use Flash for fast multimodal analysis
+                const ai = getAi(false);
+                const { base64, mimeType } = payload;
+                const prompt = `ANALYZE AUDIO FILE.
+                Task 1: Extract the full lyrics (transcription). Format with sections like [Verse], [Chorus].
+                Task 2: Generate a 'Suno AI Style Prompt'. Describe the music style, genre, mood, instruments, tempo, and vocals in English.
+                
+                Example Style: "Male Vocals, Acoustic Pop, Sad, 80 BPM, Guitar, Melancholic".
+                
+                OUTPUT JSON ONLY:
+                {
+                  "style": "string",
+                  "lyrics": "string"
+                }`;
+
+                const geminiRes = await ai.models.generateContent({
+                   model: 'gemini-2.5-flash',
+                   contents: { parts: [
+                       { inlineData: { data: base64, mimeType } },
+                       { text: prompt }
+                   ] },
+                   config: { responseMimeType: "application/json" }
+                });
+                return res.json(JSON.parse(geminiRes.text || '{}'));
+            }
              case 'generateIdPhoto': {
                 return await runWithFallback(async (ai) => {
                     const { originalImage, settings } = payload;
@@ -513,7 +646,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                        const geminiRes = await ai.models.generateContent({
                            model: model,
                            contents: { parts: [imagePart, { text: prompt }] },
-                           // FIX: Count forced to 1 to prevent error/waste. Frontend loops 4 times.
                            config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, undefined, 1) }
                        });
                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
@@ -557,13 +689,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateFootballPhoto': {
                return await runWithFallback(async (ai) => {
                    const { settings } = payload;
-                   const prompt = `[TASK] Football Photo. Player: ${settings.player}. Team: ${settings.team}. Scene: ${settings.scene}. Style: ${settings.style}.`;
+                   const isIdolMode = settings.mode === 'idol';
+                   const isHQ = settings.highQuality === true;
+                   const targetResolution = isHQ ? '4K' : '1K'; 
+                   const selectedFootballModel = MODEL_PRO; 
+
+                   let prompt = "";
+                   if (isIdolMode) {
+                       prompt = `[TASK] COMPOSITE PHOTO: USER WITH CELEBRITY. [SCENE] Action: ${settings.scene}. Style: ${settings.style}. 2 People. Person 1: Input User (Face Lock). Person 2: ${settings.player} (${settings.team}).`;
+                   } else {
+                       prompt = `[TASK] VIRTUAL TRY-ON. Input User (Face Lock) wearing ${settings.team} kit. Action: ${settings.scene}. Style: ${settings.style}.`;
+                   }
                    
-                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                   return await generateWithModelFallback(selectedFootballModel, MODEL_FLASH, async (model) => {
                        const geminiRes = await ai.models.generateContent({
                            model: model,
                            contents: { parts: [{ inlineData: { data: settings.sourceImage.base64, mimeType: settings.sourceImage.mimeType } }, { text: prompt }] },
-                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, targetResolution) }
                        });
                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                        return res.json({ imageData });
@@ -603,6 +745,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                    });
                });
            }
+           case 'detectOutfit': {
+                return await runWithFallback(async (ai) => {
+                    const { base64Image, mimeType } = payload;
+                    const prompt = `Hãy mô tả trang phục trong bức ảnh này một cách ngắn gọn bằng Tiếng Việt. Yêu cầu: Chỉ trả về mô tả trang phục. Độ dài tối đa: 15 từ.`;
+                    return await generateWithModelFallback(MODEL_FLASH, MODEL_FLASH, async (model) => {
+                        const geminiRes = await ai.models.generateContent({
+                            model: model,
+                            contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] }
+                        });
+                        return res.json({ outfit: geminiRes.text?.trim() || "" });
+                    });
+                });
+            }
+            case 'editOutfitOnImage': {
+                 return await runWithFallback(async (ai) => {
+                     const { base64Image, mimeType, newOutfitPrompt } = payload;
+                     const prompt = `[TASK] Edit Outfit. Change the person's outfit to: "${newOutfitPrompt}". [CONSTRAINTS] Keep the face, hair, pose, and background 100% unchanged. Only change the clothing.`;
+                     return await generateWithModelFallback(MODEL_FLASH, MODEL_PRO, async (model) => {
+                         const geminiRes = await ai.models.generateContent({
+                             model: model,
+                             contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
+                             config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, '1K') } 
+                         });
+                         const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
+                         return res.json({ imageData });
+                     });
+                 });
+            }
+            case 'removeVideoWatermark': {
+                 const { url, type } = payload;
+                 // Execute scraping on server side
+                 const result = await extractVideoData(url, type);
+                 return res.json(result);
+            }
            case 'generateMarketingImage': {
                return await runWithFallback(async (ai) => {
                    const { productImagePart, referenceImagePart, productDetails, settings } = payload;
@@ -627,21 +803,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                return await runWithFallback(async (ai) => {
                    const { modelFile, otherFiles, styles, quality, aspect, count, userPrompt } = payload;
                    const parts: Part[] = [];
+                   
+                   // Validation
                    if (!modelFile?.base64) return res.status(400).json({ error: "Dữ liệu ảnh Model không hợp lệ." });
+                   
+                   // Input Images
                    parts.push({ inlineData: { data: modelFile.base64, mimeType: modelFile.mimeType } });
                    if (otherFiles.clothing?.base64) parts.push({ inlineData: { data: otherFiles.clothing.base64, mimeType: otherFiles.clothing.mimeType } });
                    if (otherFiles.accessories?.base64) parts.push({ inlineData: { data: otherFiles.accessories.base64, mimeType: otherFiles.accessories.mimeType } });
                    if (otherFiles.product?.base64) parts.push({ inlineData: { data: otherFiles.product.base64, mimeType: otherFiles.product.mimeType } });
-                   const prompt = `[TASK] Commercial Composite. Inputs: Main Model + optional Clothing/Product. Styles: ${styles.join(', ')}. Description: ${userPrompt}. [INSTRUCTION] Blend inputs naturally. High fashion. Ratio: ${aspect}. Quality: ${quality}.`;
+                   
+                   // ULTRA-STRONG IDENTITY PROMPT
+                   const prompt = `[TASK] PHOTOREALISTIC COMPOSITE - IDENTITY PRESERVATION IS PRIORITY #1.
+                   
+                   [INPUTS]
+                   - Image 1: REFERENCE IDENTITY (The Face).
+                   - Other Images: Clothing/Product context.
+                   
+                   [SETTINGS]
+                   - Styles: ${styles.join(', ')}.
+                   - User Description: ${userPrompt}.
+                   - Aspect Ratio: ${aspect}.
+                   
+                   [CRITICAL INSTRUCTIONS]
+                   1. 🆔 FACE LOCK: The output face MUST be an EXACT REPLICA of the person in Image 1. 
+                      - Do NOT generate a generic face. 
+                      - Do NOT change ethnicity, age, or key facial features.
+                      - Keep the same facial structure and identity.
+                   2. INTEGRATION: Blend the face naturally into the new style/clothing/lighting defined by the styles and description.
+                   3. QUALITY: Commercial Fashion Photography, 8K, Ultra-detailed, Masterpiece.
+                   
+                   GENERATE ONLY THE IMAGE. NO TEXT.`;
+
                    parts.push({ text: prompt });
                    
-                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                   // Force Google Banana Pro (gemini-3-pro-image-preview)
+                   // This model is best for instruction following and identity.
+                   const artModel = 'gemini-3-pro-image-preview'; 
+                   
+                   // Resolution Logic
+                   // If user selected 4K or 8K -> Use 4K mode (high cost/latency)
+                   // Else (1080p, 2K) -> Use 1K mode (fast)
+                   let targetRes = '1K';
+                   if (quality === '4K' || quality === '8K') {
+                       targetRes = '4K';
+                   }
+
+                   return await generateWithModelFallback(artModel, MODEL_FLASH, async (model) => {
                        const generationPromises = [];
+                       const imgConfig = getImageConfig(model, targetRes, aspect);
+                       
                        for(let i=0; i<count; i++) {
                            generationPromises.push(ai.models.generateContent({
                                model: model,
                                contents: { parts },
-                               config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, aspect) }
+                               config: { responseModalities: [Modality.IMAGE], imageConfig: imgConfig }
                            }));
                        }
                        const results = await Promise.all(generationPromises);
@@ -683,24 +899,247 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const { featureAction, formData } = payload;
                     let parts: Part[] = [];
                     let prompt = "";
-                    if (featureAction === 'couple_compose') {
-                        if (formData.person_left_image?.base64) parts.push({ inlineData: { data: formData.person_left_image.base64, mimeType: formData.person_left_image.mimeType } });
-                        if (formData.person_right_image?.base64) parts.push({ inlineData: { data: formData.person_right_image.base64, mimeType: formData.person_right_image.mimeType } });
-                        if (formData.custom_background?.base64) parts.push({ inlineData: { data: formData.custom_background.base64, mimeType: formData.custom_background.mimeType } });
-                        prompt = `[TASK] Generate couple photo. Face Consistency: ${formData.face_consistency}. Action: ${formData.affection_action}. Background: ${formData.couple_background || "Custom"}. Style: ${formData.aesthetic_style}.`;
-                    } else {
-                        prompt = `Execute Feature: ${featureAction}. Data: ${JSON.stringify(formData)}`;
+                    let aspectRatio = formData.aspect_ratio || "4:3";
+                    
+                    // --- HELPER: Add Images safely ---
+                    const addImagePart = (b64: string, mime: string) => {
+                        if(b64) parts.push({ inlineData: { data: b64, mimeType: mime } });
+                    };
+
+                    // --- 1. EXTRACT OUTFIT (Tách trang phục) ---
+                    if (featureAction === 'extract_outfit') {
+                         if (formData.subject_image?.base64) {
+                             addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         }
+                         prompt = `[TASK] PRODUCT PHOTOGRAPHY: CLOTHING EXTRACTION (Ghost Mannequin).
+                         Input: Reference image of a person wearing an outfit.
+                         INSTRUCTION:
+                         1. ISOLATE the main outfit (top, bottom, dress) seen in the image.
+                         2. GENERATE a clean product shot of JUST the clothes on a pure white background.
+                         3. STYLE: Ghost Mannequin (3D shape without the person) or High-End Flat Lay.
+                         4. NEGATIVE PROMPT: Do NOT generate a human face, head, hands, legs, or skin. Remove the model entirely.
+                         5. Quality: 8K, Studio Lighting, Commercial E-commerce style.`;
+                    } 
+                    // --- 2. CHANGE HAIRSTYLE (Đổi kiểu tóc) ---
+                    else if (featureAction === 'change_hairstyle') {
+                         if (formData.subject_image?.base64) {
+                             addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         }
+                         prompt = `[TASK] VIRTUAL HAIR MAKEOVER - IDENTITY LOCK.
+                         Input: Portrait of a person.
+                         Target: Change hairstyle to "${formData.hairstyle}" (Color: ${formData.hair_color}, Length: ${formData.hair_length}).
+                         
+                         CRITICAL RULES:
+                         1. FACE LOCK: The face in the output MUST be 100% identical to the input image. Do NOT change eyes, nose, mouth, or facial structure.
+                         2. Only change the hair area.
+                         3. Blend the new hair naturally with the original forehead and ears.
+                         4. Style: Photorealistic, High Resolution.`;
                     }
+                    // --- 3. TRY ON OUTFIT (Thử trang phục) ---
+                    else if (featureAction === 'try_on_outfit') {
+                        if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                        if (formData.outfit_image?.base64) addImagePart(formData.outfit_image.base64, formData.outfit_image.mimeType);
+                        
+                        prompt = `[TASK] VIRTUAL TRY-ON.
+                        Input 1: Person (Identity Reference).
+                        Input 2: Outfit (Clothing Reference).
+                        
+                        INSTRUCTION:
+                        1. Generate the Person from Input 1 wearing the Outfit from Input 2.
+                        2. FACE LOCK: The face MUST match Input 1 exactly.
+                        3. OUTFIT LOCK: The clothing MUST match Input 2 exactly.
+                        4. Context: ${formData.prompt_detail || 'Studio lighting, neutral background'}.
+                        5. Ensure realistic fabric draping and fit.`;
+                    }
+                    // --- 4. KOREAN STYLE STUDIO ---
+                    else if (featureAction === 'korean_style_studio') {
+                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         const concept = formData.k_concept || "Korean Profile";
+                         const quality = formData.quality || "High";
+
+                         prompt = `[TASK] KOREAN STUDIO PORTRAIT.
+                         Target Style: ${concept}.
+                         INSTRUCTION: Generate a high-end studio photo of the input person in this specific Korean style.
+                         CRITICAL: PRESERVE FACIAL IDENTITY 100%. The face must look exactly like the input person, just with better lighting and makeup styling matching the concept.
+                         Quality: ${quality} Resolution, Photorealistic, 8K, Soft Lighting.`;
+                    }
+                    // --- 5. COUPLE COMPOSE ---
+                    else if (featureAction === 'couple_compose') {
+                        if (formData.person_left_image?.base64) addImagePart(formData.person_left_image.base64, formData.person_left_image.mimeType);
+                        if (formData.person_right_image?.base64) addImagePart(formData.person_right_image.base64, formData.person_right_image.mimeType);
+                        if (formData.custom_background?.base64) addImagePart(formData.custom_background.base64, formData.custom_background.mimeType);
+
+                        prompt = `[TASK] COUPLE PHOTO COMPOSITE.
+                        Action: ${formData.affection_action}.
+                        Background: ${formData.couple_background || "Custom/Scenic"}.
+                        Style: ${formData.aesthetic_style}.
+                        
+                        INSTRUCTION:
+                        1. Create a realistic photo of the two input people together.
+                        2. FACE LOCK: Ensure both faces match their respective input images as closely as possible.
+                        3. Ensure natural interaction and lighting consistency.`;
+                    }
+                    // --- 6. PRODUCT PHOTO ---
+                    else if (featureAction === 'product_photo') {
+                        if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                        // subject_image here is arguably the product if no model is involved, or the model holding product.
+                        // Let's check if product_image exists separately
+                        if (formData.product_image?.base64) addImagePart(formData.product_image.base64, formData.product_image.mimeType);
+
+                        prompt = `[TASK] PROFESSIONAL PRODUCT PHOTOGRAPHY.
+                        Inputs: Reference Images.
+                        INSTRUCTION:
+                        1. Create a high-end commercial shot of the product.
+                        2. Setting: ${formData.prompt_detail || 'Commercial studio, cinematic lighting'}.
+                        3. If a model is present in inputs, preserve their features. If only product is present, focus on the product.
+                        4. Quality: 8K, Advertising Standard.`;
+                    }
+                    // --- 7. CREATE ALBUM ---
+                    else if (featureAction === 'create_album') {
+                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         // Note: Create album usually iterates multiple times in the frontend calling this API.
+                         // Here we handle one generation request.
+                         const pose = formData.poses && formData.poses.length > 0 ? formData.poses[0] : "Natural pose";
+                         const bg = formData.backgrounds && formData.backgrounds.length > 0 ? formData.backgrounds[0] : "Scenic background";
+                         
+                         prompt = `[TASK] TRAVEL/ALBUM PHOTO.
+                         Subject: Input Person (Face Lock).
+                         Pose: ${pose}.
+                         Location: ${bg}.
+                         INSTRUCTION: Place the subject naturally in this location with the specified pose. Maintain facial identity 100%. CRITICAL: FACE LOCK. Photorealistic.`;
+                    }
+                    // --- 8. PLACE IN SCENE ---
+                    else if (featureAction === 'place_in_scene') {
+                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         if (formData.background_image?.base64) addImagePart(formData.background_image.base64, formData.background_image.mimeType);
+                         
+                         const bgDesc = formData.custom_background_prompt || (formData.background_options ? formData.background_options.join(', ') : "Scenic background");
+                         
+                         prompt = `[TASK] COMPOSITE: PLACE SUBJECT IN SCENE.
+                         Background: ${bgDesc}.
+                         INSTRUCTION: Seamlessly integrate the input person into this background. Match lighting, shadows, and perspective. 
+                         CRITICAL: FACE LOCK. Keep the face 100% identical to the input.`;
+                    }
+                     // --- 9. BIRTHDAY PHOTO ---
+                    else if (featureAction === 'birthday_photo') {
+                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         const scene = formData.birthday_scenes && formData.birthday_scenes.length > 0 ? formData.birthday_scenes[0] : "Birthday Party";
+                         prompt = `[TASK] BIRTHDAY CELEBRATION PHOTO.
+                         Scene: ${scene}.
+                         Subject: Input Person (Face Lock).
+                         INSTRUCTION: Generate a festive birthday photo featuring the subject. Happy expression, birthday decorations, cake/balloons visible. 
+                         CRITICAL: FACE LOCK. Keep the face 100% identical to the input. Photorealistic.`;
+                    }
+                    // --- 10. HOT TREND PHOTO ---
+                    else if (featureAction === 'hot_trend_photo') {
+                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         const trend = formData.selected_trends && formData.selected_trends.length > 0 ? formData.selected_trends[0] : "Trending Style";
+                         prompt = `[TASK] TRENDING STYLE PHOTO.
+                         Trend/Style: ${trend}.
+                         Subject: Input Person (Face Lock).
+                         INSTRUCTION: Adapt the subject to this trending visual style or meme format while keeping their identity recognizable. 
+                         CRITICAL: FACE LOCK. Keep the face 100% identical to the input. High quality.`;
+                    }
+                    // --- 11. CREATIVE COMPOSITE (Generic) ---
+                    else if (featureAction === 'creative_composite') {
+                        if (formData.main_subject?.base64) addImagePart(formData.main_subject.base64, formData.main_subject.mimeType);
+                        // Add additional components if any
+                        if (formData.additional_components && Array.isArray(formData.additional_components)) {
+                             formData.additional_components.forEach((comp: any) => {
+                                 if (comp.file?.base64) addImagePart(comp.file.base64, comp.file.mimeType);
+                             });
+                        }
+                        
+                        if (formData.document_mode) {
+                             prompt = `[TASK] DOCUMENT/IMAGE EDITING & INPAINTING - STRUCTURE PRESERVATION.
+                             Input: A single document or reference image.
+                             User Instruction: "${formData.scene_description || formData.main_subject_description || 'Edit text'}".
+                             
+                             CRITICAL CONSTRAINTS:
+                             1. PRESERVE STRUCTURE: Do NOT regenerate, hallucinate, or reimagine the document layout, fonts, tables, or background. The output must look EXACTLY like the input image, except for the requested change.
+                             2. LOCAL EDIT ONLY: Only change the specific text, number, or small detail mentioned in the instruction.
+                             3. TEXT MATCHING: If replacing text, match the original font, size, color, and alignment perfectly.
+                             4. OUTPUT: Return the edited image maintaining high fidelity to the original source.`;
+                        } else {
+                             prompt = `[TASK] CREATIVE COMPOSITE.
+                             Main Subject Description: ${formData.main_subject_description || 'Person'}.
+                             Scene Description: ${formData.scene_description || 'Artistic Scene'}.
+                             INSTRUCTION: Create a composite image based on the provided inputs and descriptions. Prioritize blending and realism (or artistic style if specified).
+                             CRITICAL: FACE LOCK. Keep the face of the main subject 100% identical to the input.`;
+                        }
+                    }
+                    // --- 12. IMAGE VARIATION GENERATOR ---
+                     else if (featureAction === 'image_variation_generator') {
+                        if (formData.reference_image?.base64) addImagePart(formData.reference_image.base64, formData.reference_image.mimeType);
+                        prompt = `[TASK] IMAGE VARIATION.
+                        Style: ${formData.style || 'Photorealistic'}.
+                        Theme: ${formData.themeAnchor || 'Same Theme'}.
+                        Variation Strength: ${formData.variationStrength || 50}%.
+                        Identity Lock: ${formData.identityLock || 80}%.
+                        INSTRUCTION: Generate a variation of the input image. Adhere to the requested style and theme. 
+                        CRITICAL: FACE LOCK. Keep the face 100% identical to the input.`;
+                    }
+                    // --- 13. FASHION STUDIO (Thời trang & Studio) ---
+                    else if (featureAction === 'fashion_studio') {
+                        if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                        if (formData.wardrobe_refs?.base64) addImagePart(formData.wardrobe_refs.base64, formData.wardrobe_refs.mimeType);
+                        
+                        prompt = `[TASK] FASHION STUDIO - VIRTUAL LOOKBOOK.
+                        Category: ${formData.style_level} / Style: ${formData.wardrobe?.join(', ')}.
+                        Pose: ${formData.pose_style}. Lighting: ${formData.lighting}.
+                        Background: ${formData.sexy_background}.
+                        
+                        CRITICAL INSTRUCTION - IDENTITY PRESERVATION:
+                        1. FACE LOCK: The face in the output MUST BE 100% IDENTICAL to the input subject image. Do not generate a generic model face.
+                        2. Use the input face as the definitive reference.
+                        3. If the input is a specific person, the output MUST look exactly like them wearing the new clothes.
+                        
+                        Style Instruction: High-end Fashion Photography, 8K, detailed fabric textures.`;
+                    }
+                    // --- 14. YOGA STUDIO ---
+                    else if (featureAction === 'yoga_studio') {
+                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
+                         prompt = `[TASK] YOGA STUDIO.
+                         Pose: ${formData.yoga_pose}. Level: ${formData.pose_level}.
+                         Location: ${formData.location}. Lighting: ${formData.lighting}. Outfit: ${formData.outfit}.
+                         INSTRUCTION: Generate a photo of the subject performing the specified yoga pose.
+                         CRITICAL: FACE LOCK. The face MUST be 100% identical to the input subject image.`;
+                    }
+                    // --- FALLBACK ---
+                    else {
+                        // Generic handler for any other legacy/future types
+                        for (const key in formData) {
+                            if (formData[key]?.base64) addImagePart(formData[key].base64, formData[key].mimeType);
+                        }
+                        prompt = `[TASK] IMAGE GENERATION. Feature: ${featureAction}. Details: ${JSON.stringify(formData)}. 
+                        CRITICAL: FACE LOCK. If a person is present in the input, keep their face 100% identical. High quality.`;
+                    }
+
                     parts.push({ text: prompt });
                     const numImages = payload.numImages || 1;
-                    
-                    return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+
+                    // MODEL SELECTION LOGIC
+                    // For sensitive identity tasks like Fashion Studio, Hair, or Extraction, force MODEL_PRO
+                    let forceModel = selectedModel;
+                    let targetResolution = imageSize; 
+
+                    if (featureAction === 'extract_outfit' || featureAction === 'change_hairstyle' || featureAction === 'fashion_studio' || (featureAction === 'creative_composite' && formData.document_mode)) {
+                         forceModel = MODEL_PRO; // Use Gemini 3 Pro
+                         // If user didn't select High Quality (4K), we still use Pro model but with 1K resolution for speed/cost
+                         if (imageSize !== '4K') {
+                             targetResolution = '1K';
+                         }
+                    }
+
+                    return await generateWithModelFallback(forceModel, MODEL_FLASH, async (model) => {
                         const generationPromises = [];
+                        const imgConfig = getImageConfig(model, targetResolution, aspectRatio);
+                        
                         for(let i=0; i<numImages; i++) {
                             generationPromises.push(ai.models.generateContent({
                                model: model,
                                contents: { parts },
-                               config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize) }
+                               config: { responseModalities: [Modality.IMAGE], imageConfig: imgConfig }
                             }));
                         }
                         const results = await Promise.all(generationPromises);
@@ -713,33 +1152,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     });
                 });
            }
+           // --- UPDATED FAMILY PHOTO LOGIC FOR IDENTITY PRESERVATION ---
             case 'generateFamilyPhoto':
             case 'generateFamilyPhoto_3_Pass': {
                 return await runWithFallback(async (ai) => {
                     const { settings } = payload;
-                    const prompt = `Family Photo Composite. Scene: ${settings.scene}. Members: ${settings.members.length}. Face Consistency: ${settings.faceConsistency}.`;
                     
+                    let parts: Part[] = [];
+                    let prompt = "";
+
+                    // 1. ATTACH REFERENCE IMAGES
+                    if (settings.members && settings.members.length > 0) {
+                        settings.members.forEach((member: any, index: number) => {
+                            if (member.photo && member.photo.base64) {
+                                parts.push({ inlineData: { data: member.photo.base64, mimeType: member.photo.mimeType } });
+                            }
+                        });
+                    }
+
+                    // 2. CONSTRUCT STRONG IDENTITY PROMPT
+                    if (settings.faceConsistency) {
+                         prompt = `[TASK] FAMILY PHOTO COMPOSITE - HIGH FIDELITY IDENTITY PRESERVATION.
+                         SCENE: ${settings.scene}. STYLE: Photorealistic, High-End Studio Photography, 8K.
+                         OUTFIT THEME: ${settings.outfit}. POSE: ${settings.pose}.
+                         CUSTOM REQUEST: ${settings.customPrompt || 'None'}.
+
+                         [CRITICAL INSTRUCTIONS]
+                         You have been provided with ${settings.members.length} reference images. You MUST use them to generate specific family members.
+                         MAPPING:`;
+                         
+                         settings.members.forEach((member: any, index: number) => {
+                             prompt += `\n- Person ${index + 1}: Based on Input Image ${index + 1}. Age/Desc: ${member.age} ${member.bodyDescription || ''}.`;
+                         });
+
+                         prompt += `\nRULES:
+                         1. FACE LOCK: The faces in the output MUST MATCH the reference images exactly. Do NOT generate generic AI faces.
+                         2. Match the ages described.
+                         3. Blend them naturally into the "${settings.scene}" scene.`;
+                    } else {
+                        prompt = `Family Photo Composite. Scene: ${settings.scene}. Style: Artistic. Members: ${settings.members.length} people. 
+                        Details: ${settings.members.map((m:any) => `${m.age}`).join(', ')}. Custom Request: ${settings.customPrompt}.`;
+                    }
+
+                    parts.push({ text: prompt });
+
                     return await generateWithModelFallback(MODEL_PRO, MODEL_FLASH, async (model) => {
                         const geminiRes = await ai.models.generateContent({
                            model: model,
-                           contents: { parts: [{ text: prompt }] },
+                           contents: { parts },
                            config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, '4K', settings.aspectRatio) }
                         });
                         const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                         return res.json({ imageData, similarityScores: [], debug: null });
                     });
                 });
-            }
-            case 'generateSongContent': {
-                const ai = getAi(false);
-                const { topic, genre, mood, language } = payload;
-                const prompt = `ACT AS A PROFESSIONAL SONGWRITER. Topic: ${topic} Genre: ${genre} Mood: ${mood} Language: ${language} OUTPUT JSON: title, lyrics, chords, description, stylePrompt.`;
-                const geminiRes = await ai.models.generateContent({
-                   model: TEXT_MODEL,
-                   contents: { parts: [{ text: prompt }] },
-                   config: { responseMimeType: "application/json" }
-                });
-                return res.json(JSON.parse(geminiRes.text || '{}'));
             }
             case 'generateAlbumArt': {
                 return await runWithFallback(async (ai) => {
@@ -754,158 +1220,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                        });
                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                        return res.json({ imageData });
-                    });
+                   });
                 });
             }
             case 'removeWatermark': {
                  return await runWithFallback(async (ai) => {
                      const { imagePart, highQuality } = payload;
                      const modelToUse = highQuality ? MODEL_PRO : MODEL_FLASH;
-                     const imgConfig = (modelToUse === MODEL_PRO) ? {} : getImageConfig(modelToUse, '1K');
-
                      const prompt = "TASK: Magic Eraser / Inpainting. Remove all watermarks, text overlays, logos, and unwanted objects. Restore the background naturally. Return a clean, high-quality image. Do not alter the main subject.";
                      
                      return await generateWithModelFallback(modelToUse, MODEL_FLASH, async (model) => {
-                         const effectiveConfig = (model === MODEL_PRO) ? {} : getImageConfig(model, '1K');
-
                         const geminiRes = await ai.models.generateContent({
                             model: model,
                             contents: { parts: [imagePart, { text: prompt }] },
-                            config: { responseModalities: [Modality.IMAGE], imageConfig: effectiveConfig }
+                            config: { responseModalities: [Modality.IMAGE], imageConfig: (model === MODEL_PRO) ? {} : getImageConfig(model, '1K') }
                         });
                         const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                         return res.json({ imageData });
                      });
                  });
-            }
-            case 'removeVideoWatermark': {
-                const { url } = payload;
-                let resultVideoUrl = "";
-
-                if (url) {
-                    if (url.match(/\.(mp4|mov)$/i)) {
-                        return res.json({ videoUrl: url });
-                    }
-
-                    try {
-                        const response = await fetch(url, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                            }
-                        });
-                        let html = await response.text();
-                        html = decodeEntities(html);
-
-                        const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
-                        if (jsonMatch && jsonMatch[1]) {
-                            try {
-                                const json = JSON.parse(jsonMatch[1]);
-                                const candidates = findVideoCandidatesInJson(json);
-                                
-                                const scoredCandidates = candidates.map(c => {
-                                    let score = 0;
-                                    const k = c.key.toLowerCase();
-                                    const v = c.url.toLowerCase();
-                                    if (k.includes('download')) score += 20;
-                                    if (k.includes('original')) score += 15;
-                                    if (k.includes('source')) score += 10;
-                                    if (k.includes('file') && !k.includes('preview')) score += 5;
-                                    if (v.includes('1080p')) score += 5;
-                                    if (k.includes('preview')) score -= 10;
-                                    if (k.includes('thumbnail')) score -= 10;
-                                    if (k.includes('poster')) score -= 10;
-                                    if (k.includes('watermark')) score -= 20;
-                                    if (v.includes('watermark')) score -= 20;
-                                    if (v.includes('preview')) score -= 5;
-                                    return { ...c, score };
-                                });
-
-                                scoredCandidates.sort((a, b) => b.score - a.score);
-                                
-                                if (scoredCandidates.length > 0 && scoredCandidates[0].score > -15) {
-                                    resultVideoUrl = decodeEntities(scoredCandidates[0].url);
-                                }
-                            } catch (e) { console.error("JSON Parse Error", e); }
-                        }
-
-                        if (!resultVideoUrl) {
-                             const regexes = [
-                                /"download_url"\s*:\s*"([^"]+)"/i,
-                                /"original_video_url"\s*:\s*"([^"]+)"/i,
-                                /<meta property="og:video:secure_url" content="([^"]+)"/i,
-                             ];
-                             for (const regex of regexes) {
-                                 const match = html.match(regex);
-                                 if (match && match[1]) {
-                                     resultVideoUrl = decodeEntities(match[1]);
-                                     break;
-                                 }
-                             }
-                        }
-                        
-                        if (!resultVideoUrl) resultVideoUrl = url;
-
-                    } catch (err) {
-                        console.error("Extraction Error:", err);
-                        resultVideoUrl = url;
-                    }
-                } 
-                return res.json({ videoUrl: resultVideoUrl }); 
-            }
-            case 'detectOutfit':
-            case 'generateVideoPrompt':
-            case 'generatePromptFromImage': {
-                 return await runWithFallback(async (ai) => {
-                     const { base64Image, mimeType, userIdea, isFaceLockEnabled, language } = payload;
-                     let prompt = "";
-                     const parts: Part[] = [];
-                     if (action === 'detectOutfit') {
-                         prompt = "Describe outfit.";
-                         parts.push({ inlineData: { data: base64Image, mimeType } });
-                     } else if (action === 'generateVideoPrompt') {
-                         prompt = `Video prompt from idea: ${userIdea}. JSON.`;
-                         if(base64Image) parts.push({ inlineData: { data: base64Image.split(',')[1], mimeType: 'image/png' } });
-                     } else if (action === 'generatePromptFromImage') {
-                         prompt = `Describe image. ${isFaceLockEnabled ? 'Focus face.' : ''} Language: ${language}.`;
-                         parts.push({ inlineData: { data: base64Image, mimeType } });
-                     }
-                     parts.push({ text: prompt });
-                     const geminiRes = await ai.models.generateContent({
-                        model: TEXT_MODEL,
-                        contents: { parts },
-                        config: { responseMimeType: action.includes('JSON') || action === 'generateVideoPrompt' ? "application/json" : undefined }
-                     });
-                     if (action === 'detectOutfit') return res.json({ outfit: geminiRes.text });
-                     if (action === 'generateVideoPrompt') return res.json({ prompts: JSON.parse(geminiRes.text || '{}') });
-                     if (action === 'generatePromptFromImage') return res.json({ prompt: geminiRes.text });
-                     return res.json({ text: geminiRes.text });
-                 });
-            }
-            case 'generateMarketingAdCopy': 
-            case 'generateMarketingVideoScript':
-            case 'getHotTrends': {
-                 const ai = getAi(false);
-                 const { product, tone, imagePart, language } = payload;
-                 let prompt = "";
-                 const parts: Part[] = [];
-                 if (action === 'generateMarketingAdCopy') {
-                     prompt = `Write ad copy for ${product.name}. Language: ${language}.`;
-                     if(imagePart) parts.push(imagePart);
-                 } else if (action === 'generateMarketingVideoScript') {
-                     prompt = `Write video script for ${product.name}. Tone: ${tone}. Language: ${language}.`;
-                     if(imagePart) parts.push(imagePart);
-                 } else if (action === 'getHotTrends') {
-                     prompt = "List 5 fashion trends JSON.";
-                 }
-                 parts.push({ text: prompt });
-                 const geminiRes = await ai.models.generateContent({
-                    model: TEXT_MODEL,
-                    contents: { parts },
-                    config: { responseMimeType: action === 'getHotTrends' ? "application/json" : undefined }
-                 });
-                 if (action === 'getHotTrends') return res.json({ trends: JSON.parse(geminiRes.text || '[]') });
-                 return res.json({ text: geminiRes.text });
             }
             default:
                 return res.status(400).json({ error: "Unknown action" });

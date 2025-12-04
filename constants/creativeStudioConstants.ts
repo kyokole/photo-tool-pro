@@ -132,17 +132,6 @@ export const FEATURES: Feature[] = [
         required: true
       },
       COMMON_INPUTS.ASPECT_RATIO,
-      {
-        type: 'select',
-        label: 'aiStudio.inputs.korean_style_studio.quality.label',
-        name: 'quality',
-        options: [
-          { value: 'standard', label: 'aiStudio.inputs.korean_style_studio.quality.options.standard' },
-          { value: 'high', label: 'aiStudio.inputs.korean_style_studio.quality.options.high' },
-          { value: 'ultra', label: 'aiStudio.inputs.korean_style_studio.quality.options.ultra' }
-        ],
-        default: 'ultra'
-      },
       { type: 'checkbox', label: 'aiStudio.inputs.korean_style_studio.face_consistency.label', name: 'face_consistency', default: true },
     ]
   },
@@ -449,6 +438,7 @@ export const FEATURES: Feature[] = [
       action: FeatureAction.CREATIVE_COMPOSITE,
       icon: 'fas fa-wand-magic-sparkles',
       inputs: [
+          { type: 'checkbox', label: 'aiStudio.inputs.creative_composite.document_mode.label', name: 'document_mode', default: false },
           // Inputs for this feature are dynamically generated in the component
       ]
   }

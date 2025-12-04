@@ -501,7 +501,7 @@ const VoiceStudio: React.FC<VoiceStudioProps> = ({ theme, setTheme, isVip, onIns
                                     {isLoading ? (
                                         <><i className="fas fa-circle-notch fa-spin"></i> {t('voiceStudio.actions.generating')}</>
                                     ) : (
-                                        <><i className="fas fa-microphone-alt"></i> {t('voiceStudio.actions.generate')} {isVip ? '(Miễn phí)' : `(${CREDIT_COSTS.AUDIO_GENERATION} Credits)`}</>
+                                        <><i className="fas fa-microphone-alt"></i> {t('voiceStudio.actions.generate')} {isVip ? ` (${t('common.free')})` : ` (${CREDIT_COSTS.AUDIO_GENERATION} Credits)`}</>
                                     )}
                                 </button>
                             ) : (

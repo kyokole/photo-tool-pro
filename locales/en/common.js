@@ -15,6 +15,8 @@ export default {
     "edit": "Edit",
     "delete": "Delete",
     "save": "Save",
+    "free": "Free",
+    "freeWatermark": "Free - Watermark",
     "uploadPrompt": "Drag & drop or click to select file",
     "highQualityLabel": "High Quality (4K)",
     "highQualityDesc": "Enable for sharpest 4K output (slower). Disable for fast generation."

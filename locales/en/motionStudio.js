@@ -42,7 +42,21 @@ export default {
         "tabs": {
             "text": "Text to Video",
             "image": "Image to Video",
-            "character": "Character Sync"
+            "character": "Character Sync",
+            "analysis": "Video Analysis"
+        },
+        "analysis": {
+            "uploadTitle": "Upload Video",
+            "uploadDesc": "Select MP4/MOV file (Max 50MB). The system will automatically extract frames and generate prompts.",
+            "uploadButton": "Select Video",
+            "analyzing": "Analyzing & Generating Prompts...",
+            "extracting": "Extracting frames...",
+            "resultTitle": "Reverse Storyboard",
+            "resultDesc": "Below are the scenes extracted from the video. You can copy the prompt or use the image to remake.",
+            "copyPrompt": "Copy Prompt",
+            "useShot": "Use this Shot",
+            "downloadImage": "Download Image",
+            "empty": "Upload a video to start analysis."
         },
         "settings": {
             "title": "Film Settings",

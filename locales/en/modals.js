@@ -3,134 +3,84 @@ export default {
   "guide": {
     "title": "User Guide",
     "subtitle": "Master the All-in-One AI Suite",
+    "magicEraser": {
+      "title": "Magic Eraser Studio",
+      "intro": "Powerful tool to clean images and extract high-quality original videos.",
+      "step1": {
+        "title": "Object Removal (Image)",
+        "desc": "Upload an image, AI will automatically detect and remove unwanted objects, watermarks, or text."
+      },
+      "step2": {
+        "title": "Video Extraction (VIP)",
+        "desc": "Paste a video link (Veo, Sora, or MP4). The system will analyze the source code to find and download the highest quality, watermark-free original file."
+      }
+    },
+    "motionStudio": {
+      "title": "Motion Studio",
+      "intro": "Turn ideas into cinematic movies with precise character control.",
+      "step1": {
+        "title": "Create Shot List",
+        "desc": "Enter each scene description (Prompt) or upload static images to animate them."
+      },
+      "step2": {
+        "title": "Character Sync",
+        "desc": "Use the 'Character Sync' tab to upload actor photos. Use the identifier (e.g., @yenlinh) in your prompt to keep the face consistent across scenes."
+      },
+      "step3": {
+        "title": "Filming & Publishing",
+        "desc": "Click 'Start Filming'. Once done, you can watch seamlessly or download the full set as a ZIP."
+      }
+    },
+    "musicVoice": {
+      "title": "Music & Voice",
+      "intro": "Create professional audio for your multimedia content.",
+      "step1": {
+        "title": "Music Composition",
+        "desc": "Enter a topic, genre, and mood. AI will write lyrics, chords, and design album art."
+      },
+      "step2": {
+        "title": "Audio Analysis",
+        "desc": "Upload a sample song, AI will separate lyrics and analyze the style (Style Prompt) for you to recreate."
+      },
+      "step3": {
+        "title": "AI Voice (TTS)",
+        "desc": "Enter text, select a regional voice accent, and adjust speed to generate natural-sounding audio."
+      }
+    },
     "creativeStudio": {
       "title": "Creative Studio",
-      "intro": "The most versatile toolkit to turn any idea into reality (Couple Photos, Try-On, Product Photography...).",
+      "intro": "Versatile toolkit to turn any idea into reality (Couple Photos, Try-On, Product Photography...).",
       "step1": {
         "title": "Select Feature",
-        "desc": "Choose a specific tool from the list (e.g., Couple Composite, Try On Outfit, Batch Generation...)."
+        "desc": "Choose a specific tool: Couple Composite, Try On Outfit, or Batch Generation."
       },
       "step2": {
         "title": "Input Data",
-        "desc": "Upload your source images and fill in the prompts. Use 'AI Trainer' to save custom faces or styles."
-      },
-      "step3": {
-        "title": "Generate",
-        "desc": "Click 'Generate'. The system processes and saves the result to your Library."
-      },
-      "note": "Tip: Use the 'Create Video' feature from the result image to make dynamic content."
+        "desc": "Upload source images and fill in descriptions. Use 'AI Trainer' to save custom faces or styles."
+      }
     },
     "beautyStudio": {
       "title": "Beauty Studio",
       "intro": "Advanced face retouching, makeup, and studio lighting adjustment.",
       "step1": {
-        "title": "Upload Photo",
-        "desc": "Upload a clear portrait photo."
+        "title": "Upload & Select",
+        "desc": "Upload a portrait. Choose a tool: Apple Mode, Smooth Skin, Makeup, or Hairstyle."
       },
       "step2": {
-        "title": "Select Tool",
-        "desc": "Choose a tool from the toolbar: Apple Mode, Smooth Skin, Makeup, or Change Hairstyle."
-      },
-      "step3": {
         "title": "Fine-tune",
         "desc": "Adjust intensity or select presets to achieve your desired look."
       }
     },
     "familyStudio": {
-      "title": "Family Studio",
+      "title": "Family Photo Composite",
       "intro": "Create perfect family photos from individual portraits.",
       "step1": {
         "title": "Add Members",
         "desc": "Upload a portrait for each family member and enter their age/description."
       },
       "step2": {
-        "title": "Set Scene",
-        "desc": "Choose a scene (Living Room, Beach, Holiday...), outfit style, and pose."
-      },
-      "step3": {
-        "title": "Face Consistency",
-        "desc": "Enable 'Face Consistency' for maximum realism, or disable it for a more artistic style."
-      }
-    },
-    "promptAnalyzer": {
-      "title": "Image Analyzer",
-      "intro": "Translate images into language the AI understands (Prompts).",
-      "step1": {
-        "title": "Upload Sample",
-        "desc": "Upload an image you want the AI to mimic in style or content."
-      },
-      "step2": {
-        "title": "Generate Prompt",
-        "desc": "Click 'Generate Prompt'. Copy this text to use in Creative Studio."
-      },
-      "step3": {
-        "title": "Face Lock",
-        "desc": "Use the 'Face Lock' option to generate a prompt that describes facial features in detail."
-      },
-      "note": "Combine the generated Prompt + Original Image in Creative Studio for best results."
-    },
-    "fourSeasons": {
-      "title": "Four Seasons Studio",
-      "intro": "Travel through photos with beautiful seasonal backdrops.",
-      "step1": {
-        "title": "Select Season & Photo",
-        "desc": "Choose a season (Spring, Summer, Autumn, Winter) and upload your photo."
-      },
-      "step2": {
-        "title": "Choose Scene",
-        "desc": "Select a desired location (e.g., Cherry Blossom Garden, Snowy Mountain...)."
-      },
-      "step3": {
-        "title": "Customize",
-        "desc": "Use the 'Edit Outfit' feature to change clothes to match the scene."
-      }
-    },
-    "fashionStudio": {
-      "title": "Fashion & Lookbook",
-      "intro": "A virtual fitting room for fashion enthusiasts.",
-      "step1": {
-        "title": "Input",
-        "desc": "Upload a clear full-body or half-body photo."
-      },
-      "step2": {
-        "title": "Choose Style",
-        "desc": "Select category (Men/Women/Kids) and style (Suit, Gown, Ao Dai...)."
-      },
-      "step3": {
-        "title": "High Quality",
-        "desc": "Enable 'High Quality' mode for the best fabric details and lighting."
-      }
-    },
-    "footballStudio": {
-      "title": "Football Studio",
-      "intro": "Stand side-by-side with football idols.",
-      "step1": {
-        "title": "Select Mode",
-        "desc": "'Photo with Idol' or 'Try on Kit'."
-      },
-      "step2": {
-        "title": "Customize",
-        "desc": "Select player, team, and context (Celebration, Press Conference, Pitch...)."
-      },
-      "step3": {
-        "title": "Generate",
-        "desc": "AI will naturally blend you into the frame."
-      }
-    },
-    "headshot": {
-      "title": "Professional Headshot",
-      "intro": "Upgrade your LinkedIn profile or CV.",
-      "step1": {
-        "title": "Original Photo",
-        "desc": "Upload a selfie or casual portrait."
-      },
-      "step2": {
-        "title": "Style",
-        "desc": "Choose a style (Corporate, Artistic, Minimalist...)."
-      },
-      "step3": {
-        "title": "Result",
-        "desc": "Receive 4 professional variations to choose from."
+        "title": "Configure",
+        "desc": "Choose scene and shared outfit. Enable 'Face Consistency' for maximum realism."
       }
     },
     "idPhoto": {
@@ -141,16 +91,8 @@ export default {
         "desc": "Upload photo, AI automatically aligns face and removes background."
       },
       "step2": {
-        "title": "Outfit & Background",
-        "desc": "Change outfit (Suit, Shirt) and background color (White, Blue) in one click."
-      },
-      "step3": {
-        "title": "Print Layout",
-        "desc": "Select print paper size (10x15, 13x18) for economical printing."
-      },
-      "step4": {
-        "title": "Batch Process",
-        "desc": "(VIP) Use 'Batch' mode to process multiple photos at once."
+        "title": "Outfit & Print",
+        "desc": "Change outfit (Suit, Shirt) with one click. Select paper size (10x15) for printing."
       },
       "note": "'Face-Lock' ensures 100% natural facial features are preserved."
     },
@@ -162,26 +104,31 @@ export default {
         "desc": "Photo Restoration (portraits/scenery) or Document Restoration (papers/text)."
       },
       "step2": {
-        "title": "Advanced Options",
-        "desc": "Select restoration level, denoise, and toggle auto-colorization."
+        "title": "Process",
+        "desc": "AI will automatically denoise, sharpen, and colorize (if selected)."
+      }
+    },
+    "marketingArt": {
+      "title": "Marketing & Art",
+      "intro": "Create high-quality advertising content and artistic images.",
+      "step1": {
+        "title": "Marketing Studio",
+        "desc": "Upload product photos, AI will write ad copy, video scripts, and generate professional marketing images."
       },
-      "step3": {
-        "title": "Compare",
-        "desc": "Use the Before/After slider to see the dramatic difference."
+      "step2": {
+        "title": "Art Style Studio",
+        "desc": "Blend models, outfits, and products into a unified artistic style."
       }
     },
     "tips": {
       "title": "Tips for Best Results",
       "tip1": {
         "title": "Original Photo Quality",
-        "desc": "The clearer the input photo, the more detailed and realistic the AI result."
+        "desc": "The clearer the input photo and lighting, the more detailed and realistic the AI result."
       },
       "tip2": {
         "title": "Detailed Prompts",
-        "desc": "When typing prompts, be specific about lighting, colors, and mood."
-      },
-      "tip3": {
-        "desc": "Don't hesitate to experiment with different settings (Scale, Style) to find the perfect result!"
+        "desc": "When typing descriptions, be specific about lighting, colors, and mood."
       }
     }
   },

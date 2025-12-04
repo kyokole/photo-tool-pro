@@ -538,6 +538,11 @@ export interface SongStructure {
     stylePrompt: string; // Musical style description
 }
 
+export interface MusicAnalysisResult {
+    style: string;
+    lyrics: string;
+}
+
 export interface MusicResult {
     song: SongStructure;
     coverArtUrl: string | null;
@@ -568,6 +573,13 @@ export interface MotionStudioSettings {
     aspectRatio: '16:9' | '9:16';
     resolution: '720p' | '1080p';
     audio: boolean;
+}
+
+export interface AnalyzedScene {
+    id: string;
+    timestamp: string;
+    image: string; // Base64
+    prompt: string;
 }
 
 // LayoutResult moved here to prevent circular dependency

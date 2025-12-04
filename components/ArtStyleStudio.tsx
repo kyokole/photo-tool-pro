@@ -1,4 +1,6 @@
 
+// components/ArtStyleStudio.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
@@ -123,7 +125,8 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
     const [styles, setStyles] = useState<string[]>(["Professional"]);
     
     const qualityOptions = ["1080p", "2K", "4K", "8K"];
-    const [quality, setQuality] = useState("8K");
+    // Changed default to 1080p (1K) as per user request
+    const [quality, setQuality] = useState("1080p");
     
     // Updated aspect options to use keys for translation
     const aspectOptions = [
@@ -214,7 +217,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
         previews.forEach((url, i) => smartDownload(url, `art-style-${i}.png`));
     };
 
-    const singleCost = quality === '1080p' ? CREDIT_COSTS.STANDARD_IMAGE : CREDIT_COSTS.HIGH_QUALITY_IMAGE;
+    const singleCost = (quality === '4K' || quality === '8K') ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
     const totalCost = singleCost * count;
 
     return (
@@ -319,7 +322,7 @@ const ArtStyleStudio: React.FC<ArtStyleStudioProps> = ({ theme, setTheme, isVip 
                                 {loading ? (
                                     <><i className="fas fa-circle-notch fa-spin"></i> {t('artStyleStudio.generating')}</>
                                 ) : (
-                                    <><i className="fas fa-magic"></i> {t('artStyleStudio.generate', { count })} {isVip ? '(Miễn phí)' : `(${totalCost} Credits)`}</>
+                                    <><i className="fas fa-magic"></i> {t('artStyleStudio.generate', { count })} {isVip ? ` (${t('common.free')})` : ` (${totalCost} Credits)`}</>
                                 )}
                             </button>
                         </div>

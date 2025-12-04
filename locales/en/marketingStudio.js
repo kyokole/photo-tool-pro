@@ -53,6 +53,7 @@ export default {
       "clear": "Clear"
     },
     "actions": {
+      "autoAnalyze": "✨ Analyze & Auto-fill",
       "generateAd": "Write Ad Copy",
       "generateImage": "Create Image",
       "generateVideoScript": "Write Script",
@@ -92,6 +93,9 @@ export default {
       "luxury": "Luxury / Premium",
       "witty": "Witty / Fun",
       "emotional": "Emotional / Touching"
+    },
+    "errors": {
+        "analysisFailed": "Failed to analyze product image. Please try another image."
     }
   }
 }

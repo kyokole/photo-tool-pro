@@ -1,4 +1,5 @@
 
+// locales/en/creativeStudio.js
 export default {
   "themes": {
     "roseGoldGlam": "Rose Gold Glam",
@@ -105,6 +106,11 @@ export default {
           }
         }
       },
+      "creative_composite": {
+        "document_mode": {
+            "label": "Document Mode (Preserve Original Structure)"
+        }
+      },
       "product_photo": {
         "subject_image": {
           "label": "Model's Photo"
@@ -117,6 +123,7 @@ export default {
           "placeholder": "e.g., model is smiling, looking at the camera"
         }
       },
+      // ... (Rest of the file content)
       "hot_trend_photo": {
         "subject_image": {
           "label": "Your Photo"

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,37 +31,44 @@ const UserGuideModal: React.FC<UserGuideModalProps> = ({ onClose }) => {
                 <h2 className="text-3xl font-bold mb-6 text-center">{t('guide.title')}</h2>
                 
                 <p className="text-center text-[#848D97] mb-8 -mt-4">{t('guide.subtitle')}</p>
+
+                {/* Magic Eraser - NEW */}
+                 <GuideSection title={t('guide.magicEraser.title')}>
+                    <p>{t('guide.magicEraser.intro')}</p>
+                    <ol className="list-decimal list-inside space-y-1 pl-4">
+                        <li><strong>{t('guide.magicEraser.step1.title')}:</strong> {t('guide.magicEraser.step1.desc')}</li>
+                        <li><strong>{t('guide.magicEraser.step2.title')}:</strong> {t('guide.magicEraser.step2.desc')}</li>
+                    </ol>
+                </GuideSection>
                 
+                 {/* Motion Studio - NEW */}
+                 <GuideSection title={t('guide.motionStudio.title')}>
+                    <p>{t('guide.motionStudio.intro')}</p>
+                    <ol className="list-decimal list-inside space-y-1 pl-4">
+                        <li><strong>{t('guide.motionStudio.step1.title')}:</strong> {t('guide.motionStudio.step1.desc')}</li>
+                        <li><strong>{t('guide.motionStudio.step2.title')}:</strong> {t('guide.motionStudio.step2.desc')}</li>
+                        <li><strong>{t('guide.motionStudio.step3.title')}:</strong> {t('guide.motionStudio.step3.desc')}</li>
+                    </ol>
+                </GuideSection>
+
+                {/* Music & Voice - NEW */}
+                 <GuideSection title={t('guide.musicVoice.title')}>
+                    <p>{t('guide.musicVoice.intro')}</p>
+                    <ol className="list-decimal list-inside space-y-1 pl-4">
+                        <li><strong>{t('guide.musicVoice.step1.title')}:</strong> {t('guide.musicVoice.step1.desc')}</li>
+                        <li><strong>{t('guide.musicVoice.step2.title')}:</strong> {t('guide.musicVoice.step2.desc')}</li>
+                        <li><strong>{t('guide.musicVoice.step3.title')}:</strong> {t('guide.musicVoice.step3.desc')}</li>
+                    </ol>
+                </GuideSection>
+
                 {/* ID Photo - Core */}
                 <GuideSection title={t('guide.idPhoto.title')}>
                     <p>{t('guide.idPhoto.intro')}</p>
                     <ol className="list-decimal list-inside space-y-1 pl-4">
                         <li><strong>{t('guide.idPhoto.step1.title')}:</strong> {t('guide.idPhoto.step1.desc')}</li>
                         <li><strong>{t('guide.idPhoto.step2.title')}:</strong> {t('guide.idPhoto.step2.desc')}</li>
-                        <li><strong>{t('guide.idPhoto.step3.title')}:</strong> {t('guide.idPhoto.step3.desc')}</li>
-                        <li><strong>{t('guide.idPhoto.step4.title')}:</strong> {t('guide.idPhoto.step4.desc')}</li>
                     </ol>
                     <p className="mt-2"><strong>{t('common.note')}:</strong> {t('guide.idPhoto.note')}</p>
-                </GuideSection>
-
-                {/* Beauty Studio - New */}
-                <GuideSection title={t('guide.beautyStudio.title')}>
-                    <p>{t('guide.beautyStudio.intro')}</p>
-                    <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.beautyStudio.step1.title')}:</strong> {t('guide.beautyStudio.step1.desc')}</li>
-                        <li><strong>{t('guide.beautyStudio.step2.title')}:</strong> {t('guide.beautyStudio.step2.desc')}</li>
-                        <li><strong>{t('guide.beautyStudio.step3.title')}:</strong> {t('guide.beautyStudio.step3.desc')}</li>
-                    </ol>
-                </GuideSection>
-
-                {/* Family Studio - New */}
-                <GuideSection title={t('guide.familyStudio.title')}>
-                    <p>{t('guide.familyStudio.intro')}</p>
-                    <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.familyStudio.step1.title')}:</strong> {t('guide.familyStudio.step1.desc')}</li>
-                        <li><strong>{t('guide.familyStudio.step2.title')}:</strong> {t('guide.familyStudio.step2.desc')}</li>
-                        <li><strong>{t('guide.familyStudio.step3.title')}:</strong> {t('guide.familyStudio.step3.desc')}</li>
-                    </ol>
                 </GuideSection>
 
                 {/* Creative Studio - Advanced */}
@@ -69,56 +77,33 @@ const UserGuideModal: React.FC<UserGuideModalProps> = ({ onClose }) => {
                     <ol className="list-decimal list-inside space-y-1 pl-4">
                         <li><strong>{t('guide.creativeStudio.step1.title')}:</strong> {t('guide.creativeStudio.step1.desc')}</li>
                         <li><strong>{t('guide.creativeStudio.step2.title')}:</strong> {t('guide.creativeStudio.step2.desc')}</li>
-                        <li><strong>{t('guide.creativeStudio.step3.title')}:</strong> {t('guide.creativeStudio.step3.desc')}</li>
-                    </ol>
-                    <p className="mt-2"><strong>{t('common.note')}:</strong> {t('guide.creativeStudio.note')}</p>
-                </GuideSection>
-                
-                {/* Prompt Analyzer - Utility */}
-                <GuideSection title={t('guide.promptAnalyzer.title')}>
-                    <p>{t('guide.promptAnalyzer.intro')}</p>
-                    <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.promptAnalyzer.step1.title')}:</strong> {t('guide.promptAnalyzer.step1.desc')}</li>
-                        <li><strong>{t('guide.promptAnalyzer.step2.title')}:</strong> {t('guide.promptAnalyzer.step2.desc')}</li>
-                        <li><strong>{t('guide.promptAnalyzer.step3.title')}:</strong> {t('guide.promptAnalyzer.step3.desc')}</li>
-                    </ol>
-                    <p className="mt-2"><strong>{t('common.note')}:</strong> {t('guide.promptAnalyzer.note')}</p>
-                </GuideSection>
-
-                {/* Thematic Studios */}
-                <GuideSection title={t('guide.fourSeasons.title')}>
-                    <p>{t('guide.fourSeasons.intro')}</p>
-                    <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.fourSeasons.step1.title')}:</strong> {t('guide.fourSeasons.step1.desc')}</li>
-                        <li><strong>{t('guide.fourSeasons.step2.title')}:</strong> {t('guide.fourSeasons.step2.desc')}</li>
-                        <li><strong>{t('guide.fourSeasons.step3.title')}:</strong> {t('guide.fourSeasons.step3.desc')}</li>
-                    </ol>
-                </GuideSection>
-                
-                <GuideSection title={t('guide.fashionStudio.title')}>
-                    <p>{t('guide.fashionStudio.intro')}</p>
-                    <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.fashionStudio.step1.title')}:</strong> {t('guide.fashionStudio.step1.desc')}</li>
-                        <li><strong>{t('guide.fashionStudio.step2.title')}:</strong> {t('guide.fashionStudio.step2.desc')}</li>
-                        <li><strong>{t('guide.fashionStudio.step3.title')}:</strong> {t('guide.fashionStudio.step3.desc')}</li>
                     </ol>
                 </GuideSection>
 
-                <GuideSection title={t('guide.footballStudio.title')}>
-                    <p>{t('guide.footballStudio.intro')}</p>
+                 {/* Marketing & Art - NEW Combination */}
+                 <GuideSection title={t('guide.marketingArt.title')}>
+                    <p>{t('guide.marketingArt.intro')}</p>
                     <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.footballStudio.step1.title')}:</strong> {t('guide.footballStudio.step1.desc')}</li>
-                        <li><strong>{t('guide.footballStudio.step2.title')}:</strong> {t('guide.footballStudio.step2.desc')}</li>
-                        <li><strong>{t('guide.footballStudio.step3.title')}:</strong> {t('guide.footballStudio.step3.desc')}</li>
+                        <li><strong>{t('guide.marketingArt.step1.title')}:</strong> {t('guide.marketingArt.step1.desc')}</li>
+                        <li><strong>{t('guide.marketingArt.step2.title')}:</strong> {t('guide.marketingArt.step2.desc')}</li>
                     </ol>
                 </GuideSection>
-                
-                <GuideSection title={t('guide.headshot.title')}>
-                    <p>{t('guide.headshot.intro')}</p>
+
+                {/* Beauty Studio */}
+                <GuideSection title={t('guide.beautyStudio.title')}>
+                    <p>{t('guide.beautyStudio.intro')}</p>
                     <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li><strong>{t('guide.headshot.step1.title')}:</strong> {t('guide.headshot.step1.desc')}</li>
-                        <li><strong>{t('guide.headshot.step2.title')}:</strong> {t('guide.headshot.step2.desc')}</li>
-                        <li><strong>{t('guide.headshot.step3.title')}:</strong> {t('guide.headshot.step3.desc')}</li>
+                        <li><strong>{t('guide.beautyStudio.step1.title')}:</strong> {t('guide.beautyStudio.step1.desc')}</li>
+                        <li><strong>{t('guide.beautyStudio.step2.title')}:</strong> {t('guide.beautyStudio.step2.desc')}</li>
+                    </ol>
+                </GuideSection>
+
+                {/* Family Studio */}
+                <GuideSection title={t('guide.familyStudio.title')}>
+                    <p>{t('guide.familyStudio.intro')}</p>
+                    <ol className="list-decimal list-inside space-y-1 pl-4">
+                        <li><strong>{t('guide.familyStudio.step1.title')}:</strong> {t('guide.familyStudio.step1.desc')}</li>
+                        <li><strong>{t('guide.familyStudio.step2.title')}:</strong> {t('guide.familyStudio.step2.desc')}</li>
                     </ol>
                 </GuideSection>
 
@@ -127,8 +112,6 @@ const UserGuideModal: React.FC<UserGuideModalProps> = ({ onClose }) => {
                      <ol className="list-decimal list-inside space-y-1 pl-4">
                          <li><strong>{t('guide.restoration.step1.title')}:</strong> {t('guide.restoration.step1.desc')}</li>
                          <li><strong>{t('guide.restoration.step2.title')}:</strong> {t('guide.restoration.step2.desc')}</li>
-                         <li><strong>{t('guide.restoration.step3.title')}:</strong> {t('guide.restoration.step3.desc')}</li>
-                         <li><strong>{t('guide.restoration.step4.title')}:</strong> {t('guide.restoration.step4.desc')}</li>
                      </ol>
                 </GuideSection>
 
@@ -136,7 +119,6 @@ const UserGuideModal: React.FC<UserGuideModalProps> = ({ onClose }) => {
                     <ul className="list-disc list-inside pl-4 space-y-1">
                         <li><strong>{t('guide.tips.tip1.title')}:</strong> {t('guide.tips.tip1.desc')}</li>
                         <li><strong>{t('guide.tips.tip2.title')}:</strong> {t('guide.tips.tip2.desc')}</li>
-                        <li>{t('guide.tips.tip3.desc')}</li>
                     </ul>
                 </GuideSection>
             </div>

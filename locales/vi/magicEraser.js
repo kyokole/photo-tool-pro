@@ -1,10 +1,18 @@
 
+
+
+
+
 export default {
     "magicEraser": {
         "title": "Studio Tẩy Xóa Đa Năng",
         "subtitle": "Xóa vật thể ảnh & Trích xuất video gốc chất lượng cao",
         "history": "Lịch sử xử lý",
         "vipNote": "Tính năng trích xuất video gốc cao cấp chỉ dành riêng cho thành viên VIP.",
+        "videoInfo": "Thông tin Video",
+        "format": "Định dạng Video",
+        "downloadMain": "Tải xuống Video",
+        "aiPrompt": "ai prompt",
         "tabs": {
             "image": "Xóa Vật Thể Ảnh",
             "video": "Trích Xuất Video Gốc"

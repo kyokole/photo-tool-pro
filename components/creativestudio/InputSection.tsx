@@ -392,6 +392,22 @@ export const InputSection: React.FC<InputSectionProps> = ({
     if(feature.action === FeatureAction.CREATIVE_COMPOSITE){
         return (
             <div className="space-y-4">
+                {/* Document Mode Checkbox - ADDED HERE */}
+                <div className="flex items-center space-x-3 p-3 bg-[var(--bg-interactive)] border border-[var(--border-color)] rounded-lg mb-2">
+                    <input
+                        type="checkbox"
+                        id="document_mode"
+                        checked={formData.document_mode || false}
+                        onChange={(e) => handleFormChange('document_mode', e.target.checked)}
+                        className="form-checkbox h-5 w-5 text-[var(--accent-cyan)] rounded focus:ring-[var(--accent-cyan)]"
+                    />
+                    <div>
+                        <label htmlFor="document_mode" className="text-sm font-bold text-[var(--text-primary)] cursor-pointer select-none">
+                            {t('aiStudio.inputs.creative_composite.document_mode.label')}
+                        </label>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>
                         <h3 className="font-semibold text-[var(--accent-text-start)] mb-2">{t('aiStudio.composite.mainSubject')}</h3>

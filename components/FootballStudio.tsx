@@ -283,7 +283,7 @@ const FootballStudio: React.FC<FootballStudioProps> = ({ theme, setTheme, isVip 
                     </div>
                     <div className="mt-auto pt-4">
                          <button onClick={handleGenerate} disabled={!canGenerate} className={`w-full btn-gradient text-white font-bold py-4 rounded-xl flex items-center justify-center text-lg transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${canGenerate ? 'animate-pulse-glow' : ''}`}>
-                            {isLoading ? <><Spinner /> <span className="ml-2">{t('footballStudio.generating')}</span></> : <><i className="fas fa-futbol mr-2"></i> {t('footballStudio.generateButton')} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}</>}
+                            {isLoading ? <><Spinner /> <span className="ml-2">{t('footballStudio.generating')}</span></> : <><i className="fas fa-futbol mr-2"></i> {t('footballStudio.generateButton')} {isVip ? ` (${t('common.free')})` : ` (${cost} Credits)`}</>}
                         </button>
                     </div>
                 </aside>

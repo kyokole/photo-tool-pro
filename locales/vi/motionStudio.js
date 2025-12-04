@@ -42,7 +42,21 @@ export default {
         "tabs": {
             "text": "Từ Văn Bản",
             "image": "Từ Hình Ảnh",
-            "character": "Đồng Bộ Nhân Vật"
+            "character": "Đồng Bộ Nhân Vật",
+            "analysis": "Phân Tích Video"
+        },
+        "analysis": {
+            "uploadTitle": "Tải lên Video",
+            "uploadDesc": "Chọn file MP4/MOV (Tối đa 50MB). Hệ thống sẽ tự động trích xuất khung hình và tạo prompt.",
+            "uploadButton": "Chọn Video",
+            "analyzing": "Đang phân tích & tạo Prompt...",
+            "extracting": "Đang trích xuất hình ảnh...",
+            "resultTitle": "Bảng Phân Cảnh Ngược (Reverse Storyboard)",
+            "resultDesc": "Dưới đây là các cảnh được trích xuất từ video. Bạn có thể sao chép prompt hoặc sử dụng hình ảnh để remake.",
+            "copyPrompt": "Sao chép Prompt",
+            "useShot": "Dùng cảnh này",
+            "downloadImage": "Tải ảnh",
+            "empty": "Tải video lên để bắt đầu phân tích."
         },
         "settings": {
             "title": "Thiết lập Phim",

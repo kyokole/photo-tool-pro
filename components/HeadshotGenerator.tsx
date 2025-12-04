@@ -236,7 +236,7 @@ const HeadshotGenerator: React.FC<HeadshotGeneratorProps> = ({
                         <>
                             <i className="fas fa-magic mr-3"></i> 
                             {t('headshot.generateButton')} 
-                            {isVip ? ' (Miễn phí)' : (currentUser ? ` (${totalCost} Credits)` : ' (Miễn phí - Watermark)')}
+                            {isVip ? ` (${t('common.free')})` : (currentUser ? ` (${totalCost} Credits)` : ` (${t('common.freeWatermark')})`)}
                         </>
                     )}
                 </button>

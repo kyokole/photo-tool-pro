@@ -1,4 +1,5 @@
 
+// locales/vi/creativeStudio.js
 export default {
   "themes": {
     "roseGoldGlam": "Rose Gold Glam",
@@ -105,6 +106,11 @@ export default {
           }
         }
       },
+      "creative_composite": {
+        "document_mode": {
+            "label": "Chế độ Tài liệu / Chỉnh sửa (Giữ nguyên gốc)"
+        }
+      },
       "product_photo": {
         "subject_image": {
           "label": "Ảnh người mẫu"
@@ -117,6 +123,7 @@ export default {
           "placeholder": "Vd: người mẫu đang mỉm cười, nhìn vào ống kính"
         }
       },
+      // ... (Rest of the file content)
       "hot_trend_photo": {
         "subject_image": {
           "label": "Ảnh của bạn"

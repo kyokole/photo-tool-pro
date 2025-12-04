@@ -72,9 +72,14 @@ export const generateVideoPrompt = async (userIdea: string, base64Image: string)
     return prompts;
 };
 
-export const enhanceVideoPrompt = async (prompt: string): Promise<string> => {
-    const { enhancedPrompt } = await callGeminiApi('enhanceVideoPrompt', { prompt }, 0); // Free tool
+export const enhanceVideoPrompt = async (prompt: string, language: string = 'en'): Promise<string> => {
+    const { enhancedPrompt } = await callGeminiApi('enhanceVideoPrompt', { prompt, language }, 0); // Free tool
     return enhancedPrompt;
+};
+
+export const analyzeVideoFrames = async (frames: string[], language: string = 'en'): Promise<string[]> => {
+    const { prompts } = await callGeminiApi('analyzeVideoFrames', { frames, language }, 0);
+    return prompts;
 };
 
 export const generateVideoFromImage = async (
@@ -82,7 +87,7 @@ export const generateVideoFromImage = async (
     prompt: string,
     setProgress: (message: string) => void,
     characterImages?: string[],
-    settings?: { resolution: '720p' | '1080p', audio: boolean }
+    settings?: { resolution: '720p' | '1080p', audio: boolean, aspectRatio?: '16:9' | '9:16' }
 ): Promise<string> => {
     // Updated to use the new unified Veo action
     setProgress('Đang kết nối máy chủ Veo...');
@@ -99,7 +104,8 @@ export const generateVideoFromImage = async (
     }
 
     // Video generation cost is handled in callGeminiApi or backend logic based on usage
-    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', payload, 10); // 10 Credits
+    // Default is 10 credits, but might vary.
+    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', payload, 10); 
     if (error) {
         throw new Error(error);
     }

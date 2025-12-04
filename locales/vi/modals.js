@@ -3,35 +3,70 @@ export default {
   "guide": {
     "title": "Hướng dẫn sử dụng",
     "subtitle": "Làm chủ bộ công cụ AI toàn năng",
+    "magicEraser": {
+      "title": "Studio Tẩy Xóa (Magic Eraser)",
+      "intro": "Công cụ mạnh mẽ để làm sạch hình ảnh và video, hỗ trợ xóa vật thể và trích xuất video gốc.",
+      "step1": {
+        "title": "Xóa Vật Thể (Ảnh)",
+        "desc": "Tải ảnh lên, AI sẽ tự động phát hiện và xóa các chi tiết thừa, watermark hoặc văn bản không mong muốn."
+      },
+      "step2": {
+        "title": "Trích Xuất Video (VIP)",
+        "desc": "Dán liên kết video (Veo, Sora, hoặc MP4). Hệ thống sẽ phân tích mã nguồn để tìm và tải về file gốc chất lượng cao nhất, không dính watermark."
+      }
+    },
+    "motionStudio": {
+      "title": "Studio Chuyển Động (Motion)",
+      "intro": "Biến ý tưởng thành phim điện ảnh sống động với khả năng kiểm soát nhân vật tuyệt đối.",
+      "step1": {
+        "title": "Tạo Kịch Bản (Shot List)",
+        "desc": "Nhập từng dòng mô tả cảnh quay (Prompt) hoặc tải lên ảnh tĩnh để tạo chuyển động."
+      },
+      "step2": {
+        "title": "Đồng Bộ Nhân Vật",
+        "desc": "Sử dụng tab 'Đồng bộ Nhân vật' để tải ảnh diễn viên lên. Dùng tên định danh (VD: @yenlinh) trong prompt để AI giữ nguyên khuôn mặt xuyên suốt các cảnh."
+      },
+      "step3": {
+        "title": "Quay Phim & Xuất Bản",
+        "desc": "Nhấn 'Bắt đầu Quay phim'. Sau khi hoàn tất, bạn có thể xem liền mạch hoặc tải trọn bộ dưới dạng ZIP."
+      }
+    },
+    "musicVoice": {
+      "title": "Âm Nhạc & Giọng Nói",
+      "intro": "Sáng tạo âm thanh chuyên nghiệp cho nội dung đa phương tiện.",
+      "step1": {
+        "title": "Sáng Tác Nhạc",
+        "desc": "Nhập chủ đề, chọn thể loại và tâm trạng. AI sẽ viết lời, hợp âm và vẽ bìa album cho bạn."
+      },
+      "step2": {
+        "title": "Phân Tích Audio",
+        "desc": "Tải lên một bài hát mẫu, AI sẽ tách lời và phân tích phong cách (Style Prompt) để bạn tái tạo."
+      },
+      "step3": {
+        "title": "Giọng Đọc AI (TTS)",
+        "desc": "Nhập văn bản, chọn giọng đọc vùng miền (Bắc, Trung, Nam) và tốc độ để tạo file âm thanh tự nhiên."
+      }
+    },
     "creativeStudio": {
-      "title": "Studio Sáng Tạo (Creative Studio)",
-      "intro": "Bộ công cụ đa năng nhất, nơi bạn biến mọi ý tưởng thành hiện thực (Ghép cặp đôi, Thử tóc, Ảnh sản phẩm...).",
+      "title": "Studio Sáng Tạo",
+      "intro": "Bộ công cụ đa năng biến mọi ý tưởng thành hiện thực (Ghép cặp đôi, Thử tóc, Ảnh sản phẩm...).",
       "step1": {
         "title": "Chọn Tính Năng",
-        "desc": "Lựa chọn một tính năng cụ thể từ danh sách (VD: Ghép ảnh Cặp đôi, Thử Trang phục, Tạo ảnh hàng loạt...)."
+        "desc": "Lựa chọn công cụ phù hợp: Ghép ảnh Cặp đôi, Thử Trang phục, hoặc Tạo ảnh hàng loạt."
       },
       "step2": {
         "title": "Nhập Dữ Liệu",
-        "desc": "Tải lên ảnh gốc và điền các mô tả cần thiết. Sử dụng 'Huấn luyện AI' để lưu giữ gương mặt hoặc phong cách riêng."
-      },
-      "step3": {
-        "title": "Tạo Ảnh",
-        "desc": "Nhấn 'Tạo ảnh'. Hệ thống sẽ xử lý và lưu kết quả vào Thư viện của bạn."
-      },
-      "note": "Mẹo: Sử dụng tính năng 'Tạo Video' từ ảnh kết quả để làm nội dung sinh động hơn."
+        "desc": "Tải ảnh gốc và điền các mô tả. Sử dụng 'Huấn luyện AI' để lưu giữ gương mặt hoặc phong cách riêng."
+      }
     },
     "beautyStudio": {
-      "title": "Studio Làm Đẹp (Beauty Studio)",
+      "title": "Studio Làm Đẹp",
       "intro": "Chỉnh sửa gương mặt chuyên sâu, trang điểm và thay đổi ánh sáng chuẩn studio.",
       "step1": {
-        "title": "Tải Ảnh",
-        "desc": "Tải lên ảnh chân dung cần chỉnh sửa."
+        "title": "Tải Ảnh & Chọn Công Cụ",
+        "desc": "Tải ảnh chân dung. Chọn công cụ: Chế độ Apple, Làm mịn da, Trang điểm, hay Đổi kiểu tóc."
       },
       "step2": {
-        "title": "Chọn Công Cụ",
-        "desc": "Sử dụng thanh công cụ để chọn tính năng: Chế độ Apple, Làm mịn da, Trang điểm, hay Đổi kiểu tóc."
-      },
-      "step3": {
         "title": "Tinh Chỉnh",
         "desc": "Điều chỉnh cường độ hiệu ứng hoặc chọn các mẫu có sẵn (preset) để có kết quả ưng ý nhất."
       }
@@ -44,93 +79,8 @@ export default {
         "desc": "Tải ảnh chân dung của từng thành viên và nhập tuổi/mô tả."
       },
       "step2": {
-        "title": "Thiết Lập Bối Cảnh",
-        "desc": "Chọn bối cảnh (Phòng khách, Bãi biển, Tết...), trang phục chung và kiểu tạo dáng."
-      },
-      "step3": {
-        "title": "Face Consistency",
-        "desc": "Bật 'Bảo toàn khuôn mặt' để giữ độ giống thật cao nhất, hoặc tắt để có phong cách nghệ thuật hơn."
-      }
-    },
-    "promptAnalyzer": {
-      "title": "Phân Tích Ảnh (Image Analyzer)",
-      "intro": "Dịch hình ảnh thành ngôn ngữ mà AI có thể hiểu (Prompt).",
-      "step1": {
-        "title": "Tải Ảnh Mẫu",
-        "desc": "Tải lên bức ảnh bạn muốn AI bắt chước phong cách hoặc nội dung."
-      },
-      "step2": {
-        "title": "Tạo Prompt",
-        "desc": "Nhấn 'Tạo Prompt'. Sao chép đoạn văn bản này để dùng trong Studio Sáng tạo."
-      },
-      "step3": {
-        "title": "Khóa Gương Mặt",
-        "desc": "Sử dụng tùy chọn 'Khóa Gương Mặt' để tạo prompt mô tả chi tiết đặc điểm khuôn mặt."
-      },
-      "note": "Kết hợp Prompt tạo ra + Ảnh gốc trong Studio Sáng tạo để đạt hiệu quả cao nhất."
-    },
-    "fourSeasons": {
-      "title": "Studio Bốn Mùa",
-      "intro": "Du lịch qua ảnh với các bối cảnh theo mùa tuyệt đẹp.",
-      "step1": {
-        "title": "Chọn Mùa & Ảnh",
-        "desc": "Chọn mùa (Xuân, Hạ, Thu, Đông) và tải ảnh cá nhân lên."
-      },
-      "step2": {
-        "title": "Chọn Bối Cảnh",
-        "desc": "Lựa chọn địa điểm mong muốn (VD: Vườn đào Nhật Tân, Tuyết Sapa...)."
-      },
-      "step3": {
-        "title": "Tùy Biến",
-        "desc": "Sử dụng tính năng 'Chỉnh sửa trang phục' để thay đổi quần áo cho phù hợp với bối cảnh."
-      }
-    },
-    "fashionStudio": {
-      "title": "Thời Trang & Lookbook",
-      "intro": "Phòng thay đồ ảo cho các tín đồ thời trang.",
-      "step1": {
-        "title": "Đầu Vào",
-        "desc": "Tải lên ảnh toàn thân hoặc nửa người rõ nét."
-      },
-      "step2": {
-        "title": "Chọn Phong Cách",
-        "desc": "Chọn danh mục (Nam/Nữ/Trẻ em) và phong cách (Vest, Dạ hội, Áo dài...)."
-      },
-      "step3": {
-        "title": "Chất Lượng Cao",
-        "desc": "Bật chế độ 'Chất lượng cao' để có chi tiết vải và ánh sáng tốt nhất."
-      }
-    },
-    "footballStudio": {
-      "title": "Studio Bóng Đá",
-      "intro": "Sát cánh cùng thần tượng sân cỏ.",
-      "step1": {
-        "title": "Chọn Chế Độ",
-        "desc": "'Chụp cùng Idol' hoặc 'Thử đồ cho Idol'."
-      },
-      "step2": {
-        "title": "Tùy Chỉnh",
-        "desc": "Chọn cầu thủ, đội tuyển và bối cảnh (Ăn mừng, Họp báo, Sân cỏ...)."
-      },
-      "step3": {
-        "title": "Tạo Ảnh",
-        "desc": "AI sẽ ghép bạn vào khung hình một cách tự nhiên nhất."
-      }
-    },
-    "headshot": {
-      "title": "Headshot Chuyên Nghiệp",
-      "intro": "Nâng cấp hồ sơ LinkedIn/CV của bạn.",
-      "step1": {
-        "title": "Ảnh Gốc",
-        "desc": "Tải lên ảnh selfie hoặc chân dung đời thường."
-      },
-      "step2": {
-        "title": "Phong Cách",
-        "desc": "Chọn phong cách (Doanh nghiệp, Nghệ thuật, Tối giản...)."
-      },
-      "step3": {
-        "title": "Kết Quả",
-        "desc": "Nhận về 4 biến thể chuyên nghiệp khác nhau để lựa chọn."
+        "title": "Cấu Hình",
+        "desc": "Chọn bối cảnh, trang phục chung. Bật 'Face Consistency' để giữ độ giống thật cao nhất."
       }
     },
     "idPhoto": {
@@ -138,19 +88,11 @@ export default {
       "intro": "Tự làm ảnh thẻ chuẩn quốc tế tại nhà.",
       "step1": {
         "title": "Tải & Cắt",
-        "desc": "Tải ảnh lên, AI sẽ tự động căn chỉnh mặt và tách nền."
+        "desc": "Tải ảnh lên, AI tự động căn chỉnh mặt và tách nền."
       },
       "step2": {
-        "title": "Trang Phục & Nền",
-        "desc": "Thay đổi trang phục (Vest, Sơ mi) và màu nền (Trắng, Xanh) chỉ với 1 cú nhấp."
-      },
-      "step3": {
-        "title": "Bố Cục In",
-        "desc": "Chọn khổ giấy in (10x15, 13x18) để xuất file in ấn tiết kiệm."
-      },
-      "step4": {
-        "title": "Xử Lý Hàng Loạt",
-        "desc": "(VIP) Sử dụng chế độ 'Hàng loạt' để xử lý nhiều ảnh cùng lúc."
+        "title": "Trang Phục & In Ấn",
+        "desc": "Thay đổi trang phục (Vest, Sơ mi) chỉ với 1 cú nhấp. Chọn khổ giấy in (10x15) để xuất file."
       },
       "note": "Tính năng 'Face-Lock' giúp giữ nguyên 100% nét mặt tự nhiên."
     },
@@ -159,29 +101,34 @@ export default {
       "intro": "Làm mới kỷ niệm xưa với công nghệ AI tiên tiến.",
       "step1": {
         "title": "Chọn Chế Độ",
-        "desc": "Phục hồi Ảnh (cho ảnh chân dung/phong cảnh) hoặc Tài liệu (cho giấy tờ/văn bản)."
+        "desc": "Phục hồi Ảnh (chân dung/phong cảnh) hoặc Tài liệu (giấy tờ/văn bản)."
       },
       "step2": {
-        "title": "Tùy Chọn Nâng Cao",
-        "desc": "Chọn mức độ phục hồi, khử nhiễu, và bật/tắt tô màu tự động."
+        "title": "Xử Lý",
+        "desc": "AI sẽ tự động khử nhiễu, làm nét và tô màu (nếu chọn)."
+      }
+    },
+    "marketingArt": {
+      "title": "Marketing & Nghệ Thuật",
+      "intro": "Tạo nội dung quảng cáo và ảnh nghệ thuật chất lượng cao.",
+      "step1": {
+        "title": "Marketing Studio",
+        "desc": "Tải ảnh sản phẩm, AI sẽ viết nội dung quảng cáo, kịch bản video và tạo ảnh marketing chuyên nghiệp."
       },
-      "step3": {
-        "title": "So Sánh",
-        "desc": "Sử dụng thanh trượt Trước/Sau để thấy sự khác biệt rõ rệt."
+      "step2": {
+        "title": "Art Style Studio",
+        "desc": "Hòa trộn người mẫu, trang phục và sản phẩm vào một phong cách nghệ thuật thống nhất."
       }
     },
     "tips": {
-      "title": "Mẹo Để Có Kết Quả Tốt Nhất",
+      "title": "Mẹo Sử Dụng Hiệu Quả",
       "tip1": {
         "title": "Chất Lượng Ảnh Gốc",
-        "desc": "Ảnh đầu vào càng rõ nét, kết quả AI tạo ra càng chi tiết và chân thực."
+        "desc": "Ảnh đầu vào càng rõ nét, ánh sáng tốt thì kết quả AI tạo ra càng chi tiết và chân thực."
       },
       "tip2": {
-        "title": "Mô Tả Chi Tiết",
-        "desc": "Khi nhập prompt, hãy mô tả cụ thể về ánh sáng, màu sắc và tâm trạng bức ảnh."
-      },
-      "tip3": {
-        "desc": "Đừng ngại thử nghiệm nhiều lần với các thông số khác nhau (Scale, Style) để tìm ra kết quả hoàn hảo nhất!"
+        "title": "Prompt Chi Tiết",
+        "desc": "Khi nhập mô tả, hãy cụ thể về ánh sáng, màu sắc và cảm xúc."
       }
     }
   },

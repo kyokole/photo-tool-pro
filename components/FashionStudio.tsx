@@ -273,7 +273,7 @@ const FashionStudio: React.FC<FashionStudioProps> = ({
                                 </>
                             ) : (
                                 <>
-                                    <i className="fas fa-magic mr-3"></i> {t('fashionStudio.generateButton')} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}
+                                    <i className="fas fa-magic mr-3"></i> {t('fashionStudio.generateButton')} {isVip ? ` (${t('common.free')})` : ` (${cost} Credits)`}
                                 </>
                             )}
                         </button>

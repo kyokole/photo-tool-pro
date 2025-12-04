@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { MarketingProduct, MarketingSettings, MarketingResult, FashionAspectRatio } from '../types';
 import { MARKETING_TEMPLATES, MARKETING_TONES, FASHION_ASPECT_RATIOS, CREDIT_COSTS } from '../constants';
-import { generateMarketingAdCopy, generateMarketingImage, generateMarketingVideoScript, generateMarketingVideo } from '../services/geminiService';
+import { generateMarketingAdCopy, generateMarketingImage, generateMarketingVideoScript, generateMarketingVideo, analyzeProductImage } from '../services/geminiService';
 import { fileToBase64, resizeBase64 } from '../utils/fileUtils';
 import { Spinner } from './creativestudio/Spinner';
 import { smartDownload } from '../utils/canvasUtils';
@@ -48,7 +48,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
     const [seed, setSeed] = useState('');
     
     const [result, setResult] = useState<MarketingResult>({ adCopy: '', videoScript: '', generatedImageUrl: null, generatedVideoUrl: null });
-    const [isLoading, setIsLoading] = useState({ ad: false, video: false, image: false, videoRender: false });
+    const [isLoading, setIsLoading] = useState({ ad: false, video: false, image: false, videoRender: false, analysis: false });
     const [activeTab, setActiveTab] = useState<'image' | 'ad' | 'video'>('image');
     const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
     
@@ -95,6 +95,41 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
             return await fileToBase64(product.productImage);
         }
         return null;
+    };
+
+    const handleAutoAnalyze = async () => {
+        if (!product.productImage) return;
+        
+        setIsLoading(prev => ({ ...prev, analysis: true }));
+        setError(null);
+        
+        try {
+            const imageData = await fileToBase64(product.productImage);
+            // Resize for faster/cheaper processing if needed, but Flash is cheap.
+            const resizedB64 = await resizeBase64(imageData.base64, 800);
+            
+            const analysisData = await analyzeProductImage(resizedB64, 'image/jpeg', i18n.language);
+            
+            // Auto-fill fields if data exists
+            setProduct(prev => ({
+                ...prev,
+                name: analysisData.name || prev.name,
+                brand: analysisData.brand || prev.brand,
+                category: analysisData.category || prev.category,
+                price: analysisData.price || prev.price,
+                merchant: analysisData.merchant || prev.merchant,
+                rating: analysisData.rating || prev.rating,
+                features: analysisData.features || prev.features,
+                pros: analysisData.pros || prev.pros,
+                cons: analysisData.cons || prev.cons,
+            }));
+
+        } catch (e: any) {
+            console.error("Auto-analysis failed:", e);
+            setError(t('marketingStudio.errors.analysisFailed') || "Phân tích ảnh thất bại.");
+        } finally {
+            setIsLoading(prev => ({ ...prev, analysis: false }));
+        }
     };
 
     // Actions
@@ -257,10 +292,68 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                 {/* Left Column: Inputs */}
                 <div className="flex flex-col gap-4 overflow-visible lg:overflow-y-auto scrollbar-thin pr-2 pb-10">
                     
-                    {/* Section 1: Product Info */}
+                     {/* Section 2: Media (MOVED UP for better flow) */}
                     <div className="bg-[var(--bg-component)] p-5 rounded-xl border border-[var(--border-color)] shadow-lg">
                         <div className="flex items-center gap-2 mb-5 pb-2 border-b border-white/10">
                             <span className="bg-[var(--accent-cyan)] text-white text-xs font-bold px-2 py-0.5 rounded">1</span>
+                            <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide">{t('marketingStudio.sections.media')}</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-[var(--text-secondary)] mb-2 text-center uppercase">{t('marketingStudio.media.productImage')}</label>
+                                <div onClick={() => triggerUpload(productInputRef)} className="aspect-square bg-[var(--bg-interactive)] rounded-lg border-2 border-dashed border-[var(--border-color)] flex items-center justify-center cursor-pointer hover:border-[var(--accent-cyan)] overflow-hidden relative transition-all group">
+                                    <input type="file" ref={productInputRef} hidden accept="image/*" onChange={e => handleFileChange(e, 'productImage')} />
+                                    {productImagePreview ? (
+                                        <>
+                                            <img src={productImagePreview} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i className="fas fa-edit text-white"></i></div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]">
+                                            <i className="fas fa-plus text-2xl mb-2 block"></i>
+                                            {t('marketingStudio.media.noFile')}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-[var(--text-secondary)] mb-2 text-center uppercase">{t('marketingStudio.media.refImage')}</label>
+                                <div onClick={() => triggerUpload(refInputRef)} className="aspect-square bg-[var(--bg-interactive)] rounded-lg border-2 border-dashed border-[var(--border-color)] flex items-center justify-center cursor-pointer hover:border-[var(--accent-cyan)] overflow-hidden relative transition-all group">
+                                    <input type="file" ref={refInputRef} hidden accept="image/*" onChange={e => handleFileChange(e, 'referenceImage')} />
+                                    {refImagePreview ? (
+                                        <>
+                                            <img src={refImagePreview} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i className="fas fa-edit text-white"></i></div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]">
+                                            <i className="fas fa-user text-2xl mb-2 block"></i>
+                                            {t('marketingStudio.media.noFile')}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-3 italic text-center">{t('marketingStudio.media.uploadTip')}</p>
+
+                         {/* AUTO ANALYZE BUTTON */}
+                         {product.productImage && (
+                            <button 
+                                onClick={handleAutoAnalyze}
+                                disabled={isLoading.analysis}
+                                className="mt-4 w-full btn-gradient text-white font-bold py-2 rounded-lg flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform shadow-md disabled:opacity-50"
+                            >
+                                {isLoading.analysis ? <Spinner size="h-4 w-4" /> : <i className="fas fa-magic"></i>}
+                                {t('marketingStudio.actions.autoAnalyze')}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Section 1: Product Info */}
+                    <div className="bg-[var(--bg-component)] p-5 rounded-xl border border-[var(--border-color)] shadow-lg">
+                        <div className="flex items-center gap-2 mb-5 pb-2 border-b border-white/10">
+                            <span className="bg-[var(--accent-cyan)] text-white text-xs font-bold px-2 py-0.5 rounded">2</span>
                             <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide">{t('marketingStudio.sections.productInfo')}</h3>
                         </div>
                         
@@ -336,52 +429,6 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Section 2: Media */}
-                    <div className="bg-[var(--bg-component)] p-5 rounded-xl border border-[var(--border-color)] shadow-lg">
-                        <div className="flex items-center gap-2 mb-5 pb-2 border-b border-white/10">
-                            <span className="bg-[var(--accent-cyan)] text-white text-xs font-bold px-2 py-0.5 rounded">2</span>
-                            <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wide">{t('marketingStudio.sections.media')}</h3>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-[var(--text-secondary)] mb-2 text-center uppercase">{t('marketingStudio.media.productImage')}</label>
-                                <div onClick={() => triggerUpload(productInputRef)} className="aspect-square bg-[var(--bg-interactive)] rounded-lg border-2 border-dashed border-[var(--border-color)] flex items-center justify-center cursor-pointer hover:border-[var(--accent-cyan)] overflow-hidden relative transition-all group">
-                                    <input type="file" ref={productInputRef} hidden accept="image/*" onChange={e => handleFileChange(e, 'productImage')} />
-                                    {productImagePreview ? (
-                                        <>
-                                            <img src={productImagePreview} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i className="fas fa-edit text-white"></i></div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]">
-                                            <i className="fas fa-plus text-2xl mb-2 block"></i>
-                                            {t('marketingStudio.media.noFile')}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-[var(--text-secondary)] mb-2 text-center uppercase">{t('marketingStudio.media.refImage')}</label>
-                                <div onClick={() => triggerUpload(refInputRef)} className="aspect-square bg-[var(--bg-interactive)] rounded-lg border-2 border-dashed border-[var(--border-color)] flex items-center justify-center cursor-pointer hover:border-[var(--accent-cyan)] overflow-hidden relative transition-all group">
-                                    <input type="file" ref={refInputRef} hidden accept="image/*" onChange={e => handleFileChange(e, 'referenceImage')} />
-                                    {refImagePreview ? (
-                                        <>
-                                            <img src={refImagePreview} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><i className="fas fa-edit text-white"></i></div>
-                                        </>
-                                    ) : (
-                                        <div className="text-center text-xs text-[var(--text-muted)] group-hover:text-[var(--accent-cyan)]">
-                                            <i className="fas fa-user text-2xl mb-2 block"></i>
-                                            {t('marketingStudio.media.noFile')}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                        <p className="text-[10px] text-[var(--text-muted)] mt-3 italic text-center">{t('marketingStudio.media.uploadTip')}</p>
                     </div>
 
                     {/* Section 3: AI Settings */}
@@ -498,7 +545,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                         </div>
                                     )}
                                 </div>
-                                <button onClick={generateImage} disabled={isLoading.image || !product.productImage} className="w-full btn-gradient text-white font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"><i className="fas fa-magic"></i>{t('marketingStudio.actions.generateImage')} {isVip ? '(Miễn phí)' : `(${imageCost} Credits)`}</button>
+                                <button onClick={generateImage} disabled={isLoading.image || !product.productImage} className="w-full btn-gradient text-white font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"><i className="fas fa-magic"></i>{t('marketingStudio.actions.generateImage')} {isVip ? ` (${t('common.free')})` : ` (${imageCost} Credits)`}</button>
                             </div>
                         )}
 
@@ -564,7 +611,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
                                 </div>
                                 <div className="flex gap-3">
                                     <button onClick={generateVideoScript} disabled={isLoading.video} className="flex-1 btn-secondary text-white font-bold py-3 rounded-lg shadow-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"><i className="fas fa-file-alt"></i>{t('marketingStudio.actions.generateVideoScript')}</button>
-                                    <button onClick={renderVideo} disabled={isLoading.videoRender || !result.videoScript} className="flex-1 btn-gradient text-white font-bold py-3 rounded-lg shadow-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"><i className="fas fa-video"></i>{t('marketingStudio.actions.renderVideo')} {isVip ? '(Miễn phí)' : `(${videoCost} Credits)`}</button>
+                                    <button onClick={renderVideo} disabled={isLoading.videoRender || !result.videoScript} className="flex-1 btn-gradient text-white font-bold py-3 rounded-lg shadow-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"><i className="fas fa-video"></i>{t('marketingStudio.actions.renderVideo')} {isVip ? ` (${t('common.free')})` : ` (${videoCost} Credits)`}</button>
                                 </div>
                             </div>
                         )}

@@ -4,6 +4,7 @@ export default {
         "title": "AI Music Studio",
         "subtitle": "Complete Songwriting & Visual Suite",
         "placeholder": "Your song will appear here after composition.",
+        "placeholderAnalysis": "Audio analysis results will appear here.",
         "settings": {
             "title": "Song Settings"
         },
@@ -19,8 +20,23 @@ export default {
             "compose": "Compose Song",
             "composing": "Composing...",
             "playDemo": "Play Demo (Spoken)",
-            "download": "Download"
+            "download": "Download",
+            "copyPrompt": "Copy Prompt",
+            "analyze": "Analyze Song",
+            "analyzing": "Listening & Analyzing...",
+            "uploadAudio": "Upload Audio (MP3, WAV, M4A)"
         },
+        "tabs": {
+            "compose": "Compose New",
+            "analyze": "Audio Analysis"
+        },
+        "analysis": {
+            "styleTitle": "Suno Style (Analyzed)",
+            "lyricsTitle": "Lyrics (Transcribed)",
+            "copyStyle": "Copy Style",
+            "uploadTip": "Upload a song you want to cover. AI will extract lyrics and suggest a style for Suno."
+        },
+        "sunoPromptLabel": "Music Style Prompt (For Suno)",
         "status": {
             "generatingArt": "Generating Album Art..."
         },

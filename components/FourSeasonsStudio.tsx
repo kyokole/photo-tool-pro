@@ -360,7 +360,7 @@ const FourSeasonsStudio: React.FC<FourSeasonsStudioProps> = ({ theme, setTheme, 
                     </div>
 
                      <button onClick={handleGenerate} disabled={isLoading || !sourceFile || !selectedScene} className={`w-full text-white font-bold py-3 px-4 rounded-lg shadow-md transition-all duration-300 disabled:bg-gray-400/50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${currentSeasonTheme.accentBg}`}>
-                        {isLoading ? <><Spinner size="h-5 w-5" /> <span>{t('fourSeasons.generating')}</span></> : <><i className="fas fa-magic"></i> {t(currentSeasonTheme.generateButtonKey)} {isVip ? '(Miễn phí)' : `(${cost} Credits)`}</>}
+                        {isLoading ? <><Spinner size="h-5 w-5" /> <span>{t('fourSeasons.generating')}</span></> : <><i className="fas fa-magic"></i> {t(currentSeasonTheme.generateButtonKey)} {isVip ? ` (${t('common.free')})` : ` (${cost} Credits)`}</>}
                     </button>
                 </div>
                 {/* Right Panel */}
