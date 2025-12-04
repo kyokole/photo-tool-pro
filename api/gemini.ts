@@ -11,7 +11,7 @@ const MODEL_PRO = 'gemini-3-pro-image-preview';
 const MODEL_FLASH = 'gemini-2.5-flash-image';
 const TEXT_MODEL = 'gemini-2.5-flash';
 const VEO_MODEL_FAST = 'veo-3.1-fast-generate-preview';
-const VEO_MODEL_REF = 'veo-3.1-generate-preview'; // Model supporting reference images
+const VEO_MODEL_REF = 'veo-3.1-generate-preview'; // Model supporting reference images and high quality
 const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 // --- INIT FIREBASE ADMIN ---
@@ -362,24 +362,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  
          if (action === 'generateVeoVideo') {
              const ai = getAi(false, 'video');
-             const { base64Image, prompt, characterImages } = payload;
+             const { base64Image, prompt, characterImages, settings } = payload;
              
+             // --- INTELLIGENT MODEL SELECTION ---
              let selectedModel = VEO_MODEL_FAST;
-             let config: any = { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' };
+             let resolution = settings?.resolution || '1080p';
+             let aspectRatio = settings?.aspectRatio || '16:9';
+             let isAudioEnabled = settings?.audio === true; // Capture audio flag
+
+             // Logic: 
+             // 1. 720p -> Fast Model (Veo 3.1 Flash)
+             // 2. 1080p -> Standard Model (Veo 3.1)
+             // 3. Character Sync -> Standard Model (Reference Images only supported on Standard)
              
-             // --- FEATURE: CHARACTER CONSISTENCY (Backend Logic) ---
-             let referenceImagesPayload = undefined;
+             if (resolution === '720p') {
+                 selectedModel = VEO_MODEL_FAST;
+             } else if (resolution === '1080p') {
+                 selectedModel = VEO_MODEL_REF;
+             }
              
+             // --- FIX TS ERROR: Explicitly initialize ---
+             let referenceImagesPayload: any[] | undefined = undefined;
+             
+             // --- FEATURE: CHARACTER CONSISTENCY ---
              if (characterImages && Array.isArray(characterImages) && characterImages.length > 0) {
                  console.log("Character images detected. Switching to Veo 3.1 Reference Mode.");
                  selectedModel = VEO_MODEL_REF; // Must switch to generate-preview for references
                  
-                 // Enforce strict constraints for reference mode
-                 config = {
-                     numberOfVideos: 1,
-                     resolution: '720p', // Required for ref images
-                     aspectRatio: '16:9' // Required for ref images
-                 };
+                 // Enforce strict constraints for reference mode (SDK limitation)
+                 resolution = '720p';
                  
                  // Limit to 3 reference images as per SDK limitation
                  referenceImagesPayload = characterImages.slice(0, 3).map((b64: string) => ({
@@ -391,9 +402,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  }));
              }
              
+             const config: any = {
+                 numberOfVideos: 1,
+                 resolution: resolution,
+                 aspectRatio: aspectRatio
+             };
+
+             // --- SMART AUDIO PROMPTING ---
+             let finalPrompt = prompt;
+             if (isAudioEnabled) {
+                 finalPrompt += ", high quality realistic sound effects, immersive audio atmosphere";
+             } else {
+                 finalPrompt += ", silent video, no audio";
+             }
+
              const requestPayload: any = {
                  model: selectedModel,
-                 prompt: prompt, 
+                 prompt: finalPrompt, 
                  config: config
              };
 
@@ -405,7 +430,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  requestPayload.image = { imageBytes: base64Image.split(',')[1], mimeType: 'image/png' };
              }
 
-             console.log(`Calling Veo API. Model: ${selectedModel}, RefImages: ${referenceImagesPayload?.length || 0}`);
+             console.log(`Calling Veo API. Model: ${selectedModel}, Resolution: ${resolution}, Audio: ${isAudioEnabled}`);
              
              let operation = await ai.models.generateVideos(requestPayload);
              

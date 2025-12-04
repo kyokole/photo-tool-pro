@@ -5,7 +5,7 @@ import { ThemeSelector } from './creativestudio/ThemeSelector';
 import type { MotionShot, MotionStudioSettings, MotionCharacter } from '../types';
 import { CREDIT_COSTS } from '../constants';
 import { VideoIcon, UploadIcon, PlusIcon, TrashIcon, PlayIcon, DownloadIcon } from './icons';
-import { generateVideoFromImage, callGeminiApi, enhanceVideoPrompt } from '../services/geminiService'; // Import generic call
+import { generateVideoFromImage, enhanceVideoPrompt } from '../services/creativeStudioService'; // Correct import source
 import { fileToBase64 } from '../utils/fileUtils';
 import { smartDownload } from '../utils/canvasUtils';
 
@@ -548,6 +548,7 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
     const [imagePrompt, setImagePrompt] = useState('');
     const imageInputRef = useRef<HTMLInputElement>(null);
     
+    // Correctly typed settings state
     const [settings, setSettings] = useState<MotionStudioSettings>({ aspectRatio: '16:9', resolution: '720p', audio: false });
     const [isGenerating, setIsGenerating] = useState(false);
     const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
@@ -718,7 +719,8 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
                      base64Image, 
                      finalPrompt, 
                      (msg) => console.log(msg),
-                     charImages.length > 0 ? charImages : undefined // Pass character images if found
+                     charImages.length > 0 ? charImages : undefined, // Pass character images if found
+                     settings // Pass current settings (resolution, audio)
                  );
                  
                  setShots(prev => prev.map(s => s.id === shot.id ? { ...s, status: 'done', videoUrl } : s));
