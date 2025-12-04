@@ -65,9 +65,10 @@ const CinemaModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     shots: MotionShot[];
-}> = ({ isOpen, onClose, shots }) => {
+    initialIndex?: number;
+}> = ({ isOpen, onClose, shots, initialIndex = 0 }) => {
     const { t } = useTranslation();
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const videoRef = useRef<HTMLVideoElement>(null);
     
     // Filter only completed shots
@@ -75,9 +76,13 @@ const CinemaModal: React.FC<{
 
     useEffect(() => {
         if (isOpen) {
-            setCurrentIndex(0);
+            // Find the index in the completedShots array that matches the ID of the shot at initialIndex in the full shots array
+            // This handles cases where some shots in the middle are not done yet.
+            const targetShot = shots[initialIndex];
+            const newIndex = completedShots.findIndex(s => s.id === targetShot?.id);
+            setCurrentIndex(newIndex !== -1 ? newIndex : 0);
         }
-    }, [isOpen]);
+    }, [isOpen, initialIndex, shots, completedShots]);
 
     useEffect(() => {
         if (videoRef.current && isOpen && completedShots[currentIndex]) {
@@ -98,7 +103,7 @@ const CinemaModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col items-center justify-center p-4 animate-fade-in">
-            <button onClick={onClose} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors">
+            <button onClick={onClose} className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-50">
                 <i className="fas fa-times text-3xl"></i>
             </button>
 
@@ -408,7 +413,8 @@ const ShotItem: React.FC<{
     onDelete: (id: string) => void; 
     onPromptChange: (id: string, val: string) => void;
     characters: MotionCharacter[];
-}> = ({ shot, index, onDelete, onPromptChange, characters }) => {
+    onPlay: () => void; // NEW: Added onPlay prop
+}> = ({ shot, index, onDelete, onPromptChange, characters, onPlay }) => {
     const { t, i18n } = useTranslation();
     const [isEnhancing, setIsEnhancing] = useState(false);
     
@@ -453,7 +459,7 @@ const ShotItem: React.FC<{
                      <span className={`text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm ${shot.status === 'done' ? 'bg-green-600' : 'bg-[var(--accent-blue)]'}`}>
                         #{index + 1}
                      </span>
-                     {shot.imagePreview && (
+                     {shot.imagePreview && !shot.videoUrl && (
                          <span className="text-[10px] text-[var(--accent-cyan)] font-mono uppercase tracking-wider flex items-center gap-1">
                             <i className="fas fa-image"></i> Img2Vid
                          </span>
@@ -481,16 +487,32 @@ const ShotItem: React.FC<{
              
              {/* Main Content Area */}
              <div className="flex flex-col">
-                 {/* Video Result (If Done) - Takes Priority */}
+                 {/* COMPACT ROW LAYOUT for Done state */}
                  {shot.status === 'done' && shot.videoUrl ? (
-                      <div className="relative aspect-video bg-black group/video">
-                         <video src={shot.videoUrl} controls className="w-full h-full object-contain" />
-                         <div className="absolute top-2 right-2 opacity-0 group-hover/video:opacity-100 transition-opacity flex gap-2">
-                            <button onClick={() => smartDownload(shot.videoUrl!, `shot_${index+1}.mp4`)} className="bg-black/60 text-white p-2 rounded hover:bg-black/80">
-                                <i className="fas fa-download"></i>
-                            </button>
-                         </div>
-                     </div>
+                      <div className="flex gap-4 p-3 bg-[var(--bg-deep-space)]">
+                        {/* Compact Thumbnail */}
+                        <div className="relative w-48 aspect-video bg-black rounded-lg overflow-hidden group/video flex-shrink-0 cursor-pointer border border-white/10 shadow-md" onClick={onPlay}>
+                             <video src={shot.videoUrl} className="w-full h-full object-cover" muted playsInline onMouseOver={e => e.currentTarget.play()} onMouseOut={e => e.currentTarget.pause()} />
+                             <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/video:bg-transparent transition-all">
+                                 <i className="fas fa-play text-white/80 drop-shadow-md text-2xl"></i>
+                             </div>
+                        </div>
+
+                        {/* Content Info */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                             <p className="text-xs text-[var(--text-secondary)] line-clamp-3 mb-2 font-medium leading-relaxed" title={shot.prompt}>
+                                <span className="text-[var(--accent-cyan)] font-bold">Prompt:</span> {shot.prompt}
+                             </p>
+                             <div className="flex items-center gap-2 mt-auto">
+                                 <button onClick={onPlay} className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded text-white transition-colors flex items-center gap-1.5">
+                                    <i className="fas fa-expand"></i> View
+                                 </button>
+                                 <button onClick={() => smartDownload(shot.videoUrl!, `shot_${index+1}.mp4`)} className="text-xs bg-green-600/20 hover:bg-green-600/30 text-green-400 px-3 py-1.5 rounded transition-colors flex items-center gap-1.5">
+                                    <i className="fas fa-download"></i> Download
+                                 </button>
+                             </div>
+                        </div>
+                    </div>
                  ) : (
                     // Input Area (If Pending/Processing)
                     <div className="flex flex-col p-3 gap-2">
@@ -540,13 +562,6 @@ const ShotItem: React.FC<{
                             </div>
                         )}
                     </div>
-                 )}
-                 
-                 {/* Prompt display for Done state */}
-                 {shot.status === 'done' && (
-                     <div className="p-2 text-xs text-[var(--text-secondary)] border-t border-white/5 bg-[var(--bg-deep-space)] truncate">
-                         <span className="font-bold text-[var(--accent-cyan)]">Prompt:</span> {shot.prompt}
-                     </div>
                  )}
              </div>
         </div>
@@ -774,6 +789,7 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
     const [characters, setCharacters] = useState<MotionCharacter[]>([]);
     const [analyzedScenes, setAnalyzedScenes] = useState<AnalyzedScene[]>([]);
     const [isCinemaOpen, setIsCinemaOpen] = useState(false);
+    const [cinemaStartIndex, setCinemaStartIndex] = useState(0);
     
     // Text Mode State
     const [bulkInput, setBulkInput] = useState('');
@@ -1161,7 +1177,7 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
                                 <div className="flex gap-2">
                                      {shots.some(s => s.status === 'done') && (
                                         <>
-                                            <button onClick={() => setIsCinemaOpen(true)} className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-500/10 transition-colors">
+                                            <button onClick={() => { setIsCinemaOpen(true); setCinemaStartIndex(0); }} className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-500/10 transition-colors">
                                                 <i className="fas fa-play-circle"></i> {t('motionStudio.playFilm')}
                                             </button>
                                             <button onClick={handleDownloadZip} className="text-xs text-green-400 hover:text-green-300 font-bold flex items-center gap-1 px-2 py-1 rounded hover:bg-green-500/10 transition-colors">
@@ -1205,6 +1221,7 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
                                             onDelete={handleDeleteShot} 
                                             onPromptChange={handlePromptChange}
                                             characters={characters}
+                                            onPlay={() => { setIsCinemaOpen(true); setCinemaStartIndex(idx); }}
                                         />
                                     ))}
                                 </div>
@@ -1320,6 +1337,7 @@ const MotionStudio: React.FC<MotionStudioProps> = ({ theme, setTheme, isVip }) =
                 isOpen={isCinemaOpen} 
                 onClose={() => setIsCinemaOpen(false)} 
                 shots={shots} 
+                initialIndex={cinemaStartIndex}
             />
         </div>
     );
