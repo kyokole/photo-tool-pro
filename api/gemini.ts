@@ -619,15 +619,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateSongContent': {
                 const ai = getAi(false);
                 const { topic, genre, mood, language } = payload;
+                const langFull = language === 'vi' ? 'Vietnamese' : 'English';
+
                 const prompt = `ACT AS A PROFESSIONAL SONGWRITER. 
-                Input: Topic: "${topic}", Genre: "${genre}", Mood: "${mood}", Language: "${language}".
+                Input: Topic: "${topic}", Genre: "${genre}", Mood: "${mood}", Language: "${langFull}".
                 
                 TASK:
-                1. Write a song title.
-                2. Write full lyrics with structure (Verse 1, Chorus, Verse 2, Chorus, Bridge, Outro).
+                1. Write a song title (in ${langFull}).
+                2. Write full lyrics with structure (Verse 1, Chorus, Verse 2, Chorus, Bridge, Outro) in ${langFull}.
                 3. Write chords for guitar/piano.
-                4. Write a short visual description for Album Art.
-                5. CRITICAL: Generate a "Music Style Prompt" optimized for Suno AI. 
+                4. Write a short visual description for Album Art. CRITICAL: This description MUST be in ${langFull} language so the user can understand it.
+                5. CRITICAL: Generate a "Music Style Prompt" optimized for Suno AI (Keep this style prompt in English for better AI understanding). 
                    Format: comma-separated tags describing genre, mood, instruments, tempo, and vocals.
                    Example: "Upbeat Pop, Female Vocals, 120bpm, Catchy Hook, Piano and Synth".
                    Ensure the style matches the requested "${genre}" and "${mood}".
