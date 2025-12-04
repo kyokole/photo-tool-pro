@@ -461,6 +461,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              const ai = getAi(false, 'video');
              const { base64Image, prompt, characterImages, settings } = payload;
              
+             // DEFAULT: Fast model
              let selectedModel = VEO_MODEL_FAST;
              let resolution = settings?.resolution || '720p';
              let aspectRatio = settings?.aspectRatio || '16:9';
@@ -472,11 +473,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  selectedModel = VEO_MODEL_REF;
              }
              
+             // FORCE MODEL SELECTION: If input is an image (Image-to-Video) or has characters (Character Sync),
+             // use VEO_MODEL_REF (generate-preview) because it reliably supports image input.
+             // Fast model support for image input varies by region/version.
+             if (base64Image || (characterImages && characterImages.length > 0)) {
+                 selectedModel = VEO_MODEL_REF;
+             }
+
              let referenceImagesPayload: any[] | undefined = undefined;
              
              if (characterImages && Array.isArray(characterImages) && characterImages.length > 0) {
                  selectedModel = VEO_MODEL_REF; 
-                 resolution = '720p';
                  referenceImagesPayload = characterImages.slice(0, 3).map((b64: string) => ({
                      image: { imageBytes: b64, mimeType: 'image/png' },
                      referenceType: 'ASSET',
@@ -505,7 +512,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              if (referenceImagesPayload) {
                  requestPayload.config.referenceImages = referenceImagesPayload;
              } else if (base64Image) {
-                 requestPayload.image = { imageBytes: base64Image.split(',')[1], mimeType: 'image/png' };
+                 // BUGFIX: Detect mime type from Data URI or default to jpeg if raw base64 provided.
+                 // Frontend typically sends full data URI now, or if it sends raw base64, we should verify.
+                 // Assuming frontend sends "data:image/jpeg;base64,..."
+                 const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+                 const mimeType = mimeMatch ? mimeMatch[1] : 'image/png'; // Default to png if regex fails, but check payload
+                 const rawBase64 = base64Image.includes('base64,') ? base64Image.split('base64,')[1] : base64Image;
+                 
+                 requestPayload.image = { imageBytes: rawBase64, mimeType: mimeType };
              }
              
              let operation = await ai.models.generateVideos(requestPayload);
