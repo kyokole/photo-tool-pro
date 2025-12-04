@@ -308,15 +308,29 @@ export const editOutfitOnImage = async (base64Image: string, mimeType: string, n
 };
 
 export const generateVideoFromImage = async (
-    base64Image: string,
+    base64Image: string | null, // Allow null for text-to-video
     prompt: string,
-    setProgress: (message: string) => void
+    setProgress: (message: string) => void,
+    characterImages?: string[] // NEW: Optional array of base64 images for character reference
 ): Promise<string> => {
     setProgress('Đang kết nối máy chủ Veo (Video Gen)...');
-    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', { base64Image, prompt }, CREDIT_COSTS.VIDEO_GENERATION);
+    const payload: any = { prompt };
+    if (base64Image) {
+        payload.base64Image = base64Image;
+    }
+    if (characterImages && characterImages.length > 0) {
+        payload.characterImages = characterImages;
+    }
+    
+    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', payload, CREDIT_COSTS.VIDEO_GENERATION);
     if (error) throw new Error(error);
     setProgress('Video đã tạo xong! Đang tải...'); 
     return videoUrl;
+};
+
+export const enhanceVideoPrompt = async (prompt: string): Promise<string> => {
+    const { enhancedPrompt } = await callGeminiApi('enhanceVideoPrompt', { prompt }, 0); // Free tool
+    return enhancedPrompt;
 };
 
 // --- CREATIVE STUDIO GEN ---

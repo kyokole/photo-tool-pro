@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Settings, AppMode, User } from '../types';
-import { PassportIcon, BriefcaseIcon, SchoolIcon, IdPhotoIcon, UndoIcon, GuideIcon, SparklesIcon } from './icons';
+import { PassportIcon, BriefcaseIcon, SchoolIcon, IdPhotoIcon, UndoIcon, GuideIcon, SparklesIcon, VideoIcon } from './icons';
 import SubscriptionCountdown from './SubscriptionCountdown';
 
 const getDisplayName = (username: string | undefined): string => {
@@ -58,7 +58,8 @@ interface SidebarProps {
   onArtStyleStudioClick: () => void;
   onVoiceStudioClick: () => void;
   onMusicStudioClick: () => void;
-  onMagicEraserClick: () => void; // New prop
+  onMagicEraserClick: () => void; 
+  onMotionStudioClick: () => void; // New
   onAdminPanelClick: () => void;
   onPresetSelect: (settings: Partial<Settings>) => void;
   onUndo: () => void;
@@ -91,6 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onVoiceStudioClick,
     onMusicStudioClick,
     onMagicEraserClick,
+    onMotionStudioClick,
     onAdminPanelClick,
     onPresetSelect, 
     onUndo, 
@@ -334,6 +336,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           >
             <div className="min-h-0"> {/* Wrapper for grid animation */}
               <nav className="space-y-1 pb-2">
+                <button onClick={onMotionStudioClick} className={getToolButtonClasses('motion_studio')}>
+                    <VideoIcon />
+                    <span>{t('tools.motionStudio')}</span>
+                </button>
                 <button onClick={onMagicEraserClick} className={getToolButtonClasses('magic_eraser')}>
                     <div className="w-5 h-5"><i className="fas fa-eraser"></i></div>
                     <span>{t('tools.magicEraser')}</span>

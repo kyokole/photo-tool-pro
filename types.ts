@@ -2,7 +2,7 @@
 // FIX: Import React to provide the 'React' namespace for React.ReactNode.
 import React from 'react';
 
-export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio' | 'music_studio' | 'magic_eraser';
+export type AppMode = 'id_photo' | 'headshot' | 'restoration' | 'admin' | 'fashion_studio' | 'creative_studio' | 'prompt_analyzer' | 'football_studio' | 'four_seasons_studio' | 'beauty_studio' | 'family_studio' | 'marketing_studio' | 'art_style_studio' | 'voice_studio' | 'music_studio' | 'magic_eraser' | 'motion_studio';
 export type AspectRatio = '2x3' | '3x4' | '4x6' | '5x5';
 export type FashionAspectRatio = '1:1' | '4:3' | '9:16' | '16:9';
 export type OutfitMode = 'preset' | 'custom' | 'upload';
@@ -414,7 +414,7 @@ export interface DebugInfo {
 export interface FamilyStudioResult {
     id: string;
     imageUrl: string;
-    similarityScores?: { memberId: string, score: number }[];
+    similarityScores?: { memberId: string, score: number }[],
     debug?: DebugInfo;
 }
 
@@ -542,6 +542,32 @@ export interface MusicResult {
     song: SongStructure;
     coverArtUrl: string | null;
     demoAudioUrl: string | null; // Base64 audio from TTS reading lyrics
+}
+
+// --- MOTION STUDIO TYPES (NEW) ---
+export interface MotionCharacter {
+    id: string;
+    name: string;
+    image: File;
+    previewUrl: string;
+    description?: string; // Added description field
+}
+
+export interface MotionShot {
+    id: string;
+    prompt: string;
+    image?: File | null; 
+    imagePreview?: string;
+    status: 'pending' | 'processing' | 'done' | 'error';
+    videoUrl?: string;
+    duration?: number;
+    characters?: string[]; // List of character IDs used in this shot
+}
+
+export interface MotionStudioSettings {
+    aspectRatio: '16:9' | '9:16';
+    resolution: '720p' | '1080p';
+    audio: boolean;
 }
 
 // LayoutResult moved here to prevent circular dependency

@@ -10,7 +10,8 @@ import sharp from 'sharp';
 const MODEL_PRO = 'gemini-3-pro-image-preview';
 const MODEL_FLASH = 'gemini-2.5-flash-image';
 const TEXT_MODEL = 'gemini-2.5-flash';
-const VEO_MODEL = 'veo-3.1-fast-generate-preview';
+const VEO_MODEL_FAST = 'veo-3.1-fast-generate-preview';
+const VEO_MODEL_REF = 'veo-3.1-generate-preview'; // Model supporting reference images
 const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 // --- INIT FIREBASE ADMIN ---
@@ -51,7 +52,7 @@ const processGoogleError = (error: any): string => {
                 if (msg.includes('inline_data')) return "Dữ liệu ảnh không hợp lệ hoặc bị lỗi định dạng.";
                 if (msg.includes('safety')) return "Ảnh bị chặn bởi bộ lọc an toàn của Google.";
                 if (msg.includes('quota') || msg.includes('429')) return "Hệ thống đang bận (Quota Exceeded).";
-                if (msg.includes('InvalidArgument') || msg.includes('400')) return "Tham số không hợp lệ với mô hình này.";
+                if (msg.includes('InvalidArgument') || msg.includes('400')) return `Tham số không hợp lệ: ${msg}`;
                 return `Lỗi từ AI: ${msg}`;
             }
         }
@@ -140,7 +141,12 @@ const addWatermark = async (imageBuffer: Buffer): Promise<Buffer> => {
 
 const resolveImageSize = (payload: any, isVip: boolean): string => {
     const checkHQ = (obj: any) => obj?.highQuality === true || obj?.quality === 'high' || obj?.quality === 'ultra' || obj?.quality === '4K';
+    const checkPrompt = (p: string) => typeof p === 'string' && (p.includes('4K') || p.includes('8K') || p.includes('High Quality'));
+    
     if (checkHQ(payload) || checkHQ(payload.settings) || checkHQ(payload.options) || checkHQ(payload.formData) || checkHQ(payload.style) || checkHQ(payload.tool)) {
+        return '4K';
+    }
+    if (payload.prompt && checkPrompt(payload.prompt)) {
         return '4K';
     }
     return '1K';
@@ -154,20 +160,30 @@ const selectModel = (imageSize: string): string => {
 const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, count: number = 1) => {
     const config: any = {};
     if (aspectRatio) config.aspectRatio = aspectRatio;
-    if (model === MODEL_PRO) config.imageSize = imageSize;
-    if (model === MODEL_FLASH && count > 1) config.numberOfImages = count;
+    if (model === MODEL_PRO) {
+        config.imageSize = imageSize;
+    }
+    if (model === MODEL_FLASH && count > 1) {
+        config.numberOfImages = count;
+    }
     return config;
 };
 
-const getAi = (useBackup: boolean = false) => {
+const getAi = (useBackup: boolean = false, modelType: 'image' | 'video' = 'image') => {
     let apiKey;
-    if (useBackup) {
-        apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY;
+    
+    if (modelType === 'video') {
+        apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
     } else {
-        apiKey = process.env.GEMINI_API_KEY;
+        if (useBackup) {
+            apiKey = process.env.VEO_API_KEY || process.env.GEMINI_API_KEY;
+        } else {
+            apiKey = process.env.GEMINI_API_KEY;
+        }
+        if (!apiKey) apiKey = process.env.API_KEY;
     }
-    if (!apiKey) apiKey = process.env.API_KEY;
-    if (!apiKey) throw new Error("Server API Key missing.");
+    
+    if (!apiKey) throw new Error(`Server API Key missing for ${modelType}.`);
     return new GoogleGenAI({ apiKey });
 };
 
@@ -188,13 +204,10 @@ const decodeEntities = (str: string) => {
     return decoded;
 };
 
-// NEW: Advanced Recursive Finder with Key Context & Scoring
-// This is the new intelligent core for video extraction.
 const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string }[] = []) => {
     if (!obj) return results;
     
     if (typeof obj === 'string') {
-        // Direct string check if array traversal hits a string
         return results;
     }
     
@@ -215,7 +228,6 @@ const findVideoCandidatesInJson = (obj: any, results: { key: string, url: string
                     (val.includes('openai-assets') && val.includes('video')) ||
                     val.includes('.mp4')) {
                     
-                    // Add if it looks like a URL
                     if (val.startsWith('http')) {
                         results.push({ key: key, url: val });
                     }
@@ -322,16 +334,80 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              if (!audioData) throw new Error("Không tạo được âm thanh.");
              return res.json({ audioData });
          }
+         
+         if (action === 'enhanceVideoPrompt') {
+            const ai = getAi(false); // Use standard key
+            const { prompt } = payload;
+            
+            const systemInstruction = `You are a professional film director and cinematographer.
+            Rewrite the user's video prompt into a highly detailed, cinematic description suitable for AI video generation (like Veo or Sora).
+            
+            Focus on:
+            1. Camera Angle (Wide, Close-up, Drone, Tracking shot).
+            2. Lighting (Cinematic, Golden Hour, Neon, Moody).
+            3. Movement (Slow motion, Hyperlapse, Smooth).
+            4. Details (Textures, atmosphere, weather).
+            
+            Keep it concise but descriptive. Do not add introductory text like "Here is the prompt". Just return the refined prompt.
+            
+            User Prompt: "${prompt}"`;
+            
+            const response = await ai.models.generateContent({
+                model: TEXT_MODEL,
+                contents: { parts: [{ text: systemInstruction }] }
+            });
+            
+            return res.json({ enhancedPrompt: response.text });
+         }
  
          if (action === 'generateVeoVideo') {
-             const ai = getAi(true);
-             const { base64Image, prompt } = payload;
-             let operation = await ai.models.generateVideos({
-                 model: VEO_MODEL,
+             const ai = getAi(false, 'video');
+             const { base64Image, prompt, characterImages } = payload;
+             
+             let selectedModel = VEO_MODEL_FAST;
+             let config: any = { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' };
+             
+             // --- FEATURE: CHARACTER CONSISTENCY (Backend Logic) ---
+             let referenceImagesPayload = undefined;
+             
+             if (characterImages && Array.isArray(characterImages) && characterImages.length > 0) {
+                 console.log("Character images detected. Switching to Veo 3.1 Reference Mode.");
+                 selectedModel = VEO_MODEL_REF; // Must switch to generate-preview for references
+                 
+                 // Enforce strict constraints for reference mode
+                 config = {
+                     numberOfVideos: 1,
+                     resolution: '720p', // Required for ref images
+                     aspectRatio: '16:9' // Required for ref images
+                 };
+                 
+                 // Limit to 3 reference images as per SDK limitation
+                 referenceImagesPayload = characterImages.slice(0, 3).map((b64: string) => ({
+                     image: {
+                         imageBytes: b64,
+                         mimeType: 'image/png',
+                     },
+                     referenceType: 'ASSET', // VideoGenerationReferenceType.ASSET
+                 }));
+             }
+             
+             const requestPayload: any = {
+                 model: selectedModel,
                  prompt: prompt, 
-                 image: { imageBytes: base64Image.split(',')[1], mimeType: 'image/png' },
-                 config: { numberOfVideos: 1, resolution: '1080p', aspectRatio: '16:9' }
-             });
+                 config: config
+             };
+
+             if (referenceImagesPayload) {
+                 requestPayload.config.referenceImages = referenceImagesPayload;
+             } else if (base64Image) {
+                 // Standard Image-to-Video (Start Frame)
+                 // Do not use if using Reference Images to avoid conflict, unless specifically supported
+                 requestPayload.image = { imageBytes: base64Image.split(',')[1], mimeType: 'image/png' };
+             }
+
+             console.log(`Calling Veo API. Model: ${selectedModel}, RefImages: ${referenceImagesPayload?.length || 0}`);
+             
+             let operation = await ai.models.generateVideos(requestPayload);
              
              let retries = 0;
              while (!operation.done && retries < 60) {
@@ -412,7 +488,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                        const geminiRes = await ai.models.generateContent({
                            model: model,
                            contents: { parts: [imagePart, { text: prompt }] },
-                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, undefined, 4) }
+                           // FIX: Count forced to 1 to prevent error/waste. Frontend loops 4 times.
+                           config: { responseModalities: [Modality.IMAGE], imageConfig: getImageConfig(model, imageSize, undefined, 1) }
                        });
                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                        return res.json({ imageData });
@@ -681,13 +758,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let resultVideoUrl = "";
 
                 if (url) {
-                    // 1. Direct File Match
                     if (url.match(/\.(mp4|mov)$/i)) {
                         return res.json({ videoUrl: url });
                     }
 
                     try {
-                        // 2. Deep Source Extraction
                         const response = await fetch(url, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -697,50 +772,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         let html = await response.text();
                         html = decodeEntities(html);
 
-                        // A. Attempt JSON Hydration Parsing
                         const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.+?)<\/script>/);
                         if (jsonMatch && jsonMatch[1]) {
                             try {
                                 const json = JSON.parse(jsonMatch[1]);
-                                
-                                // Use new recursive finder that captures keys
                                 const candidates = findVideoCandidatesInJson(json);
                                 
-                                // INTELLIGENT SCORING
                                 const scoredCandidates = candidates.map(c => {
                                     let score = 0;
                                     const k = c.key.toLowerCase();
                                     const v = c.url.toLowerCase();
-
-                                    // Positive Keywords
                                     if (k.includes('download')) score += 20;
                                     if (k.includes('original')) score += 15;
                                     if (k.includes('source')) score += 10;
                                     if (k.includes('file') && !k.includes('preview')) score += 5;
                                     if (v.includes('1080p')) score += 5;
-                                    
-                                    // Negative Keywords (Watermark, Preview)
                                     if (k.includes('preview')) score -= 10;
                                     if (k.includes('thumbnail')) score -= 10;
                                     if (k.includes('poster')) score -= 10;
                                     if (k.includes('watermark')) score -= 20;
                                     if (v.includes('watermark')) score -= 20;
                                     if (v.includes('preview')) score -= 5;
-                                    
                                     return { ...c, score };
                                 });
 
-                                // Sort by score descending
                                 scoredCandidates.sort((a, b) => b.score - a.score);
                                 
-                                // Pick best candidate with decent score
                                 if (scoredCandidates.length > 0 && scoredCandidates[0].score > -15) {
                                     resultVideoUrl = decodeEntities(scoredCandidates[0].url);
                                 }
                             } catch (e) { console.error("JSON Parse Error", e); }
                         }
 
-                        // B. Fallback Regex (Legacy)
                         if (!resultVideoUrl) {
                              const regexes = [
                                 /"download_url"\s*:\s*"([^"]+)"/i,
@@ -756,14 +819,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                              }
                         }
                         
-                        if (!resultVideoUrl) resultVideoUrl = url; // Ultimate Fallback
+                        if (!resultVideoUrl) resultVideoUrl = url;
 
                     } catch (err) {
                         console.error("Extraction Error:", err);
                         resultVideoUrl = url;
                     }
                 } 
-                
                 return res.json({ videoUrl: resultVideoUrl }); 
             }
             case 'detectOutfit':

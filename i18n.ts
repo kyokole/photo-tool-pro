@@ -29,7 +29,8 @@ import viMarketingStudio from './locales/vi/marketingStudio.js';
 import viArtStyleStudio from './locales/vi/artStyleStudio.js';
 import viVoiceStudio from './locales/vi/voiceStudio.js';
 import viMusicStudio from './locales/vi/musicStudio.js';
-import viMagicEraser from './locales/vi/magicEraser.js'; // Added
+import viMagicEraser from './locales/vi/magicEraser.js'; 
+import viMotionStudio from './locales/vi/motionStudio.js'; // Added
 
 // English imports
 import enActionBar from './locales/en/actionBar.js';
@@ -57,7 +58,8 @@ import enMarketingStudio from './locales/en/marketingStudio.js';
 import enArtStyleStudio from './locales/en/artStyleStudio.js';
 import enVoiceStudio from './locales/en/voiceStudio.js';
 import enMusicStudio from './locales/en/musicStudio.js';
-import enMagicEraser from './locales/en/magicEraser.js'; // Added
+import enMagicEraser from './locales/en/magicEraser.js';
+import enMotionStudio from './locales/en/motionStudio.js'; // Added
 
 
 const resources = {
@@ -88,7 +90,8 @@ const resources = {
       ...enArtStyleStudio,
       ...enVoiceStudio,
       ...enMusicStudio,
-      ...enMagicEraser // Added
+      ...enMagicEraser,
+      ...enMotionStudio // Added
     }
   },
   vi: {
@@ -118,7 +121,8 @@ const resources = {
       ...viArtStyleStudio,
       ...viVoiceStudio,
       ...viMusicStudio,
-      ...viMagicEraser // Added
+      ...viMagicEraser,
+      ...viMotionStudio // Added
     }
   }
 };

@@ -30,7 +30,8 @@ export default {
     "familyStudio": "Ghép Ảnh Gia Đình",
     "voiceStudio": "Studio Giọng Nói AI",
     "musicStudio": "Studio Âm Nhạc AI",
-    "magicEraser": "Studio Tẩy Xóa Đa Năng"
+    "magicEraser": "Studio Tẩy Xóa Đa Năng",
+    "motionStudio": "AI Motion Studio" 
   },
   "utilities": {
     "guide": "Hướng dẫn sử dụng",

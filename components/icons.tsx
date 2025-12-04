@@ -90,3 +90,5 @@ export const UploadIcon: React.FC<{ className?: string }> = ({ className = "w-6 
 );
 
 export const MusicIcon: React.FC = () => <IconWrapper><i className="fas fa-music"></i></IconWrapper>;
+
+export const VideoIcon: React.FC = () => <IconWrapper><i className="fas fa-video"></i></IconWrapper>;
