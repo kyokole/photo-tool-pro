@@ -56,7 +56,8 @@ export default {
             "copyPrompt": "Copy Prompt",
             "useShot": "Use this Shot",
             "downloadImage": "Download Image",
-            "empty": "Upload a video to start analysis."
+            "empty": "Upload a video to start analysis.",
+            "changeActor": "Swap Character"
         },
         "settings": {
             "title": "Film Settings",

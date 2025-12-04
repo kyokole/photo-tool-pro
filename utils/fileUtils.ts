@@ -8,14 +8,24 @@ const MAX_DIMENSION = 1024;
 // New resizing utility
 const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }> => {
   return new Promise((resolve, reject) => {
+    // SAFETY CHECK 1: Explicitly skip non-images immediately
+    if (!file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ dataUrl: reader.result as string, mimeType: file.type });
+        reader.onerror = (err) => reject(new Error(`File reader error: ${String(err)}`));
+        reader.readAsDataURL(file);
+        return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = (event) => {
       if (!event.target?.result) {
         return reject(new Error('File could not be read.'));
       }
+      const originalDataUrl = event.target.result as string;
       const img = new Image();
-      img.src = event.target.result as string;
+      
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
@@ -45,7 +55,15 @@ const resizeImage = (file: File): Promise<{ dataUrl: string, mimeType: string }>
         const dataUrl = canvas.toDataURL(mimeType, 0.7); 
         resolve({ dataUrl, mimeType });
       };
-      img.onerror = (err) => reject(new Error(`Image load error: ${String(err)}`));
+
+      // SAFETY CHECK 2: Fallback for corrupted images or mislabeled files
+      // Instead of rejecting, we return the original file data so the process can continue
+      img.onerror = () => {
+          console.warn("resizeImage: Failed to load as image (or file is not an image). Using original file data.");
+          resolve({ dataUrl: originalDataUrl, mimeType: file.type });
+      };
+
+      img.src = originalDataUrl;
     };
     reader.onerror = (err) => reject(new Error(`File reader error: ${String(err)}`));
   });

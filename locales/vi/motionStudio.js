@@ -56,7 +56,8 @@ export default {
             "copyPrompt": "Sao chép Prompt",
             "useShot": "Dùng cảnh này",
             "downloadImage": "Tải ảnh",
-            "empty": "Tải video lên để bắt đầu phân tích."
+            "empty": "Tải video lên để bắt đầu phân tích.",
+            "changeActor": "Thay diễn viên"
         },
         "settings": {
             "title": "Thiết lập Phim",
