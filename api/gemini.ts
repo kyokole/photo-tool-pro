@@ -541,24 +541,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const parts: Part[] = [];
                 if (imagePart) parts.push(imagePart);
                 
-                const prompt = `Act as a professional Copywriter. Write a compelling Facebook/Instagram Ad Copy for the product.
-                Product: ${product.brand} ${product.name}.
-                Category: ${product.category}.
-                Features: ${product.features}.
-                Pros: ${product.pros}.
+                const prompt = `Act as a professional Marketing Copywriter. Write a HIGH-CONVERSION Ad Copy for Facebook/Instagram.
                 
-                MANDATORY REQUIREMENTS:
-                1. Language: ${lang}.
-                2. Include the Price: ${product.price} (Must appear clearly).
-                3. Include the Merchant/Place to Buy: ${product.merchant} (Call to Action).
-                4. Tone: Enthusiastic, Engaging, Sales-oriented.
-                5. Structure: Hook -> Pain Points -> Solution (Product) -> Benefits -> Price & Offer -> Call to Action.
-                6. Use emojis relevant to the product.`;
+                [Product Information]
+                Product: ${product.brand} ${product.name}
+                Category: ${product.category}
+                Features: ${product.features}
+                Pros: ${product.pros}
+                Price: ${product.price}
+                Where to buy: ${product.merchant}
+                
+                [Requirements]
+                1. Language: ${lang} (Natural, Engaging, Viral style).
+                2. Structure:
+                   - 🎣 **HOOK**: Grab attention immediately (Question, Shocking fact, or Benefit).
+                   - 😩 **PAIN POINT**: What problem does the user have?
+                   - 💡 **SOLUTION**: Introduce the product as the hero.
+                   - ✅ **BENEFITS**: Bullet points of key features (Use emojis).
+                   - 💰 **OFFER**: Mention price/promo clearly.
+                   - 👇 **CTA**: Strong Call to Action.
+                3. Tone: Enthusiastic, Trustworthy, FOMO (Fear Of Missing Out).
+                4. Formatting: Use bolding, emojis, and clear line breaks for readability.`;
                 
                 parts.push({ text: prompt });
                 
                 const geminiRes = await ai.models.generateContent({
-                   model: TEXT_MODEL, // Flash is sufficient for text
+                   model: TEXT_MODEL, 
                    contents: { parts }
                 });
                 
@@ -572,18 +580,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const parts: Part[] = [];
                 if (imagePart) parts.push(imagePart);
                 
-                const prompt = `Act as a TikTok/Reels Video Director. Write a viral short video script (15-30s).
-                Product: ${product.brand} ${product.name}.
-                Price: ${product.price}.
-                Tone: ${tone}.
-                Angle/Topic: ${angle}.
+                const prompt = `Act as a professional TV Commercial (TVC) Director and Scriptwriter.
+                Write a Viral Video Script (TikTok/Reels format, 30-60s).
                 
-                REQUIREMENTS:
+                [Product Info]
+                - Product: ${product.brand} ${product.name}
+                - Key Selling Point: ${angle}
+                - Tone: ${tone}
+                
+                [Output Format - Strict Markdown Table]
+                Create a table with these columns:
+                | Time | Visual (Scene Description) | Audio (Voiceover/Dialogue) | Director Notes (Camera/Lighting) |
+                
+                [Script Requirements]
                 1. Language: ${lang}.
-                2. Format: Table with [Time] | [Visual] | [Audio/Voiceover].
-                3. The script MUST be based on the visual appearance of the product (if image provided).
-                4. Include a strong Hook in the first 3 seconds.
-                5. Mention Price and Where to Buy (${product.merchant}) at the end.`;
+                2. **Visuals**: Be highly descriptive (e.g., "Close-up shot of product texture", "Fast transition", "Split screen").
+                3. **Audio**: Catchy, conversational, matches the tone.
+                4. **Director Notes**: Add technical cues like "Zoom in", "Pan left", "Soft lighting", "Upbeat music starts".
+                5. **Structure**:
+                   - 0-3s: Strong Visual Hook (Stop the scroll).
+                   - 3-15s: Problem/Context & Product Reveal.
+                   - 15-45s: Demo/Benefits/Testimonial vibe.
+                   - 45-60s: Strong CTA (Price: ${product.price}, Buy at: ${product.merchant}).
+                
+                Make it look like a professional production document.`;
                 
                 parts.push({ text: prompt });
                 

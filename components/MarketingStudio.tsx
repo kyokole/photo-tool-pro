@@ -207,12 +207,20 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
         setGeneratedPrompt(t('marketingStudio.actions.generating')); // Show loading state in prompt box
         
         try {
+            // Resize uploaded images for stability
             const prodImg = await fileToBase64(product.productImage);
-            const refImg = product.referenceImage ? await fileToBase64(product.referenceImage) : null;
+            const resizedProdBase64 = await resizeBase64(prodImg.base64, 800);
+
+            let refImgData = null;
+            if (product.referenceImage) {
+                const refImg = await fileToBase64(product.referenceImage);
+                const resizedRefBase64 = await resizeBase64(refImg.base64, 800);
+                refImgData = { inlineData: { data: resizedRefBase64, mimeType: 'image/jpeg' } };
+            }
             
             const { imageData: url, prompt } = await generateMarketingImage(
-                { inlineData: { data: prodImg.base64, mimeType: prodImg.mimeType } },
-                refImg ? { inlineData: { data: refImg.base64, mimeType: refImg.mimeType } } : null,
+                { inlineData: { data: resizedProdBase64, mimeType: 'image/jpeg' } },
+                refImgData,
                 { name: product.name, brand: product.brand, category: product.category, features: product.features },
                 settings
             );
@@ -255,9 +263,12 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
         setError(null);
 
         try {
+            // OPTIMIZATION: Resize heavy images before video generation
+            const resizedBase64 = await resizeBase64(imageData.base64, 512);
+
             // CRITICAL: Use the generated video script as the prompt
             const videoUrl = await generateMarketingVideo(
-                `data:${imageData.mimeType};base64,${imageData.base64}`, 
+                `data:image/jpeg;base64,${resizedBase64}`, 
                 result.videoScript, 
                 (msg) => console.log(msg)
             );
