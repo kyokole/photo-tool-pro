@@ -532,6 +532,70 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedModel = selectModel(imageSize);
 
         switch (action) {
+            // --- NEW: Marketing Text Handlers ---
+            case 'generateMarketingAdCopy': {
+                const ai = getAi(false);
+                const { product, imagePart, language } = payload;
+                const lang = language === 'vi' ? 'Vietnamese' : 'English';
+                
+                const parts: Part[] = [];
+                if (imagePart) parts.push(imagePart);
+                
+                const prompt = `Act as a professional Copywriter. Write a compelling Facebook/Instagram Ad Copy for the product.
+                Product: ${product.brand} ${product.name}.
+                Category: ${product.category}.
+                Features: ${product.features}.
+                Pros: ${product.pros}.
+                
+                MANDATORY REQUIREMENTS:
+                1. Language: ${lang}.
+                2. Include the Price: ${product.price} (Must appear clearly).
+                3. Include the Merchant/Place to Buy: ${product.merchant} (Call to Action).
+                4. Tone: Enthusiastic, Engaging, Sales-oriented.
+                5. Structure: Hook -> Pain Points -> Solution (Product) -> Benefits -> Price & Offer -> Call to Action.
+                6. Use emojis relevant to the product.`;
+                
+                parts.push({ text: prompt });
+                
+                const geminiRes = await ai.models.generateContent({
+                   model: TEXT_MODEL, // Flash is sufficient for text
+                   contents: { parts }
+                });
+                
+                return res.json({ text: geminiRes.text });
+            }
+            case 'generateMarketingVideoScript': {
+                const ai = getAi(false);
+                const { product, tone, angle, imagePart, language } = payload;
+                const lang = language === 'vi' ? 'Vietnamese' : 'English';
+                
+                const parts: Part[] = [];
+                if (imagePart) parts.push(imagePart);
+                
+                const prompt = `Act as a TikTok/Reels Video Director. Write a viral short video script (15-30s).
+                Product: ${product.brand} ${product.name}.
+                Price: ${product.price}.
+                Tone: ${tone}.
+                Angle/Topic: ${angle}.
+                
+                REQUIREMENTS:
+                1. Language: ${lang}.
+                2. Format: Table with [Time] | [Visual] | [Audio/Voiceover].
+                3. The script MUST be based on the visual appearance of the product (if image provided).
+                4. Include a strong Hook in the first 3 seconds.
+                5. Mention Price and Where to Buy (${product.merchant}) at the end.`;
+                
+                parts.push({ text: prompt });
+                
+                const geminiRes = await ai.models.generateContent({
+                   model: TEXT_MODEL,
+                   contents: { parts }
+                });
+                
+                return res.json({ text: geminiRes.text });
+            }
+            // ------------------------------------
+
             case 'generateSongContent': {
                 const ai = getAi(false);
                 const { topic, genre, mood, language } = payload;
@@ -788,7 +852,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                    const prompt = `[TASK] Marketing Image. Product: ${productDetails.brand} ${productDetails.name}. Template: ${settings.templateId}. Tone: ${settings.tone}. Features: ${productDetails.features}. [QUALITY] 8K, Advertising.`;
                    parts.push({ text: prompt });
                    
-                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                   // FORCE MODEL PRO (Banana Pro) for Marketing Images as requested
+                   const marketingModel = MODEL_PRO;
+
+                   return await generateWithModelFallback(marketingModel, MODEL_FLASH, async (model) => {
                        const geminiRes = await ai.models.generateContent({
                            model: model,
                            contents: { parts },

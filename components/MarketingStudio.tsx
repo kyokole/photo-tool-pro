@@ -86,10 +86,13 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
     const getActiveImageBase64 = async (): Promise<{ base64: string, mimeType: string } | null> => {
         // Priority: Generated Image > Uploaded Product Image
         if (result.generatedImageUrl) {
-            return {
-                base64: result.generatedImageUrl.split(',')[1],
-                mimeType: 'image/png'
-            };
+            const base64 = result.generatedImageUrl.split(',')[1];
+            if (base64) {
+                return {
+                    base64: base64,
+                    mimeType: 'image/png'
+                };
+            }
         }
         if (product.productImage) {
             return await fileToBase64(product.productImage);
@@ -236,7 +239,9 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
     const renderVideo = async () => {
         const imageData = await getActiveImageBase64();
         if (!imageData) return alert(t('errors.uploadRequired'));
-        if (!result.videoScript) return alert("Vui lòng tạo kịch bản video trước.");
+        
+        // CRITICAL FIX: The video script must be generated first
+        if (!result.videoScript) return alert("Vui lòng viết kịch bản video trước (Bước 2: Viết Kịch Bản).");
 
         // Check for Veo API Key (or use server environment)
         if (window.aistudio && !(await window.aistudio.hasSelectedApiKey())) {
@@ -250,6 +255,7 @@ const MarketingStudio: React.FC<MarketingStudioProps> = ({ theme, setTheme, isVi
         setError(null);
 
         try {
+            // CRITICAL: Use the generated video script as the prompt
             const videoUrl = await generateMarketingVideo(
                 `data:${imageData.mimeType};base64,${imageData.base64}`, 
                 result.videoScript, 
