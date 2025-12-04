@@ -169,15 +169,27 @@ export const fileToGenerativePart = async (file: File): Promise<FilePart | null>
 export function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise(async (resolve, reject) => {
     try {
-        const { dataUrl, mimeType } = await resizeImage(file);
+        let dataUrl = '';
+        let mimeType = file.type;
+
+        // FIX: Only resize if it is an image. Skip resizing for audio/video.
+        if (file.type.startsWith('image/')) {
+            const result = await resizeImage(file);
+            dataUrl = result.dataUrl;
+            mimeType = result.mimeType;
+        } else {
+            // For Audio/Video, just read as Data URL directly
+            dataUrl = await fileToDataURL(file);
+        }
+
         const base64 = dataUrl.split(',')[1];
         if (base64) {
             resolve({ base64, mimeType });
         } else {
-            reject(new Error("Failed to parse resized file data."));
+            reject(new Error("Failed to parse file data."));
         }
     } catch (error) {
-        console.error("Error resizing and converting file to Base64:", error);
+        console.error("Error converting file to Base64:", error);
         reject(error);
     }
   });
