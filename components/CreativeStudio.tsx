@@ -1,4 +1,3 @@
-
 // components/CreativeStudio.tsx
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -230,6 +229,9 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ theme, setTheme, initia
         }
         if (selectedFeature === FeatureAction.HOT_TREND_PHOTO) {
             return formData.selected_trends?.length || 0;
+        }
+        if (selectedFeature === FeatureAction.IMAGE_VARIATION_GENERATOR) {
+            return 4; // FIX: Explicitly return 4 for Image Variation Generator
         }
         return numImages;
     };

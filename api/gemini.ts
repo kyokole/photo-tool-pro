@@ -1,4 +1,3 @@
-
 // /api/gemini.ts
 import { GoogleGenAI, Modality, Part } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -167,6 +166,25 @@ const getImageConfig = (model: string, imageSize: string, aspectRatio?: string, 
         config.numberOfImages = count;
     }
     return config;
+};
+
+// --- HELPER: FRAMING INSTRUCTION ---
+const getFramingInstruction = (frameStyle: string): string => {
+    // Defaults if undefined or empty
+    if (!frameStyle) return "Medium Shot (Waist-up).";
+
+    switch (frameStyle) {
+        case 'full_body': 
+            return "Wide Angle Full Body Shot. **CRITICAL: Show the subject from head to toe. Do not crop the feet. Ensure the entire outfit and shoes are visible. Do not zoom in.**";
+        case 'half_body': 
+            return "Medium Shot (Waist-up). Show the subject from the waist up. Visible torso and head.";
+        case 'shoulder_portrait': 
+            return "Close-up Portrait. Head and shoulders shot. Focus on the face.";
+        case 'cinematic_wide': 
+            return "Cinematic Wide Shot. Environmental portrait showing the subject small in a vast background. **CRITICAL: Do not zoom in on the person.**";
+        default: 
+            return "Medium Shot (Waist-up).";
+    }
 };
 
 const getAi = (useBackup: boolean = false, modelType: 'image' | 'video' = 'image') => {
@@ -423,6 +441,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              
              return res.json({ prompts: JSON.parse(response.text || '[]') });
          }
+         
+         // --- NEW: GET HOT TRENDS HANDLER ---
+         if (action === 'getHotTrends') {
+             const ai = getAi(false);
+             // Prompt Gemini to list current hot trends. 
+             // We specifically ask for visual trends suitable for photo generation.
+             const prompt = `List 10 currently viral or popular visual trends for social media photos (Instagram, TikTok) in 2024/2025. 
+             Focus on styles like "Cyberpunk", "Y2K", "Vintage Film", "Barbiecore", "Old Money", etc.
+             Output strictly a JSON array of strings. Example: ["Cyberpunk City", "Y2K Fashion", "Wes Anderson Style"].
+             Do not include markdown code blocks.`;
+             
+             const response = await ai.models.generateContent({
+                 model: TEXT_MODEL,
+                 contents: { parts: [{ text: prompt }] },
+                 config: { responseMimeType: 'application/json' }
+             });
+             
+             let trends = [];
+             try {
+                 trends = JSON.parse(response.text || '[]');
+             } catch (e) {
+                 console.warn("Failed to parse trends JSON", e);
+                 // Fallback trends if parsing fails
+                 trends = ["Cyberpunk", "Y2K", "Vintage", "Cinematic", "Neon", "Pastel", "Minimalist"];
+             }
+             return res.json({ trends });
+         }
 
          if (action === 'analyzeProductImage') {
             const ai = getAi(false);
@@ -455,6 +500,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
 
             return res.json(JSON.parse(response.text || '{}'));
+         }
+
+         // --- NEW CASE: Generate Prompt from Image (Fixing "Unknown action") ---
+         if (action === 'generatePromptFromImage') {
+            const ai = getAi(false);
+            const { base64Image, mimeType, isFaceLockEnabled, language } = payload;
+
+            const langInstruction = language === 'vi' ? 'Tiếng Việt' : 'English';
+            
+            // Checkbox logic: If checked, add specific instruction
+            const faceLockInstruction = isFaceLockEnabled 
+                ? 'CRITICAL: The user wants to preserve the face. Describe the facial features (eyes, nose, mouth, skin texture, age, expression) in EXTREME detail so a face-swapper or generator can reconstruct it accurately.' 
+                : '';
+
+            const prompt = `Describe this image for an AI image generator prompt.
+            Language: ${langInstruction}.
+            Focus on: Subject description, clothing, pose, background, lighting, artistic style, and mood.
+            ${faceLockInstruction}
+            Do not use introductory phrases like "Here is a description". Just output the prompt directly.`;
+
+            const response = await ai.models.generateContent({
+                model: TEXT_MODEL, // gemini-2.5-flash works well for vision-to-text
+                contents: { parts: [
+                    { inlineData: { data: base64Image, mimeType: mimeType || 'image/jpeg' } },
+                    { text: prompt }
+                ]}
+            });
+
+            return res.json({ prompt: response.text });
          }
  
          if (action === 'generateVeoVideo') {
@@ -544,7 +618,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const selectedModel = selectModel(imageSize);
 
         switch (action) {
-            // --- NEW: Marketing Text Handlers ---
+            // ... (Marketing Handlers - unchanged)
             case 'generateMarketingAdCopy': {
                 const ai = getAi(false);
                 const { product, imagePart, language } = payload;
@@ -626,7 +700,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 
                 return res.json({ text: geminiRes.text });
             }
-            // ------------------------------------
 
             case 'generateSongContent': {
                 const ai = getAi(false);
@@ -771,9 +844,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
            case 'generateFashionPhoto': {
                return await runWithFallback(async (ai) => {
                    const { imagePart, settings } = payload;
-                   const prompt = `[TASK] Fashion Photo. Category: ${settings.category}. Style: ${settings.style}. ${settings.description}. [QUALITY] Photorealistic. ${imageSize} Output.`;
                    
-                   return await generateWithModelFallback(selectedModel, MODEL_FLASH, async (model) => {
+                   // --- FRAMING INSTRUCTION ---
+                   const framing = getFramingInstruction(settings.aspectRatio === '16:9' ? 'cinematic_wide' : 'half_body'); // Heuristic default, refine if needed
+
+                   const prompt = `[TASK] FASHION STUDIO - VIRTUAL LOOKBOOK.
+                   Category: ${settings.category}. Style: ${settings.style}.
+                   Pose: ${settings.description || 'Professional Model Pose'}.
+                   Framing: ${framing}
+                   
+                   [CRITICAL INSTRUCTION - IDENTITY PRESERVATION]
+                   1. STRICT FACE LOCK: The face in the output MUST BE A PERFECT COPY of the input subject image.
+                   2. Do NOT generate a generic model face. You must use the input face as the absolute reference.
+                   3. Preserve facial features (eyes, nose, lips, skin marks) exactly.
+                   4. Only change the clothing and background. The head and face structure must be untouched.
+                   
+                   [FRAMING ENFORCEMENT]
+                   **DO NOT ZOOM IN**. If 'Full Body' is requested, user MUST see shoes. If 'Cinematic Wide' is requested, user must see environment.
+                   
+                   [QUALITY] Photorealistic, 8K, Masterpiece.`;
+                   
+                   // FORCE MODEL PRO for strict identity
+                   const forcedModel = MODEL_PRO;
+
+                   return await generateWithModelFallback(forcedModel, MODEL_FLASH, async (model) => {
                        const geminiRes = await ai.models.generateContent({
                            model: model,
                            contents: { parts: [imagePart, { text: prompt }] },
@@ -789,14 +883,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                    const { settings } = payload;
                    const isIdolMode = settings.mode === 'idol';
                    const isHQ = settings.highQuality === true;
-                   const targetResolution = isHQ ? '4K' : '1K'; 
-                   const selectedFootballModel = MODEL_PRO; 
+                   const targetResolution = isHQ ? '4K' : '1K';
+                   
+                   // FORCE PRO MODEL FOR IDENTITY PRESERVATION (DUAL IDENTITY LOCKING)
+                   const selectedFootballModel = 'gemini-3-pro-image-preview'; 
 
                    let prompt = "";
+                   
                    if (isIdolMode) {
-                       prompt = `[TASK] COMPOSITE PHOTO: USER WITH CELEBRITY. [SCENE] Action: ${settings.scene}. Style: ${settings.style}. 2 People. Person 1: Input User (Face Lock). Person 2: ${settings.player} (${settings.team}).`;
+                       // CHUP CUNG IDOL
+                       prompt = `[TASK] REALISTIC PHOTO COMPOSITE - CELEBRITY FAN MOMENT.
+                       
+                       [SCENE DETAILS]
+                       - Action: ${settings.scene}.
+                       - Style: ${settings.style}.
+                       - Context: A real-life photo, high resolution.
+                       
+                       [CHARACTERS - CRITICAL IDENTITY RULES]
+                       1. CELEBRITY: ${settings.player} (${settings.team}). Must look exactly like the real famous footballer.
+                       2. FAN (USER): The person from the INPUT IMAGE.
+                          - FACE LOCK: The Fan's face MUST be an EXACT REPLICA of the Input Image face.
+                          - Do not beautify or genericize the Fan's face. Keep skin texture and features identical.
+                       
+                       [COMPOSITION]
+                       The two people are standing/interacting naturally together in the specified scene.`;
                    } else {
-                       prompt = `[TASK] VIRTUAL TRY-ON. Input User (Face Lock) wearing ${settings.team} kit. Action: ${settings.scene}. Style: ${settings.style}.`;
+                       // THU DO (VIRTUAL TRY-ON)
+                       prompt = `[TASK] VIRTUAL TRY-ON / OUTFIT SWAP.
+                       
+                       [INPUT]
+                       - Source Identity: The person in the provided image.
+                       - Target Outfit: ${settings.team} National/Club Football Kit.
+                       
+                       [SCENE]
+                       - Action: ${settings.scene}.
+                       - Style: ${settings.style}.
+                       
+                       [CRITICAL INSTRUCTION - IDENTITY PRESERVATION]
+                       1. FACE LOCK: The output face MUST BE 100% IDENTICAL to the source image.
+                       2. Do NOT generate a random model. Use the actual input face.
+                       3. Only change the clothing and background. Keep the head structure and facial features exact.`;
                    }
                    
                    return await generateWithModelFallback(selectedFootballModel, MODEL_FLASH, async (model) => {
@@ -1002,6 +1128,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     let prompt = "";
                     let aspectRatio = formData.aspect_ratio || "4:3";
                     
+                    // --- HELPER: GET FRAMING ---
+                    // Translate frame_style to explicit prompt instruction
+                    const framing = getFramingInstruction(formData.frame_style);
+
                     // --- HELPER: Add Images safely ---
                     const addImagePart = (b64: string, mime: string) => {
                         if(b64) parts.push({ inlineData: { data: b64, mimeType: mime } });
@@ -1030,27 +1160,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                          Input: Portrait of a person.
                          Target: Change hairstyle to "${formData.hairstyle}" (Color: ${formData.hair_color}, Length: ${formData.hair_length}).
                          
+                         [FRAMING]
+                         ${framing}
+                         
                          CRITICAL RULES:
                          1. FACE LOCK: The face in the output MUST be 100% identical to the input image. Do NOT change eyes, nose, mouth, or facial structure.
                          2. Only change the hair area.
                          3. Blend the new hair naturally with the original forehead and ears.
                          4. Style: Photorealistic, High Resolution.`;
                     }
-                    // --- 3. TRY ON OUTFIT (Thử trang phục) ---
+                    // --- 3. TRY ON OUTFIT (Thử trang phục) - SUPER STRICT MODE ---
                     else if (featureAction === 'try_on_outfit') {
-                        if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
-                        if (formData.outfit_image?.base64) addImagePart(formData.outfit_image.base64, formData.outfit_image.mimeType);
+                        // Input order matters for context
+                        if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType); // INPUT 1 (PERSON)
+                        if (formData.outfit_image?.base64) addImagePart(formData.outfit_image.base64, formData.outfit_image.mimeType); // INPUT 2 (OUTFIT)
                         
-                        prompt = `[TASK] VIRTUAL TRY-ON.
-                        Input 1: Person (Identity Reference).
-                        Input 2: Outfit (Clothing Reference).
+                        prompt = `[TASK] PHOTOREALISTIC VIRTUAL TRY-ON WITH STRICT IDENTITY PRESERVATION.
                         
-                        INSTRUCTION:
-                        1. Generate the Person from Input 1 wearing the Outfit from Input 2.
-                        2. FACE LOCK: The face MUST match Input 1 exactly.
-                        3. OUTFIT LOCK: The clothing MUST match Input 2 exactly.
-                        4. Context: ${formData.prompt_detail || 'Studio lighting, neutral background'}.
-                        5. Ensure realistic fabric draping and fit.`;
+                        [INPUTS]
+                        - Input 1: REFERENCE PERSON (The Identity Source).
+                        - Input 2: TARGET OUTFIT (The Clothing Source).
+                        
+                        [FRAMING]
+                        **${framing}** (STRICT)
+                        
+                        [CRITICAL INSTRUCTION - FACE LOCK]
+                        1. The output MUST contain the EXACT SAME FACE as Input 1.
+                        2. Do NOT generate a "similar" person. Use the actual facial features (eyes, nose, mouth, skin texture, jawline) from Input 1.
+                        3. Do NOT beautify, age-down, or alter the ethnicity of the person.
+                        4. If the face changes, the task is failed.
+                        5. **DO NOT ZOOM IN** on the face if a wider shot (Full Body/Half Body) is requested. Maintain the framing distance.
+                        
+                        [EXECUTION]
+                        1. Composite the HEAD and FACE of Input 1 onto a body wearing the outfit from Input 2.
+                        2. Adjust skin tone of the neck/body to match the face perfectly.
+                        3. Preserve the pose if possible, or adapt the outfit to the person's pose.
+                        4. Context: ${formData.prompt_detail || 'High-end studio lighting, neutral background'}.
+                        
+                        OUTPUT: High-Resolution Photograph.`;
                     }
                     // --- 4. KOREAN STYLE STUDIO ---
                     else if (featureAction === 'korean_style_studio') {
@@ -1060,8 +1207,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                          prompt = `[TASK] KOREAN STUDIO PORTRAIT.
                          Target Style: ${concept}.
+                         
+                         [FRAMING]
+                         **${framing}**
+                         
                          INSTRUCTION: Generate a high-end studio photo of the input person in this specific Korean style.
                          CRITICAL: PRESERVE FACIAL IDENTITY 100%. The face must look exactly like the input person, just with better lighting and makeup styling matching the concept.
+                         **ANTI-ZOOM:** If Full Body is selected, show the shoes. Do not crop tightly on the face.
                          Quality: ${quality} Resolution, Photorealistic, 8K, Soft Lighting.`;
                     }
                     // --- 5. COUPLE COMPOSE ---
@@ -1070,30 +1222,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         if (formData.person_right_image?.base64) addImagePart(formData.person_right_image.base64, formData.person_right_image.mimeType);
                         if (formData.custom_background?.base64) addImagePart(formData.custom_background.base64, formData.custom_background.mimeType);
 
-                        prompt = `[TASK] COUPLE PHOTO COMPOSITE.
+                        prompt = `[TASK] COUPLE PHOTO COMPOSITE - STRICT IDENTITY MATCHING.
+                        
+                        [INPUTS]
+                        - Input 1: MALE / LEFT Person Identity.
+                        - Input 2: FEMALE / RIGHT Person Identity.
+                        
+                        [CONTEXT]
                         Action: ${formData.affection_action}.
                         Background: ${formData.couple_background || "Custom/Scenic"}.
                         Style: ${formData.aesthetic_style}.
+                        Framing: **${framing}**.
                         
-                        INSTRUCTION:
-                        1. Create a realistic photo of the two input people together.
-                        2. FACE LOCK: Ensure both faces match their respective input images as closely as possible.
-                        3. Ensure natural interaction and lighting consistency.`;
+                        [CRITICAL INSTRUCTION - IDENTITY LOCK]
+                        1. You MUST generate 2 distinct people.
+                        2. PERSON 1 (Male/Left) MUST look exactly like Input 1.
+                        3. PERSON 2 (Female/Right) MUST look exactly like Input 2.
+                        4. DO NOT blend their faces. DO NOT hallucinate a random face.
+                        5. Prioritize facial similarity above all else.
+                        6. **RESPECT FRAMING:** If framing is 'Full Body', show both people fully. Do not zoom into a close-up kiss unless requested.
+                        
+                        Quality: Photorealistic, 8K, High-End Photography.`;
                     }
-                    // --- 6. PRODUCT PHOTO ---
+                    // --- 6. PRODUCT PHOTO (ENHANCED FACE LOCK) ---
                     else if (featureAction === 'product_photo') {
                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
-                        // subject_image here is arguably the product if no model is involved, or the model holding product.
-                        // Let's check if product_image exists separately
                         if (formData.product_image?.base64) addImagePart(formData.product_image.base64, formData.product_image.mimeType);
 
-                        prompt = `[TASK] PROFESSIONAL PRODUCT PHOTOGRAPHY.
-                        Inputs: Reference Images.
-                        INSTRUCTION:
-                        1. Create a high-end commercial shot of the product.
-                        2. Setting: ${formData.prompt_detail || 'Commercial studio, cinematic lighting'}.
-                        3. If a model is present in inputs, preserve their features. If only product is present, focus on the product.
-                        4. Quality: 8K, Advertising Standard.`;
+                        prompt = `[TASK] PROFESSIONAL PRODUCT PHOTOGRAPHY WITH MODEL.
+                        Inputs: Reference Image containing Model and/or Product.
+                        Framing: **${framing}**.
+                        
+                        [CRITICAL INSTRUCTION - IDENTITY PRESERVATION]
+                        1. FACE LOCK: If the input image contains a person, the face in the output MUST BE 100% IDENTICAL to the input person. 
+                        2. Do NOT generate a generic model face. Use the input face as the definitive reference.
+                        3. Keep facial features, ethnicity, and expression exactly as they are in the source.
+                        4. **NO ZOOM:** Ensure the framing instruction is followed. Do not crop the product or the model's body parts implied by the framing.
+
+                        [SCENE & LIGHTING]
+                        Setting: ${formData.prompt_detail || 'Commercial studio, cinematic lighting, premium aesthetic'}.
+                        Focus: Highlight the product naturally.
+                        
+                        Quality: 8K, Advertising Standard, Masterpiece.`;
                     }
                     // --- 7. CREATE ALBUM ---
                     else if (featureAction === 'create_album') {
@@ -1103,43 +1273,71 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                          const pose = formData.poses && formData.poses.length > 0 ? formData.poses[0] : "Natural pose";
                          const bg = formData.backgrounds && formData.backgrounds.length > 0 ? formData.backgrounds[0] : "Scenic background";
                          
-                         prompt = `[TASK] TRAVEL/ALBUM PHOTO.
-                         Subject: Input Person (Face Lock).
-                         Pose: ${pose}.
-                         Location: ${bg}.
-                         INSTRUCTION: Place the subject naturally in this location with the specified pose. Maintain facial identity 100%. CRITICAL: FACE LOCK. Photorealistic.`;
+                         prompt = `[TASK] TRAVEL/ALBUM PHOTO - CREATE ALBUM.
+                         
+                         [SUBJECT & IDENTITY]
+                         - Subject: Reference Person from Input Image.
+                         - Pose: ${pose}.
+                         - CRITICAL: FACE LOCK. The output face MUST BE 100% IDENTICAL to the input.
+                         
+                         [SCENE & FRAMING]
+                         - Location: ${bg}.
+                         - Framing: **${framing}**.
+                         
+                         INSTRUCTION: Place the subject naturally in this location with the specified pose and framing. Maintain facial identity 100%. Photorealistic.`;
                     }
-                    // --- 8. PLACE IN SCENE ---
+                    // --- 8. PLACE IN SCENE (UPDATED WITH FRAMING & FACE LOCK) ---
                     else if (featureAction === 'place_in_scene') {
                          if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
                          if (formData.background_image?.base64) addImagePart(formData.background_image.base64, formData.background_image.mimeType);
                          
                          const bgDesc = formData.custom_background_prompt || (formData.background_options ? formData.background_options.join(', ') : "Scenic background");
                          
-                         prompt = `[TASK] COMPOSITE: PLACE SUBJECT IN SCENE.
-                         Background: ${bgDesc}.
-                         INSTRUCTION: Seamlessly integrate the input person into this background. Match lighting, shadows, and perspective. 
-                         CRITICAL: FACE LOCK. Keep the face 100% identical to the input.`;
+                         prompt = `[TASK] PHOTO COMPOSITE - PLACE SUBJECT IN SCENE.
+                         
+                         [SCENE]
+                         Background Description: ${bgDesc}.
+                         
+                         [COMPOSITION & FRAMING]
+                         **${framing}**
+                         
+                         [CRITICAL INSTRUCTION - IDENTITY PRESERVATION]
+                         1. FACE LOCK: The face in the output MUST BE 100% IDENTICAL to the input subject image.
+                         2. Use the input face as the definitive reference. Do not generate a generic face.
+                         3. Blend the subject naturally into the background's lighting and perspective (shadows, color tone).
+                         4. **RESPECT FRAMING**: Do not auto-zoom to the face.
+                         
+                         Quality: Photorealistic, 8K.`;
                     }
                      // --- 9. BIRTHDAY PHOTO ---
                     else if (featureAction === 'birthday_photo') {
                          if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
                          const scene = formData.birthday_scenes && formData.birthday_scenes.length > 0 ? formData.birthday_scenes[0] : "Birthday Party";
+                         
                          prompt = `[TASK] BIRTHDAY CELEBRATION PHOTO.
                          Scene: ${scene}.
+                         Framing: **${framing}**.
                          Subject: Input Person (Face Lock).
+                         
                          INSTRUCTION: Generate a festive birthday photo featuring the subject. Happy expression, birthday decorations, cake/balloons visible. 
                          CRITICAL: FACE LOCK. Keep the face 100% identical to the input. Photorealistic.`;
                     }
-                    // --- 10. HOT TREND PHOTO ---
+                    // --- 10. HOT TREND PHOTO (UPDATED) ---
                     else if (featureAction === 'hot_trend_photo') {
                          if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
                          const trend = formData.selected_trends && formData.selected_trends.length > 0 ? formData.selected_trends[0] : "Trending Style";
-                         prompt = `[TASK] TRENDING STYLE PHOTO.
-                         Trend/Style: ${trend}.
-                         Subject: Input Person (Face Lock).
-                         INSTRUCTION: Adapt the subject to this trending visual style or meme format while keeping their identity recognizable. 
-                         CRITICAL: FACE LOCK. Keep the face 100% identical to the input. High quality.`;
+                         prompt = `[TASK] TRENDING STYLE PHOTO - STRICT IDENTITY.
+                         Trend: ${trend}.
+                         Framing: **${framing}**.
+                         
+                         [CRITICAL INSTRUCTION - IDENTITY PRESERVATION]
+                         1. FACE LOCK: The face in the output MUST BE 100% IDENTICAL to the input subject image.
+                         2. Do NOT generate a generic face. Use the input face as the definitive reference.
+                         3. Maintain the exact facial structure, key features (eyes, nose, mouth), and expression.
+                         4. Apply the visual style of the "${trend}" trend to the clothing, background, and lighting, but keep the face intact.
+                         5. **NO UNWANTED ZOOM**: If Full Body is set, show the whole outfit.
+                         
+                         Quality: 8K, Highly Detailed, Masterpiece.`;
                     }
                     // --- 11. CREATIVE COMPOSITE (Generic) ---
                     else if (featureAction === 'creative_composite') {
@@ -1165,6 +1363,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                              prompt = `[TASK] CREATIVE COMPOSITE.
                              Main Subject Description: ${formData.main_subject_description || 'Person'}.
                              Scene Description: ${formData.scene_description || 'Artistic Scene'}.
+                             Framing: **${framing}**.
                              INSTRUCTION: Create a composite image based on the provided inputs and descriptions. Prioritize blending and realism (or artistic style if specified).
                              CRITICAL: FACE LOCK. Keep the face of the main subject 100% identical to the input.`;
                         }
@@ -1172,30 +1371,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     // --- 12. IMAGE VARIATION GENERATOR ---
                      else if (featureAction === 'image_variation_generator') {
                         if (formData.reference_image?.base64) addImagePart(formData.reference_image.base64, formData.reference_image.mimeType);
-                        prompt = `[TASK] IMAGE VARIATION.
+                        prompt = `[TASK] IMAGE VARIATION - STRICT FACE LOCK.
                         Style: ${formData.style || 'Photorealistic'}.
                         Theme: ${formData.themeAnchor || 'Same Theme'}.
                         Variation Strength: ${formData.variationStrength || 50}%.
                         Identity Lock: ${formData.identityLock || 80}%.
-                        INSTRUCTION: Generate a variation of the input image. Adhere to the requested style and theme. 
-                        CRITICAL: FACE LOCK. Keep the face 100% identical to the input.`;
+                        Framing: **${framing}**.
+
+                        [CRITICAL INSTRUCTION]
+                        1. FACE LOCK: The face in the output MUST BE 100% IDENTICAL to the input reference image.
+                        2. Do NOT generate a generic face. Use the input face as the definitive source.
+                        3. If the input is a person, preserve their facial features, ethnicity, and expression exactly.
+                        4. Only vary the background, lighting, or artistic style as requested.
+                        `;
                     }
                     // --- 13. FASHION STUDIO (Thời trang & Studio) ---
                     else if (featureAction === 'fashion_studio') {
                         if (formData.subject_image?.base64) addImagePart(formData.subject_image.base64, formData.subject_image.mimeType);
                         if (formData.wardrobe_refs?.base64) addImagePart(formData.wardrobe_refs.base64, formData.wardrobe_refs.mimeType);
                         
+                        // STRONG IDENTITY PROMPT FOR FASHION STUDIO
                         prompt = `[TASK] FASHION STUDIO - VIRTUAL LOOKBOOK.
-                        Category: ${formData.style_level} / Style: ${formData.wardrobe?.join(', ')}.
+                        Category: ${formData.style_level}. Style: ${formData.wardrobe?.join(', ')}.
                         Pose: ${formData.pose_style}. Lighting: ${formData.lighting}.
                         Background: ${formData.sexy_background}.
+                        Framing: **${framing}**.
                         
-                        CRITICAL INSTRUCTION - IDENTITY PRESERVATION:
-                        1. FACE LOCK: The face in the output MUST BE 100% IDENTICAL to the input subject image. Do not generate a generic model face.
-                        2. Use the input face as the definitive reference.
+                        [CRITICAL INSTRUCTION - IDENTITY PRESERVATION]
+                        1. STRICT FACE LOCK: The face in the output MUST BE 100% IDENTICAL to the input subject image.
+                        2. Do NOT generate a generic model face. You must use the input face as the source of truth.
                         3. If the input is a specific person, the output MUST look exactly like them wearing the new clothes.
+                        4. **ANTI-ZOOM**: Adhere strictly to the Framing instruction.
                         
-                        Style Instruction: High-end Fashion Photography, 8K, detailed fabric textures.`;
+                        Style Instruction: High-end Fashion Photography, 8K.`;
                     }
                     // --- 14. YOGA STUDIO ---
                     else if (featureAction === 'yoga_studio') {
@@ -1203,8 +1411,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                          prompt = `[TASK] YOGA STUDIO.
                          Pose: ${formData.yoga_pose}. Level: ${formData.pose_level}.
                          Location: ${formData.location}. Lighting: ${formData.lighting}. Outfit: ${formData.outfit}.
+                         Framing: **${framing}**.
                          INSTRUCTION: Generate a photo of the subject performing the specified yoga pose.
-                         CRITICAL: FACE LOCK. The face MUST be 100% identical to the input subject image.`;
+                         CRITICAL: FACE LOCK. The face MUST be 100% identical to the input subject image.
+                         **Note:** For Full Body framing, ensure the entire pose (hands, feet) is visible and not cropped.`;
                     }
                     // --- FALLBACK ---
                     else {
@@ -1213,6 +1423,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             if (formData[key]?.base64) addImagePart(formData[key].base64, formData[key].mimeType);
                         }
                         prompt = `[TASK] IMAGE GENERATION. Feature: ${featureAction}. Details: ${JSON.stringify(formData)}. 
+                        Framing: **${framing}**.
                         CRITICAL: FACE LOCK. If a person is present in the input, keep their face 100% identical. High quality.`;
                     }
 
@@ -1220,12 +1431,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const numImages = payload.numImages || 1;
 
                     // MODEL SELECTION LOGIC
-                    // For sensitive identity tasks like Fashion Studio, Hair, or Extraction, force MODEL_PRO
+                    // For sensitive identity tasks like Fashion Studio, Hair, Extraction, PRODUCT PHOTO, OR IMAGE VARIATION, force MODEL_PRO
                     let forceModel = selectedModel;
                     let targetResolution = imageSize; 
 
-                    if (featureAction === 'extract_outfit' || featureAction === 'change_hairstyle' || featureAction === 'fashion_studio' || (featureAction === 'creative_composite' && formData.document_mode)) {
-                         forceModel = MODEL_PRO; // Use Gemini 3 Pro
+                    if (
+                        featureAction === 'extract_outfit' || 
+                        featureAction === 'change_hairstyle' || 
+                        featureAction === 'fashion_studio' || 
+                        featureAction === 'couple_compose' || 
+                        featureAction === 'try_on_outfit' || // Added Try On Outfit
+                        featureAction === 'product_photo' || 
+                        featureAction === 'hot_trend_photo' || 
+                        featureAction === 'image_variation_generator' || 
+                        featureAction === 'place_in_scene' || // Added Place in Scene
+                        featureAction === 'create_album' || // Added Create Album
+                        featureAction === 'birthday_photo' || // Added Birthday Photo
+                        featureAction === 'yoga_studio' ||
+                        (featureAction === 'creative_composite' && formData.document_mode)
+                    ) {
+                         forceModel = MODEL_PRO; // Use Gemini 3 Pro for superior instruction following and identity preservation
                          // If user didn't select High Quality (4K), we still use Pro model but with 1K resolution for speed/cost
                          if (imageSize !== '4K') {
                              targetResolution = '1K';
@@ -1273,23 +1498,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     // 2. CONSTRUCT STRONG IDENTITY PROMPT
                     if (settings.faceConsistency) {
-                         prompt = `[TASK] FAMILY PHOTO COMPOSITE - HIGH FIDELITY IDENTITY PRESERVATION.
-                         SCENE: ${settings.scene}. STYLE: Photorealistic, High-End Studio Photography, 8K.
-                         OUTFIT THEME: ${settings.outfit}. POSE: ${settings.pose}.
-                         CUSTOM REQUEST: ${settings.customPrompt || 'None'}.
-
-                         [CRITICAL INSTRUCTIONS]
-                         You have been provided with ${settings.members.length} reference images. You MUST use them to generate specific family members.
-                         MAPPING:`;
+                         prompt = `[TASK] HYPER-REALISTIC FAMILY COMPOSITE - STRICT IDENTITY MAPPING.\n`;
+                         prompt += `SCENE: ${settings.scene}\n`;
+                         prompt += `OUTFIT: ${settings.outfit}. POSE: ${settings.pose}\n`;
+                         prompt += `CUSTOM REQUEST: ${settings.customPrompt || 'None'}\n\n`;
+                         prompt += `[INPUTS] You have received ${settings.members.length} reference images.\n`;
+                         prompt += `[MAPPING INSTRUCTIONS]\n`;
                          
                          settings.members.forEach((member: any, index: number) => {
-                             prompt += `\n- Person ${index + 1}: Based on Input Image ${index + 1}. Age/Desc: ${member.age} ${member.bodyDescription || ''}.`;
+                             prompt += `- Input Image ${index + 1} corresponds to Family Member ${index + 1}. Description: ${member.age} ${member.bodyDescription || ''}.\n`;
                          });
 
-                         prompt += `\nRULES:
-                         1. FACE LOCK: The faces in the output MUST MATCH the reference images exactly. Do NOT generate generic AI faces.
-                         2. Match the ages described.
-                         3. Blend them naturally into the "${settings.scene}" scene.`;
+                         prompt += `\n[CRITICAL IDENTITY RULES]\n`;
+                         prompt += `1. PRESERVE IDENTITY: The face of Family Member X in the output MUST look exactly like the face in Input Image X.\n`;
+                         prompt += `2. NO BLENDING: Do not mix facial features between members. Keep them distinct.\n`;
+                         prompt += `3. AGE ACCURACY: Adhere strictly to the age descriptions provided.\n`;
+                         prompt += `4. STYLE: Photorealistic, 8K, High-End Studio Photography.\n`;
                     } else {
                         prompt = `Family Photo Composite. Scene: ${settings.scene}. Style: Artistic. Members: ${settings.members.length} people. 
                         Details: ${settings.members.map((m:any) => `${m.age}`).join(', ')}. Custom Request: ${settings.customPrompt}.`;
@@ -1297,7 +1521,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     parts.push({ text: prompt });
 
-                    return await generateWithModelFallback(MODEL_PRO, MODEL_FLASH, async (model) => {
+                    // ALWAYS FORCE PRO MODEL FOR FAMILY PHOTOS to handle multiple identities
+                    const familyModel = MODEL_PRO;
+
+                    return await generateWithModelFallback(familyModel, MODEL_FLASH, async (model) => {
                         const geminiRes = await ai.models.generateContent({
                            model: model,
                            contents: { parts },
@@ -1307,8 +1534,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         return res.json({ imageData, similarityScores: [], debug: null });
                     });
                 });
-            }
-            case 'generateAlbumArt': {
+           }
+           case 'generateAlbumArt': {
                 return await runWithFallback(async (ai) => {
                     const { description } = payload;
                     const prompt = `[TASK] Album Cover Art. ${description}. [QUALITY] High resolution, artistic, vinyl style.`;
@@ -1322,7 +1549,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                        const imageData = await processOutputImage(geminiRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data);
                        return res.json({ imageData });
                    });
-                });
+               });
             }
             case 'removeWatermark': {
                  return await runWithFallback(async (ai) => {
