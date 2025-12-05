@@ -3,6 +3,7 @@
 import { FeatureAction } from "../types";
 import { fileToBase64 } from "../utils/fileUtils";
 import { callGeminiApi } from "./geminiService";
+import { CREDIT_COSTS } from "../constants";
 
 // This function now prepares the data and sends it to our backend,
 // rather than directly calling the Gemini API.
@@ -54,16 +55,24 @@ export const generateImagesFromFeature = async (
 
     const serializedFormData = await serializeFiles(formData);
 
+    // CALCULATE CREDIT COST
+    // Logic: Base cost * number of images.
+    // High quality check based on formData.highQuality
+    const isHighQuality = formData.highQuality === true;
+    const costPerImage = isHighQuality ? CREDIT_COSTS.HIGH_QUALITY_IMAGE : CREDIT_COSTS.STANDARD_IMAGE;
+    const totalCost = numImages * costPerImage;
+
     const { images, successCount } = await callGeminiApi('generateImagesFromFeature', {
         featureAction,
         formData: serializedFormData,
         numImages,
-    });
+    }, totalCost); // PASS CALCULATED COST HERE to trigger isPaid=true
+
     return { images, successCount };
 };
 
 export const getHotTrends = async (): Promise<string[]> => {
-    const { trends } = await callGeminiApi('getHotTrends', {});
+    const { trends } = await callGeminiApi('getHotTrends', {}, 0);
     return trends;
 };
 
@@ -105,7 +114,7 @@ export const generateVideoFromImage = async (
 
     // Video generation cost is handled in callGeminiApi or backend logic based on usage
     // Default is 10 credits, but might vary.
-    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', payload, 10); 
+    const { videoUrl, error } = await callGeminiApi('generateVeoVideo', payload, CREDIT_COSTS.VIDEO_GENERATION); 
     if (error) {
         throw new Error(error);
     }

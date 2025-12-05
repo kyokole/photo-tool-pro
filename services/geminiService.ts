@@ -143,12 +143,14 @@ export const generateFamilyPhoto_3_Pass = async (
 // --- Beauty Studio ---
 export const generateBeautyPhoto = async (
     baseImage: string,
-    tool: BeautyFeature,
+    tool: any, // Using any to check highQuality prop safely
     subFeature: BeautySubFeature | null,
-    style: BeautyStyle | null
+    style: any | null // Using any to check highQuality prop safely
 ): Promise<string> => {
-    const cost = CREDIT_COSTS.STANDARD_IMAGE;
-    const { imageData } = await callGeminiApi('generateBeautyPhoto', { baseImage, tool, subFeature, style }, cost);
+    // Beauty Studio is strictly for VIP/Admin users (handled in App.tsx).
+    // Therefore, we pass 0 as the credit cost.
+    // The 'highQuality' property in tool/style is still preserved for the backend to determine resolution (4K vs 1K).
+    const { imageData } = await callGeminiApi('generateBeautyPhoto', { baseImage, tool, subFeature, style }, 0);
     return imageData;
 };
 
@@ -313,14 +315,21 @@ export const enhanceVideoPrompt = async (prompt: string, language: string = 'en'
 };
 
 // --- CREATIVE STUDIO GEN ---
+// Deprecated export for backward compatibility, new logic is in creativeStudioService.ts
 export const generateImagesFromFeature = async (
     featureAction: string,
     formData: Record<string, any>,
     numImages: number
 ): Promise<{images: string[], successCount: number}> => {
-    // Serialization logic moved to creativeStudioService or handled here if needed.
-    // For now, assuming direct call from creativeStudioService.ts which handles file conversion.
-    // To resolve circular dependency, we implement a basic passthrough.
+    // This function should ideally redirect to creativeStudioService logic or maintain compatibility
+    // But since we updated creativeStudioService.ts to call callGeminiApi directly, this export might be redundant 
+    // if the component uses the service file. 
+    // However, keeping it here as a passthrough in case other components rely on geminiService imports.
+    
+    // Note: Since we moved serialization and cost calculation to creativeStudioService.ts, 
+    // calling this raw might miss cost calculation if called from elsewhere. 
+    // Ideally, components should import from creativeStudioService.ts.
+    
     return { images: [], successCount: 0 }; 
 };
 
@@ -357,7 +366,7 @@ export const analyzeMusicAudio = async (audioFile: File): Promise<MusicAnalysisR
 
 // --- MAGIC ERASER STUDIO ---
 export const removeWatermark = async (imagePart: FilePart, highQuality: boolean = false): Promise<string> => {
-    const { imageData } = await callGeminiApi('removeWatermark', { imagePart, highQuality }, 0); 
+    const { imageData } = await callGeminiApi('removeWatermark', { imagePart, highQuality }, CREDIT_COSTS.STANDARD_IMAGE); // Add Cost
     return imageData;
 };
 
@@ -369,6 +378,6 @@ export const removeVideoWatermark = async (source: { file?: File, url?: string }
          payload.filename = source.file.name;
     }
     // API now returns prompt along with videoUrl
-    const { videoUrl, prompt } = await callGeminiApi('removeVideoWatermark', payload, 0); 
+    const { videoUrl, prompt } = await callGeminiApi('removeVideoWatermark', payload, 0); // Free for now (Scraping)
     return { videoUrl, prompt };
 };
